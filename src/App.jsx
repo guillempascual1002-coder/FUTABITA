@@ -75,8 +75,8 @@ const RIVALS_BY_TIER = [
   ["Real Madrid", "FC Barcelona", "Man City", "Bayern", "Liverpool", "PSG", "Arsenal", "Inter", "Borussia Dortmund"],
 ];
 
-const SEASON_LENGTH = 15; // jornadas (partido cada 2 días ≈ 1 mes)
-const MID_WINDOW = 8;
+const SEASON_LENGTH = 15; // jornadas (una por día ≈ 2 semanas de temporada)
+const MID_WINDOW = 8;     // jornada del mercado de invierno (mitad de temporada)
 
 const CAPTAINS = ["Iván Torres", "Rubén Salgado", "Marcos Peña", "Aitor Zubiaurre", "Dani Cortés", "Álex Herrera", "Chema Ríos"];
 const PRESS = ["📰 La Grada Digital", "📰 Diario del Área", "📰 El Once Inicial", "📻 Radio Vestuario"];
@@ -114,6 +114,14 @@ const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const pickN = (arr, n) => { const c = [...arr]; const out = []; while (out.length < n && c.length) out.push(c.splice(Math.floor(Math.random() * c.length), 1)[0]); return out; };
 const nowTime = () => { const d = new Date(); return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); };
 const fmtEUR = (n) => n >= 1000000 ? (n / 1000000).toFixed(1).replace(".", ",") + " M€" : Math.round(n / 1000) + " mil €";
+
+/* calendario de liga: una jornada por día. La jornada 1 se juega al día siguiente
+   del inicio de temporada (el día del fichaje/arranque es de presentación).
+   Si el usuario no abre la app varios días, los partidos pendientes se acumulan
+   y puede jugarlos seguidos: el calendario nunca se salta jornadas. */
+const matchDateFor = (season, matchday) => addDays(season.startDate, matchday + 1);
+const isMatchDue = (season, dateStr) =>
+  !!season && season.matchday < SEASON_LENGTH && dayDiff(season.startDate, dateStr) >= season.matchday + 1;
 
 const calcOVR = (stats) => Math.round(STAT_KEYS.reduce((s, k) => s + stats[k] * OVR_WEIGHTS[k], 0));
 const xpToNext = (v) => Math.round(40 + Math.max(0, v - 58) * 12);
@@ -330,7 +338,7 @@ const FLAVOR = [
   { c: "press", t: "Se ha visto a {player} cenando con varios compañeros del {club} tras el último partido.", w: "starter" },
   { c: "press", t: "Los pronósticos empiezan a contar con {player} como factor decisivo del {club}.", w: "good" },
   { c: "press", t: "Arranca la temporada {season} y {player} figura entre los nombres a seguir en {league}.", w: "seasonStart" },
-  { c: "press", t: "Balance de curso: {player} deja huella en {league} con {goals} goles y {assists} asistencias.", w: "seasonEnd" },
+  { c: "press", t: "Recta final de la temporada {season}: {player} suma {goals} goles y {assists} asistencias en {league}.", w: "seasonEnd" },
   /* ---- AFICIÓN (tercera persona) ---- */
   { c: "fan", t: "Parte de la grada del {club} cree que {player} merece galones cuanto antes." },
   { c: "fan", t: "En las peñas del {club} ya hay quien lleva el dorsal de {player} a la espalda." },
@@ -423,7 +431,8 @@ function flavorCtx(g) {
   const ovr = calcOVR(p.stats);
   const hist = g.matchHistory || [];
   const last = hist[hist.length - 1];
-  const played = s ? hist.slice(-Math.max(0, s.matchday)) : [];
+  /* ojo: slice(-0) devolvería el historial entero, así que en jornada 0 la temporada va vacía */
+  const played = s && s.matchday > 0 ? hist.slice(-s.matchday) : [];
   const goals = played.reduce((a, x) => a + (x.myGoals || 0), 0);
   const assists = played.reduce((a, x) => a + (x.myAssists || 0), 0);
   const form = p.form || "est";
@@ -436,8 +445,10 @@ function flavorCtx(g) {
   c.benched = last ? !!last.benched : false;
   c.hasGoals = goals >= 1;
   c.scorer = goals >= 3;
-  c.seasonStart = s ? s.matchday === 0 : true;
-  c.seasonEnd = s ? s.matchday >= SEASON_LENGTH : false;
+  /* al acabar la última jornada la temporada se reinicia al instante, así que "fin de temporada"
+     se refiere a la recta final (aún jugable), no a un estado que casi nunca existiría */
+  c.seasonStart = s ? s.matchday <= 1 : true;
+  c.seasonEnd = s ? s.matchday >= SEASON_LENGTH - 2 : false;
   return c;
 }
 
@@ -1015,7 +1026,7 @@ function LogTab({ game, log, onLog, logDate, onDate, onCloseDay, savedMeals, onS
 /* ---------- LIGA ---------- */
 function LeagueTab({ game, onPlayMatch, crest, crestScale }) {
   const s = game.season;
-  const matchDue = s.matchday < SEASON_LENGTH && dayDiff(s.startDate, todayStr()) >= (s.matchday + 1) * 2 - 1;
+  const matchDue = isMatchDue(s, todayStr());
   const nextRival = s.rivals[s.matchday % s.rivals.length];
   const table = [...s.table].sort((a, b) => b.pts - a.pts);
   const myPos = table.findIndex((t) => t.me) + 1;
@@ -1035,8 +1046,8 @@ function LeagueTab({ game, onPlayMatch, crest, crestScale }) {
           <button className="btn-gold" onClick={onPlayMatch}>⚽ JUGAR PARTIDO</button>
         ) : (
           <div style={{ color: "#8b95a3", fontSize: 13 }}>
-            Próximo partido: {addDays(s.startDate, (s.matchday + 1) * 2 - 1)}<br />
-            <span style={{ fontSize: 12 }}>Trabaja fuerte esta semana: llegarás al partido con mejor forma.</span></div>
+            Próximo partido: {matchDateFor(s, s.matchday)}<br />
+            <span style={{ fontSize: 12 }}>Trabaja fuerte hoy: llegarás al partido con mejor forma.</span></div>
         )}
       </div>
       <div className="panel">
@@ -1361,8 +1372,7 @@ export default function App() {
     }
     /* frase espontánea diaria: el mundo del juego sigue vivo aunque no haya partido */
     if (out.lastFlavor !== today) {
-      const s2 = out.season;
-      const matchDueToday = s2 && s2.matchday < SEASON_LENGTH && dayDiff(s2.startDate, today) >= (s2.matchday + 1) * 2 - 1;
+      const matchDueToday = isMatchDue(out.season, today);
       const n = matchDueToday ? 1 : (Math.random() < 0.5 ? 2 : 1);
       pickFlavor(out, n).forEach((fv) => { out = addMsg(out, fv.from, fv.text); });
       out.lastFlavor = today;
@@ -1407,7 +1417,7 @@ export default function App() {
         midSeasonKeepPts: false,
       };
       out = addMsg(out, "Entrenador",
-        `Bienvenido al ${club.name}, ${g.player.name}. Aquí las cosas son simples: el que trabaja y se deja la piel como un profesional, juega. Partido cada 2 días. Demuéstramelo. ⚽`);
+        `Bienvenido al ${club.name}, ${g.player.name}. Aquí las cosas son simples: el que trabaja y se deja la piel como un profesional, juega. Aquí se juega cada día. Demuéstramelo. ⚽`);
       const captain = pick(CAPTAINS);
       out.captain = captain;
       out = addMsg(out, `${captain} · Capitán`, pick([
@@ -1448,7 +1458,7 @@ export default function App() {
           `Hermano, hoy has sido OTRO NIVEL 🙌 Se nota lo que curras fuera del campo. Orgulloso de jugar contigo.`]));
       } else if (m.res === "V" && !m.benched && Math.random() < 0.3) {
         out = addMsg(out, cap, pick([
-          `¡VICTORIAAA! 🎉 Buen curro hoy, equipo. A descansar bien que en 2 días hay otra guerra.`,
+          `¡VICTORIAAA! 🎉 Buen curro hoy, equipo. A descansar bien que mañana hay otra guerra.`,
           `3 puntitos más 😎 A descansar bien, que la liga no espera.`]));
       } else if (m.benched && Math.random() < 0.5) {
         out = addMsg(out, cap, `Te he visto jodido en el banquillo... 😕 Escucha: a todos nos ha pasado. Esta semana cúrratelo al máximo y el míster no tendrá excusas. Cuento contigo.`);
@@ -1496,7 +1506,7 @@ export default function App() {
         out.season = { num: s.num + 1, startDate: todayStr(), matchday: 0,
           table: buildTable(g.club.name, g.tier.id),
           rivals: pickN(RIVALS_BY_TIER[Math.min(g.tier.id, RIVALS_BY_TIER.length - 1)], SEASON_LENGTH), midOfferDone: false };
-        out = addMsg(out, "Entrenador", `La temporada ${s.num + 1} arranca ya. Pretemporada corta: partido en 2 días. 🏃`);
+        out = addMsg(out, "Entrenador", `La temporada ${s.num + 1} arranca ya. Pretemporada exprés: mañana se juega. 🏃`);
       }
       return out;
     });

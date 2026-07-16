@@ -85,27 +85,23 @@ function pressNote(g, dayForm) {
   const p = g.player, name = p.name, club = g.club.name;
   const ovr = calcOVR(p.stats);
   const next = TIERS.find((t) => t.id === g.tier.id + 1);
-  const wl = p.weightLog || [];
-  const gained = wl.length ? wl[wl.length - 1].kg - p.weight0 : 0;
   const pool = [];
   if (dayForm === "alza") pool.push(
-    `🔥 ${name} está intratable en los entrenamientos del ${club}. "Nunca vi a nadie cuidarse así", confiesa un empleado del club.`,
-    `El cuerpo técnico del ${club} no da crédito: ${name} vuelve a completar un día perfecto de preparación. La grada ya tiene ídolo.`);
+    `🔥 ${name} está intratable en los entrenamientos del ${club}. El cuerpo técnico no oculta su entusiasmo.`,
+    `El staff del ${club} destaca la notable evolución física de ${name}. La grada ya tiene ídolo.`);
   if (dayForm === "buen") pool.push(
-    `${name} sigue sumando buenos entrenamientos en el ${club}. La constancia, su mejor virtud.`,
+    `${name} sigue sumando buenos entrenamientos en el ${club}. La regularidad, su mejor virtud.`,
     `Ambiente tranquilo en la ciudad deportiva del ${club}: ${name} mantiene el ritmo y el míster sonríe.`);
   if (dayForm === "est") pool.push(
     `¿Le pesa la presión a ${name}? En el ${club} esperan un paso adelante de su joven promesa.`,
-    `Día gris de ${name} en los entrenamientos. Nada grave, pero en el ${club} piden más.`);
+    `Semana discreta de ${name} en los entrenamientos. Nada grave, pero en el ${club} piden más.`);
   if (dayForm === "caida") pool.push(
     `❗ Se encienden las alarmas en el ${club}: ${name} acumula malas sensaciones. ¿Dónde está el jugador que ilusionó?`,
-    `La grada murmura: ${name} no se está cuidando como debería, y en el ${club} empieza a notarse.`);
+    `Preocupación en el ${club} por el evidente bajón de ${name} en las últimas sesiones.`);
   if ((p.streak || 0) >= 5) pool.push(
-    `📈 ${p.streak} días seguidos de disciplina total: la racha de ${name} ya es tema de conversación en ${club}.`);
+    `📈 ${p.streak} días seguidos de disciplina total: la constancia de ${name} ya es tema de conversación en ${club}.`);
   if (next && ovr >= next.minOvr - 2) pool.push(
     `👀 RUMOR | Ojeadores de ${next.league} habrían preguntado por ${name} (media ${ovr}). En el ${club} se hacen los sordos… de momento.`);
-  if (gained >= 1) pool.push(
-    `💪 La transformación física de ${name} es evidente: +${gained.toFixed(1)} kg desde el inicio. El gimnasio tiene un nuevo inquilino fijo.`);
   return pool.length ? { from: pick(PRESS), text: pick(pool) } : null;
 }
 
@@ -130,7 +126,7 @@ const FORM_META = {
   est: { label: "ESTANCADO", icon: "—", color: "#C9A94E" },
   caida: { label: "EN CAÍDA", icon: "▼", color: "#E14B4B" },
 };
-const formFromPct = (p) => (p >= 120 ? "alza" : p >= 100 ? "buen" : p >= 70 ? "est" : "caida");
+const formFromPct = (p) => (p >= 110 ? "alza" : p >= 95 ? "buen" : p >= 70 ? "est" : "caida");
 
 /* storage */
 async function stGet(key) { try { const r = localStorage.getItem("futabita:" + key); return r ? JSON.parse(r) : null; } catch (e) { return null; } }
@@ -265,18 +261,18 @@ function simulateMatch(player, rival, jornada) {
 
 function coachMessage(m, player) {
   if (m.benched) return pick([
-    `Te dejé en el banquillo hoy. Llevas días flojos en los entrenamientos y la alimentación. Demuéstrame que quieres jugar.`,
-    `No me tiembla el pulso: sin forma no hay minutos. Recupera el ritmo esta semana y volverás al once.`]);
+    `Hoy te he dejado en el banquillo. Llevas días grises en los entrenamientos y necesito verte al cien por cien. Demuéstrame que quieres jugar.`,
+    `Sin buenas sensaciones no hay minutos, así de claro. Recupera el tono esta semana y volverás al once.`]);
   if (m.rating >= 8.5) return pick([
-    `¡${m.rating} de nota! Espectacular. Si sigues entrenando y comiendo así, los grandes van a llamar a tu puerta.`,
-    `Partidazo. ${m.myGoals ? `Ese gol tuyo` : `Tu despliegue físico`} marcó la diferencia. Sigue con esa disciplina.`]);
+    `¡${m.rating} de nota! Espectacular. Si sigues con esta entrega, los grandes van a llamar a tu puerta.`,
+    `Partidazo. ${m.myGoals ? `Ese gol tuyo` : `Tu despliegue`} marcó la diferencia. Sigue con esa mentalidad.`]);
   if (m.res === "V") return pick([
-    `Buena victoria ${m.gf}-${m.ga}. Se nota el trabajo que estás haciendo fuera del campo. No aflojes.`,
-    `Tres puntos más. Tu constancia esta semana se vio en el césped.`]);
-  if (m.res === "E") return `Empate ${m.gf}-${m.ga}. Nos faltó chispa. Cuida el descanso y las comidas, ahí está la diferencia.`;
+    `Buena victoria ${m.gf}-${m.ga}. Se nota el trabajo que estás metiendo entre semana. No aflojes.`,
+    `Tres puntos más. Tu constancia en los entrenamientos se vio en el césped.`]);
+  if (m.res === "E") return `Empate ${m.gf}-${m.ga}. Nos faltó chispa. En los pequeños detalles del día a día está la diferencia.`;
   return pick([
-    `Derrota ${m.gf}-${m.ga}. Los partidos se ganan entre semana: gym, comida y descanso. Espero más de ti.`,
-    `Mal día (${m.gf}-${m.ga}). Analiza tu semana: ¿cumpliste tus objetivos? El campo no miente.`]);
+    `Derrota ${m.gf}-${m.ga}. Los partidos se ganan entre semana, en el trabajo diario. Espero más de ti.`,
+    `Mal día (${m.gf}-${m.ga}). Analiza tu semana: el campo nunca miente.`]);
 }
 
 function makeOffer(club, tier, ovr) {
@@ -291,6 +287,195 @@ function makeOffer(club, tier, ovr) {
 function buildTable(myClub, tierId) {
   const rivals = pickN(RIVALS_BY_TIER[Math.min(tierId, RIVALS_BY_TIER.length - 1)], 9);
   return [{ name: myClub, pts: 0, me: true }, ...rivals.map((r) => ({ name: r, pts: 0, me: false }))];
+}
+
+/* ============================================================
+   FRASES ESPONTÁNEAS · el mundo del juego sigue vivo cada día
+   ------------------------------------------------------------
+   Reglas:
+   - c (club): entrenador/capitán/agente → hablan DIRECTAMENTE al jugador (tú/te).
+   - press/fan/social/club → hablan en TERCERA persona sobre {player}. Nunca "tú".
+   - Jamás mencionan comida, calorías, proteínas ni "la app". Solo fútbol.
+   Variables: {player} {club} {position} {league} {ovr} {season} {goals} {assists}
+   Condición opcional `w`: solo aparece cuando tiene sentido (racha, suplente, etc.)
+   ============================================================ */
+const CAT_W = { press: 3, fan: 3, social: 3, club: 2, coach: 2.5, cap: 2.5, agent: 1.6 };
+const COND = {
+  good: (c) => c.good, hot: (c) => c.hot, bad: (c) => c.bad,
+  starter: (c) => c.starter, benched: (c) => c.benched,
+  hasGoals: (c) => c.hasGoals, scorer: (c) => c.scorer,
+  seasonStart: (c) => c.seasonStart, seasonEnd: (c) => c.seasonEnd,
+};
+const FLAVOR = [
+  /* ---- PRENSA (tercera persona) ---- */
+  { c: "press", t: "El {position} del {club} sigue ganándose el respeto de la categoría a base de trabajo." },
+  { c: "press", t: "Fuentes cercanas al {club} aseguran que {player} es de los primeros en llegar y de los últimos en marcharse." },
+  { c: "press", t: "La progresión de {player} en {league} no está pasando desapercibida para los ojeadores." },
+  { c: "press", t: "Análisis | Con una media de {ovr}, {player} empieza a marcar diferencias en {league}." },
+  { c: "press", t: "El cuerpo técnico del {club} destaca en privado la mejora física de {player}.", w: "good" },
+  { c: "press", t: "Rumor de mercado: preguntan por {player}, aunque en el {club} no quieren ni oír hablar del tema.", w: "good" },
+  { c: "press", t: "Editorial | La paciencia del {club} con {player} está empezando a dar sus frutos." },
+  { c: "press", t: "{player} encadena semanas de gran nivel y la prensa local ya habla de un fenómeno en el {club}.", w: "hot" },
+  { c: "press", t: "Preocupación en el entorno del {club}: {player} atraviesa días de menos brillo.", w: "bad" },
+  { c: "press", t: "Los números de {player} esta temporada ({goals} goles) invitan al optimismo en el {club}.", w: "hasGoals" },
+  { c: "press", t: "Crónica | {player} firma otra actuación de nota alta con la camiseta del {club}.", w: "starter" },
+  { c: "press", t: "El nombre de {player} empieza a sonar más allá de {league}.", w: "good" },
+  { c: "press", t: "Reportaje | De promesa a realidad: el ascenso silencioso de {player} en el {club}." },
+  { c: "press", t: "La afición rival ya teme la visita del {club} y, sobre todo, de su {position} {player}.", w: "good" },
+  { c: "press", t: "Según los datos, {player} ({ovr}) es uno de los jugadores más en forma de {league}.", w: "good" },
+  { c: "press", t: "En los mentideros del fútbol se pregunta hasta dónde puede llegar {player}." },
+  { c: "press", t: "Un histórico exjugador del {club} elogió públicamente la actitud de {player}." },
+  { c: "press", t: "Temporada {season}: {player} se ha convertido en un fijo de las quinielas de la jornada." },
+  { c: "press", t: "Voces autorizadas piden calma con {player}: 'Hay que dejarle crecer sin presión'.", w: "bad" },
+  { c: "press", t: "Se ha visto a {player} cenando con varios compañeros del {club} tras el último partido.", w: "starter" },
+  { c: "press", t: "Los pronósticos empiezan a contar con {player} como factor decisivo del {club}.", w: "good" },
+  { c: "press", t: "Arranca la temporada {season} y {player} figura entre los nombres a seguir en {league}.", w: "seasonStart" },
+  { c: "press", t: "Balance de curso: {player} deja huella en {league} con {goals} goles y {assists} asistencias.", w: "seasonEnd" },
+  /* ---- AFICIÓN (tercera persona) ---- */
+  { c: "fan", t: "Parte de la grada del {club} cree que {player} merece galones cuanto antes." },
+  { c: "fan", t: "En las peñas del {club} ya hay quien lleva el dorsal de {player} a la espalda." },
+  { c: "fan", t: "Los aficionados del {club} se rinden al esfuerzo de su joven {position}.", w: "good" },
+  { c: "fan", t: "Debate en la grada: '¿Es {player} el mejor {position} que ha pasado por el {club}?'", w: "hot" },
+  { c: "fan", t: "Un sector de la afición del {club} pide más protagonismo para {player}.", w: "benched" },
+  { c: "fan", t: "Cánticos para {player} en el último partido del {club}.", w: "starter" },
+  { c: "fan", t: "Los más veteranos del {club} comparan a {player} con jugadores de otra época.", w: "good" },
+  { c: "fan", t: "La afición del {club} respira tranquila: {player} vuelve a estar enchufado.", w: "good" },
+  { c: "fan", t: "Murmullos en la grada del {club} tras el bajón de {player} en las últimas semanas.", w: "bad" },
+  { c: "fan", t: "En los foros del {club} no se habla de otra cosa que de {player}.", w: "hot" },
+  { c: "fan", t: "Aficionados del {club} madrugaron para ver entrenar a {player}." },
+  { c: "fan", t: "La grada del {club} corea el nombre de {player} cada vez que toca el balón.", w: "scorer" },
+  { c: "fan", t: "Niños del barrio esperan a {player} a la salida del entrenamiento para un autógrafo." },
+  { c: "fan", t: "La afición confía en que {player} lidere al {club} hacia lo más alto de {league}." },
+  { c: "fan", t: "En el bar de siempre, la peña del {club} brinda por {player}.", w: "good" },
+  /* ---- REDES SOCIALES (tercera persona) ---- */
+  { c: "social", t: "🔥 El clip de la última jugada de {player} arrasa en redes." },
+  { c: "social", t: "Trending | El nombre de {player} se cuela entre lo más comentado del día." },
+  { c: "social", t: "Una cuenta de estadísticas destaca a {player} como revelación de {league}.", w: "good" },
+  { c: "social", t: "El {club} publica una foto de {player} entrenando y se llena de comentarios." },
+  { c: "social", t: "Un vídeo de {player} preparándose en la ciudad deportiva suma miles de reproducciones.", w: "good" },
+  { c: "social", t: "Los memes sobre la última actuación de {player} inundan el timeline.", w: "scorer" },
+  { c: "social", t: "Aficionados piden en redes que {player} sea titular indiscutible.", w: "benched" },
+  { c: "social", t: "'Acordaos del nombre: {player}', escribe un periodista en redes.", w: "good" },
+  { c: "social", t: "Una vieja foto de {player} de sus inicios se vuelve viral." },
+  { c: "social", t: "El hashtag con el apellido de {player} empieza a moverse en el mundillo de {league}.", w: "hot" },
+  { c: "social", t: "Comentaristas debaten en directo el momento de forma de {player}." },
+  { c: "social", t: "La cuenta oficial del {club} dedica una historia a {player}.", w: "starter" },
+  { c: "social", t: "Un tuit pregunta cuánto valdría {player} en el mercado actual.", w: "good" },
+  { c: "social", t: "Se filtra un vídeo del golazo de {player} en el entrenamiento.", w: "good" },
+  /* ---- NOTICIAS DEL CLUB (tercera persona / oficial) ---- */
+  { c: "club", t: "El {club} programa un acto con patrocinadores y {player} será uno de los rostros elegidos." },
+  { c: "club", t: "El {club} renueva su tienda con una zona dedicada a sus jóvenes valores." },
+  { c: "club", t: "El {club} confirma que {player} entrena con total normalidad de cara al próximo partido." },
+  { c: "club", t: "El {club} agradece a su afición el apoyo en {league} esta temporada {season}." },
+  { c: "club", t: "El {club} anuncia mejoras en la ciudad deportiva para reforzar la preparación del plantel." },
+  { c: "club", t: "El {club} destaca en su web la evolución de {player} desde su llegada." },
+  { c: "club", t: "El {club} organiza un día de puertas abiertas y {player} firmará autógrafos." },
+  { c: "club", t: "El {club} recuerda que las entradas para el próximo partido vuelan." },
+  { c: "club", t: "El {club} publica la lista de convocados y {player} vuelve a aparecer.", w: "starter" },
+  { c: "club", t: "El {club} celebra estar peleando por sus objetivos en {league}." },
+  /* ---- ENTRENADOR (directo: tú/te) ---- */
+  { c: "coach", t: "Hoy te he visto especialmente enchufado en el entrenamiento. Sigue por ahí.", w: "good" },
+  { c: "coach", t: "Quiero que lideres al equipo desde el ejemplo. Confío en ti.", w: "good" },
+  { c: "coach", t: "Te he preparado un par de ejercicios extra. Sé que puedes con ellos." },
+  { c: "coach", t: "Mañana trabajamos táctica. Quiero verte concentrado." },
+  { c: "coach", t: "Estos días te noto algo espeso. Nada que no arregle una buena semana de trabajo.", w: "bad" },
+  { c: "coach", t: "Me gusta tu actitud. Ojalá todos entrenaran con tu hambre.", w: "good" },
+  { c: "coach", t: "Ven diez minutos antes mañana, quiero comentarte una idea para tu puesto de {position}." },
+  { c: "coach", t: "El míster rival me ha preguntado por ti. Le he dicho que no estás en venta.", w: "good" },
+  { c: "coach", t: "Sigue así y no voy a tener más remedio que ponerte fijo en el once.", w: "good" },
+  { c: "coach", t: "Necesito tu mejor versión para el próximo partido. Cuento contigo." },
+  { c: "coach", t: "Hoy descansa la cabeza. Mañana volvemos a la carga con todo." },
+  { c: "coach", t: "He hablado de ti con la dirección deportiva. Están contentos con tu evolución.", w: "good" },
+  { c: "coach", t: "No te confíes con los elogios. El que se relaja, pierde el sitio." },
+  { c: "coach", t: "Bienvenido al grupo de los que se ganan los minutos. Ahora mantenlo.", w: "good" },
+  /* ---- CAPITÁN (directo: tú/te) ---- */
+  { c: "cap", t: "Mañana llegamos antes al estadio, te guardo sitio en el bus." },
+  { c: "cap", t: "Te he visto currar de lo lindo esta semana, crack. Así se hace.", w: "good" },
+  { c: "cap", t: "Si necesitas que te eche una mano con algo del vestuario, aquí estoy." },
+  { c: "cap", t: "Después del entreno nos quedamos unos cuantos a tirar a puerta, ¿te vienes?" },
+  { c: "cap", t: "El grupo está encantado contigo. Sigue siendo tú mismo.", w: "good" },
+  { c: "cap", t: "Tranquilo con los malos días, a todos nos pasa. Mañana lo damos todo.", w: "bad" },
+  { c: "cap", t: "Hoy invito yo al café del vestuario. Te lo has ganado.", w: "good" },
+  { c: "cap", t: "Cuando quieras te cuento los trucos de este campo, que me lo conozco de memoria." },
+  { c: "cap", t: "En el vestuario ya dicen que vas a ser importante. No les quites la razón.", w: "good" },
+  { c: "cap", t: "Oye, gran detalle el de hoy en el entrenamiento. Se nota tu momento.", w: "good" },
+  { c: "cap", t: "Mañana toca foto de equipo, no llegues tarde." },
+  { c: "cap", t: "Me han preguntado por ti fuera. Les he dicho que eres de los nuestros.", w: "good" },
+  { c: "cap", t: "Vamos a apretar juntos esta semana, que viene partido importante." },
+  { c: "cap", t: "Si te ves con dudas, hablamos. El vestuario tira de ti.", w: "bad" },
+  /* ---- AGENTE (directo: tú/te) ---- */
+  { c: "agent", t: "He recibido una llamada interesante por ti. Nada firme aún, pero buena señal.", w: "good" },
+  { c: "agent", t: "Sigo tu evolución de cerca. Si mantienes este nivel, se abrirán puertas.", w: "good" },
+  { c: "agent", t: "Una marca deportiva ha preguntado por ti. Te mantengo informado.", w: "good" },
+  { c: "agent", t: "Tranquilo, aún es pronto, pero el mercado empieza a fijarse en ti." },
+  { c: "agent", t: "He estado revisando tus números de la temporada {season}. Vamos por buen camino." },
+  { c: "agent", t: "Me piden referencias tuyas desde clubes de {league}. Eso es que lo estás haciendo bien.", w: "good" },
+  { c: "agent", t: "Cuida los detalles: cuando llegue la oferta buena, quiero que llegues fino." },
+  { c: "agent", t: "Nada nuevo por ahora, pero no dejo de mover tu nombre. Confía en mí." },
+  { c: "agent", t: "Un ojeador me ha pedido tu agenda de partidos. Algo se cuece.", w: "good" },
+  { c: "agent", t: "Con una media de {ovr}, empiezas a estar en el radar de gente importante.", w: "good" },
+];
+
+const fillTpl = (str, c) => str.replace(/\{(\w+)\}/g, (_, k) => (c[k] != null ? String(c[k]) : ""));
+
+function flavorCtx(g) {
+  const p = g.player, s = g.season;
+  const ovr = calcOVR(p.stats);
+  const hist = g.matchHistory || [];
+  const last = hist[hist.length - 1];
+  const played = s ? hist.slice(-Math.max(0, s.matchday)) : [];
+  const goals = played.reduce((a, x) => a + (x.myGoals || 0), 0);
+  const assists = played.reduce((a, x) => a + (x.myAssists || 0), 0);
+  const form = p.form || "est";
+  const c = { player: p.name, club: g.club.name, position: p.position,
+    league: g.tier.league, ovr, season: s ? s.num : 1, goals, assists };
+  c.good = (p.streak || 0) >= 3 || form === "alza";
+  c.hot = (p.streak || 0) >= 6;
+  c.bad = form === "caida" || (p.badDays || 0) >= 1;
+  c.starter = last ? !last.benched : false;
+  c.benched = last ? !!last.benched : false;
+  c.hasGoals = goals >= 1;
+  c.scorer = goals >= 3;
+  c.seasonStart = s ? s.matchday === 0 : true;
+  c.seasonEnd = s ? s.matchday >= SEASON_LENGTH : false;
+  return c;
+}
+
+function senderFor(cat, g) {
+  if (cat === "coach") return "Entrenador";
+  if (cat === "cap") return (g.captain || "El capitán") + " · Capitán";
+  if (cat === "agent") return "Tu agente";
+  if (cat === "press") return pick(PRESS);
+  if (cat === "fan") return "📣 La Grada";
+  if (cat === "social") return pick(["📱 Redes", "🐦 Timeline", "📲 Peña digital"]);
+  if (cat === "club") return "📢 " + g.club.name;
+  return pick(PRESS);
+}
+
+/* elige n frases distintas y ponderadas que tengan sentido hoy */
+function pickFlavor(g, n) {
+  const c = flavorCtx(g);
+  const pool = FLAVOR.filter((f) => !f.w || (COND[f.w] && COND[f.w](c)));
+  const out = [];
+  const used = new Set();
+  let guard = 0;
+  while (out.length < n && used.size < pool.length && guard < 80) {
+    guard++;
+    let total = 0;
+    for (let i = 0; i < pool.length; i++) if (!used.has(i)) total += (CAT_W[pool[i].c] || 1);
+    if (total <= 0) break;
+    let r = Math.random() * total, idx = -1;
+    for (let i = 0; i < pool.length; i++) {
+      if (used.has(i)) continue;
+      r -= (CAT_W[pool[i].c] || 1);
+      if (r <= 0) { idx = i; break; }
+    }
+    if (idx < 0) break;
+    used.add(idx);
+    const f = pool[idx];
+    out.push({ from: senderFor(f.c, g), text: fillTpl(f.t, c) });
+  }
+  return out;
 }
 
 const INTRO = [
@@ -312,7 +497,11 @@ function FormBadge({ form, size }) {
   );
 }
 
-function Crest({ c1, c2, name, size = 40 }) {
+function Crest({ c1, c2, name, size = 40, img }) {
+  if (img) return (
+    <img src={img} alt="" style={{ width: size, height: size * 1.15, objectFit: "cover", borderRadius: 4,
+      border: "1px solid rgba(255,255,255,.25)" }} />
+  );
   const initials = name.split(" ").filter((w) => w.length > 2 || /^[A-Z]/.test(w)).slice(0, 2).map((w) => w[0]).join("");
   return (
     <div style={{ width: size, height: size * 1.15, background: `linear-gradient(135deg, ${c1} 50%, ${c2} 50%)`,
@@ -324,7 +513,7 @@ function Crest({ c1, c2, name, size = 40 }) {
   );
 }
 
-function PlayerCard({ player, photo, club, small }) {
+function PlayerCard({ player, photo, club, small, crest }) {
   const ovr = calcOVR(player.stats);
   const tier = cardTier(ovr);
   const grad = {
@@ -344,7 +533,7 @@ function PlayerCard({ player, photo, club, small }) {
           <div style={{ fontFamily: "'Oswald',sans-serif", fontWeight: 700, fontSize: W * 0.19, lineHeight: 1 }}>{ovr}</div>
           <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: W * 0.07, letterSpacing: 2 }}>{player.position}</div>
           <div style={{ marginTop: 6, display: "flex", justifyContent: "center" }}>
-            {club ? <Crest c1={club.c1} c2={club.c2} name={club.name} size={W * 0.13} /> : null}
+            {club ? <Crest c1={club.c1} c2={club.c2} name={club.name} size={W * 0.13} img={crest} /> : null}
           </div>
           <div style={{ fontSize: W * 0.075, marginTop: 4 }}>🇪🇸</div>
         </div>
@@ -514,7 +703,7 @@ function ChoiceScreen({ offers, playerName, onSign }) {
 }
 
 /* ---------- ANIMACIÓN DE FICHAJE ---------- */
-function SigningOverlay({ club, player, photo, onDone }) {
+function SigningOverlay({ club, player, photo, crest, onDone }) {
   const [step, setStep] = useState(0);
   useEffect(() => {
     const t1 = setTimeout(() => setStep(1), 900);
@@ -530,7 +719,7 @@ function SigningOverlay({ club, player, photo, onDone }) {
           <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 34, color: "#F5EFDF", margin: "6px 0 16px", textTransform: "uppercase" }}>
             {club.name}</div>
           <div style={{ display: "flex", justifyContent: "center" }} className={step >= 2 ? "card-drop" : ""}
-            children={step >= 2 ? <PlayerCard player={player} photo={photo} club={club} /> : <Crest c1={club.c1} c2={club.c2} name={club.name} size={80} />} />
+            children={step >= 2 ? <PlayerCard player={player} photo={photo} club={club} crest={crest} /> : <Crest c1={club.c1} c2={club.c2} name={club.name} size={80} img={crest} />} />
           {step >= 2 && (
             <button className="btn-gold" style={{ marginTop: 26 }} onClick={onDone}>COMENZAR LA AVENTURA</button>
           )}
@@ -541,7 +730,7 @@ function SigningOverlay({ club, player, photo, onDone }) {
 }
 
 /* ---------- SIMULACIÓN DE PARTIDO EN VIVO ---------- */
-function MatchModal({ match, club, onFinish }) {
+function MatchModal({ match, club, onFinish, crest }) {
   const [minute, setMinute] = useState(0);
   const [shown, setShown] = useState([]);
   const [ended, setEnded] = useState(false);
@@ -562,7 +751,7 @@ function MatchModal({ match, club, onFinish }) {
     <div className="overlay" style={{ background: "radial-gradient(ellipse at 50% 0%, #0E3320, #05070d 75%)", justifyContent: "flex-start", paddingTop: 60 }}>
       <div className="eyebrow" style={{ textAlign: "center" }}>JORNADA {match.jornada} · EN VIVO</div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 18, margin: "14px 0" }}>
-        <Crest c1={club.c1} c2={club.c2} name={club.name} size={44} />
+        <Crest c1={club.c1} c2={club.c2} name={club.name} size={44} img={crest} />
         <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 44, color: "#F5EFDF" }}>
           {ended ? match.gf : gf} - {ended ? match.ga : ga}</div>
         <div style={{ width: 44, textAlign: "center", fontSize: 11, color: "#8b95a3" }}>{match.rival}</div>
@@ -602,7 +791,7 @@ function ChatTab({ messages, onOfferAction }) {
       {messages.length === 0 && <div style={{ color: "#5b6470", fontSize: 13, marginTop: 20 }}>Aún no hay mensajes. Juega partidos y progresa: el vestuario hablará de ti.</div>}
       {messages.map((m) => (
         <div key={m.id} style={{ marginBottom: 14 }}>
-          <div className={"bubble " + (m.kind === "offer" ? "offer" : m.from === "Entrenador" ? "coach" : m.from.startsWith("📰") || m.from.startsWith("📻") ? "press" : m.from.includes("Capitán") ? "cap" : "agent")}>
+          <div className={"bubble " + (m.kind === "offer" ? "offer" : m.from === "Entrenador" ? "coach" : m.from.includes("Capitán") ? "cap" : m.from === "Tu agente" ? "agent" : "press")}>
             <div className="bfrom">{m.from} <span style={{ float: "right", opacity: 0.5, fontWeight: 400 }}>{m.time}</span></div>
             {m.kind === "offer" && m.offer && (
               <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 8 }}>
@@ -752,14 +941,16 @@ function LogTab({ game, log, onLog, logDate, onDate, onCloseDay, savedMeals, onS
             {savedMeals.map((m, i) => (
               <button key={i} className="chip" onClick={() => addSaved(m)}>{m.name} · {m.kcal}kcal</button>))}
           </div>)}
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 6 }}>
           <input className="inp" style={{ flex: 1, marginBottom: 0 }} value={meal} placeholder='ej. "2 huevos, arroz y un batido"'
             onChange={(e) => setMeal(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addAI()} />
-          <button className="btn-gold sm" style={{ minWidth: 74 }} onClick={addAI} disabled={loading}>
+          <button className="btn-gold sm" style={{ minWidth: 56 }} onClick={addAI} disabled={loading}>
             {loading ? "…" : "✨ IA"}</button>
+          <button className="btn-ghost sm" style={{ minWidth: 74, whiteSpace: "nowrap",
+            ...(manual ? { borderColor: "#E8C15A", color: "#E8C15A" } : {}) }}
+            onClick={() => setManual(!manual)}>✏️ Manual</button>
         </div>
         {err && <div style={{ color: "#E14B4B", fontSize: 12, marginTop: 6 }}>{err}</div>}
-        <button className="linky" onClick={() => setManual(!manual)}>{manual ? "Ocultar entrada manual" : "Entrada manual (ya sé las macros)"}</button>
         {manual && (
           <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
             <input className="inp" style={{ flex: 2, marginBottom: 0 }} placeholder="Nombre" value={mn} onChange={(e) => setMn(e.target.value)} />
@@ -815,7 +1006,7 @@ function LogTab({ game, log, onLog, logDate, onDate, onCloseDay, savedMeals, onS
 }
 
 /* ---------- LIGA ---------- */
-function LeagueTab({ game, onPlayMatch }) {
+function LeagueTab({ game, onPlayMatch, crest }) {
   const s = game.season;
   const matchDue = s.matchday < SEASON_LENGTH && dayDiff(s.startDate, todayStr()) >= (s.matchday + 1) * 2 - 1;
   const nextRival = s.rivals[s.matchday % s.rivals.length];
@@ -827,7 +1018,7 @@ function LeagueTab({ game, onPlayMatch }) {
       <div className="panel" style={{ marginTop: 10, textAlign: "center" }}>
         <div style={{ fontSize: 12, color: "#8b95a3" }}>JORNADA {Math.min(s.matchday + 1, SEASON_LENGTH)} / {SEASON_LENGTH}</div>
         <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 16, margin: "10px 0" }}>
-          <Crest c1={game.club.c1} c2={game.club.c2} name={game.club.name} size={40} />
+          <Crest c1={game.club.c1} c2={game.club.c2} name={game.club.name} size={40} img={crest} />
           <span style={{ fontFamily: "'Oswald',sans-serif", fontSize: 18, color: "#F5EFDF" }}>VS</span>
           <div style={{ width: 60, fontSize: 12, color: "#B9C2CD" }}>{s.matchday < SEASON_LENGTH ? nextRival : "—"}</div>
         </div>
@@ -838,7 +1029,7 @@ function LeagueTab({ game, onPlayMatch }) {
         ) : (
           <div style={{ color: "#8b95a3", fontSize: 13 }}>
             Próximo partido: {addDays(s.startDate, (s.matchday + 1) * 2 - 1)}<br />
-            <span style={{ fontSize: 12 }}>Entrena y come bien: llegarás con mejor forma.</span></div>
+            <span style={{ fontSize: 12 }}>Trabaja fuerte esta semana: llegarás al partido con mejor forma.</span></div>
         )}
       </div>
       <div className="panel">
@@ -867,7 +1058,7 @@ function LeagueTab({ game, onPlayMatch }) {
 }
 
 /* ---------- INICIO ---------- */
-function HomeTab({ game, photo, log }) {
+function HomeTab({ game, photo, log, crest }) {
   const p = game.player;
   const ovr = calcOVR(p.stats);
   const kg0 = p.weight0;
@@ -877,7 +1068,7 @@ function HomeTab({ game, photo, log }) {
   return (
     <div style={{ padding: "18px 16px 96px" }}>
       <div style={{ display: "flex", justifyContent: "center", marginTop: 6 }}>
-        <PlayerCard player={p} photo={photo} club={game.club} />
+        <PlayerCard player={p} photo={photo} club={game.club} crest={crest} />
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginTop: 18 }}>
         <div className="stat-box"><div className="sb-num">{fmtEUR(mv)}</div><div className="sb-lbl">Valor de mercado</div></div>
@@ -885,7 +1076,7 @@ function HomeTab({ game, photo, log }) {
         <div className="stat-box"><div className="sb-num">{p.streak || 0}🔥</div><div className="sb-lbl">Racha de días</div></div>
       </div>
       <div className="panel" style={{ marginTop: 14 }}>
-        <div className="ptitle">Hoy · {pct}% del reto</div>
+        <div className="ptitle">Hoy · {pct}% del día</div>
         <div className="track"><div className="fill" style={{ width: Math.min(100, pct) + "%",
           background: FORM_META[formFromPct(pct)].color }} /></div>
         <div style={{ marginTop: 8, textAlign: "center" }}><FormBadge form={formFromPct(pct)} size={13} /></div>
@@ -945,25 +1136,28 @@ function BackupPanel({ getBackup, onRestore }) {
 }
 
 /* ---------- PERFIL / OBJETIVOS ---------- */
-function ProfileTab({ game, onWeight, onPhoto, onGoals, getBackup, onRestore }) {
+function ProfileTab({ game, photo, onWeight, onPhoto, onRemovePhoto, crest, onCrest, onRemoveCrest, onGoals, getBackup, onRestore }) {
   const p = game.player;
   const [kg, setKg] = useState("");
   const [edit, setEdit] = useState(false);
   const [newHabit, setNewHabit] = useState("");
   const [g, setG] = useState({ ...p.goals, gymDays: [...p.goals.gymDays] });
-  const fileRef = useRef();
-  const handleFile = (e) => {
+  /* redimensiona una imagen subida y devuelve un dataURL, para foto o escudo */
+  const processImg = (e, cb, max = 420) => {
     const file = e.target.files && e.target.files[0]; if (!file) return;
     const img = new Image();
     img.onload = () => {
-      const cv = document.createElement("canvas"); const s = Math.min(1, 420 / img.width);
+      const cv = document.createElement("canvas"); const s = Math.min(1, max / img.width);
       cv.width = img.width * s; cv.height = img.height * s;
       cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
       const isPng = (file.type || "").includes("png");
-      onPhoto(isPng ? cv.toDataURL("image/png") : cv.toDataURL("image/jpeg", 0.82));
+      cb(isPng ? cv.toDataURL("image/png") : cv.toDataURL("image/jpeg", 0.82));
     };
     const r = new FileReader(); r.onload = () => (img.src = r.result); r.readAsDataURL(file);
+    e.target.value = "";
   };
+  const handleFile = (e) => processImg(e, onPhoto);
+  const handleCrest = (e) => processImg(e, onCrest, 240);
   const wl = p.weightLog;
   return (
     <div style={{ padding: "16px 16px 96px" }}>
@@ -989,9 +1183,27 @@ function ProfileTab({ game, onWeight, onPhoto, onGoals, getBackup, onRestore }) 
       </div>
       <div className="panel">
         <div className="ptitle">📷 Foto de la carta</div>
-        <label className="btn-ghost filebtn">Cambiar foto
-          <input type="file" accept="image/*" className="fileinp" onChange={handleFile} />
-        </label>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <label className="btn-ghost filebtn">{photo ? "Cambiar foto" : "Subir foto"}
+            <input type="file" accept="image/*" className="fileinp" onChange={handleFile} />
+          </label>
+          {photo && <button className="btn-ghost sm" style={{ color: "#E14B4B" }} onClick={onRemovePhoto}>Quitar foto</button>}
+        </div>
+        {photo && <img src={photo} alt="" style={{ width: 70, borderRadius: 8, marginTop: 10 }} />}
+      </div>
+      <div className="panel">
+        <div className="ptitle">🛡️ Escudo del club</div>
+        <div style={{ fontSize: 12, color: "#8b95a3", marginBottom: 10, lineHeight: 1.5 }}>
+          Sube el escudo real del {game.club.name} para verlo en tu carta, en la cabecera y en los partidos.</div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <label className="btn-ghost filebtn">{crest ? "Cambiar escudo" : "Subir escudo"}
+            <input type="file" accept="image/*" className="fileinp" onChange={handleCrest} />
+          </label>
+          {crest && <button className="btn-ghost sm" style={{ color: "#E14B4B" }} onClick={onRemoveCrest}>Quitar escudo</button>}
+        </div>
+        <div style={{ marginTop: 10 }}>
+          <Crest c1={game.club.c1} c2={game.club.c2} name={game.club.name} size={48} img={crest} />
+        </div>
       </div>
       <div className="panel">
         <div className="ptitle">🎯 Objetivos {edit ? "" : <button className="linky" style={{ margin: 0, float: "right" }} onClick={() => setEdit(true)}>Editar</button>}</div>
@@ -1048,6 +1260,7 @@ const EMPTY_LOG = () => ({ meals: [], kcal: 0, prot: 0, gym: false, gymProgress:
 export default function App() {
   const [game, setGame] = useState(null);
   const [photo, setPhoto] = useState(null);
+  const [crest, setCrest] = useState(null);
   const [loaded, setLoaded] = useState(false);
   const [signing, setSigning] = useState(null); // club en animación de fichaje
   const [liveMatch, setLiveMatch] = useState(null);
@@ -1066,7 +1279,9 @@ export default function App() {
     (async () => {
       const g = await stGet("game");
       const ph = await stGet("photo");
+      const cr = await stGet("crest");
       if (ph) setPhoto(ph);
+      if (cr) setCrest(cr);
       if (g) setGame(processNewDays(sanitizeGame(g)));
       else setGame({ phase: "intro" });
       setLoaded(true);
@@ -1081,6 +1296,9 @@ export default function App() {
   }, [game, loaded]);
 
   const savePhoto = (url) => { setPhoto(url); stSet("photo", url); };
+  const removePhoto = () => { setPhoto(null); try { localStorage.removeItem("futabita:photo"); } catch (e) {} };
+  const saveCrest = (url) => { setCrest(url); stSet("crest", url); };
+  const removeCrest = () => { setCrest(null); try { localStorage.removeItem("futabita:crest"); } catch (e) {} };
 
   /* cierre de días pasados */
   function processNewDays(g) {
@@ -1115,6 +1333,14 @@ export default function App() {
       anyUp.forEach((k) => (counts[k] = (counts[k] || 0) + 1));
       const txt = Object.entries(counts).map(([k, n]) => `${STAT_LABELS[k]} +${n}`).join(", ");
       out = addMsg(out, "Entrenador", `Informe de entrenamiento: ${txt}. El staff está impresionado con tu trabajo. 💪`);
+    }
+    /* frase espontánea diaria: el mundo del juego sigue vivo aunque no haya partido */
+    if (out.lastFlavor !== today) {
+      const s2 = out.season;
+      const matchDueToday = s2 && s2.matchday < SEASON_LENGTH && dayDiff(s2.startDate, today) >= (s2.matchday + 1) * 2 - 1;
+      const n = matchDueToday ? 1 : (Math.random() < 0.5 ? 2 : 1);
+      pickFlavor(out, n).forEach((fv) => { out = addMsg(out, fv.from, fv.text); });
+      out.lastFlavor = today;
     }
     return out;
   }
@@ -1156,13 +1382,13 @@ export default function App() {
         midSeasonKeepPts: false,
       };
       out = addMsg(out, "Entrenador",
-        `Bienvenido al ${club.name}, ${g.player.name}. Aquí las cosas son simples: el que entrena, come y descansa como un profesional, juega. Partido cada 2 días. Demuéstramelo. ⚽`);
+        `Bienvenido al ${club.name}, ${g.player.name}. Aquí las cosas son simples: el que trabaja y se deja la piel como un profesional, juega. Partido cada 2 días. Demuéstramelo. ⚽`);
       const captain = pick(CAPTAINS);
       out.captain = captain;
       out = addMsg(out, `${captain} · Capitán`, pick([
         `¡Bienvenido al vestuario, crack! 🙌 Soy ${captain}, el capi. Aquí somos pocos pero somos familia. Un consejo: al míster gánatelo entre semana, no los domingos. Cualquier cosa que necesites, me escribes.`,
-        `¡Eh, el nuevo! 😄 Soy ${captain}, capitán de este equipo. Ya me han hablado de tu hambre. Aquí el que se cuida, juega — así de fácil. Bienvenido a casa, hermano.`,
-        `Bienvenido, ${g.player.name} 🤝 Soy ${captain}. Te lo digo el primero: esta camiseta pesa más de lo que parece. Entrena fuerte, come como un animal y el vestuario te llevará en volandas.`]));
+        `¡Eh, el nuevo! 😄 Soy ${captain}, capitán de este equipo. Ya me han hablado de tu hambre. Aquí el que se lo curra, juega — así de fácil. Bienvenido a casa, hermano.`,
+        `Bienvenido, ${g.player.name} 🤝 Soy ${captain}. Te lo digo el primero: esta camiseta pesa más de lo que parece. Déjate la piel entre semana y el vestuario te llevará en volandas.`]));
       out = addMsg(out, pick(PRESS),
         `OFICIAL ✍️ | El ${club.name} anuncia el fichaje de ${g.player.name} (${g.player.position}). ${viaTransfer ? "Movimiento sonado en el mercado que ilusiona a la afición." : "El club apuesta por una joven promesa con hambre de fútbol."}`);
       return out;
@@ -1198,7 +1424,7 @@ export default function App() {
       } else if (m.res === "V" && !m.benched && Math.random() < 0.3) {
         out = addMsg(out, cap, pick([
           `¡VICTORIAAA! 🎉 Buen curro hoy, equipo. A descansar bien que en 2 días hay otra guerra.`,
-          `3 puntitos más 😎 Cena bien y a dormir, que la liga no espera.`]));
+          `3 puntitos más 😎 A descansar bien, que la liga no espera.`]));
       } else if (m.benched && Math.random() < 0.5) {
         out = addMsg(out, cap, `Te he visto jodido en el banquillo... 😕 Escucha: a todos nos ha pasado. Esta semana cúrratelo al máximo y el míster no tendrá excusas. Cuento contigo.`);
       }
@@ -1315,7 +1541,7 @@ export default function App() {
   });
 
   /* respaldo manual (independiente del almacenamiento automático) */
-  const getBackup = () => JSON.stringify({ v: 1, game, photo });
+  const getBackup = () => JSON.stringify({ v: 1, game, photo, crest });
   const restoreBackup = (txt) => {
     try {
       const b = JSON.parse(txt.trim());
@@ -1323,6 +1549,7 @@ export default function App() {
       const g = processNewDays(sanitizeGame(b.game));
       setGame(g); stSet("game", g);
       if (b.photo) savePhoto(b.photo);
+      if (b.crest) saveCrest(b.crest);
       setTab("home");
       pushToast("✓ Carrera restaurada. ¡Bienvenido de vuelta!");
     } catch (e) { pushToast("✗ Ese texto no es un respaldo válido"); }
@@ -1347,19 +1574,20 @@ export default function App() {
       {game.phase === "main" && (
         <>
           <header style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 16px 8px" }}>
-            <Crest c1={game.club.c1} c2={game.club.c2} name={game.club.name} size={30} />
+            <Crest c1={game.club.c1} c2={game.club.c2} name={game.club.name} size={30} img={crest} />
             <div>
               <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 14, letterSpacing: 0.5 }}>{game.club.name}</div>
               <div style={{ fontSize: 10.5, color: "#8b95a3" }}>{game.tier.league} · Temporada {game.season.num}</div>
             </div>
             <div style={{ marginLeft: "auto" }}><FormBadge form={game.player.form} /></div>
           </header>
-          {tab === "home" && <HomeTab game={game} photo={photo} log={(game.logs && game.logs[todayStr()]) || EMPTY_LOG()} />}
+          {tab === "home" && <HomeTab game={game} photo={photo} crest={crest} log={(game.logs && game.logs[todayStr()]) || EMPTY_LOG()} />}
           {tab === "log" && <LogTab game={game} log={activeLog} onLog={setActiveLog} logDate={logDate} onDate={setLogDate}
             onCloseDay={closePendingDay} savedMeals={game.savedMeals || []} onSaveMeal={saveMeal} />}
-          {tab === "league" && <LeagueTab game={game} onPlayMatch={playMatch} />}
+          {tab === "league" && <LeagueTab game={game} onPlayMatch={playMatch} crest={crest} />}
           {tab === "chat" && <ChatTab messages={game.messages} onOfferAction={offerAction} />}
-          {tab === "me" && <ProfileTab game={game} onWeight={addWeight} onPhoto={savePhoto} onGoals={setGoals} getBackup={getBackup} onRestore={restoreBackup} />}
+          {tab === "me" && <ProfileTab game={game} photo={photo} onWeight={addWeight} onPhoto={savePhoto} onRemovePhoto={removePhoto}
+            crest={crest} onCrest={saveCrest} onRemoveCrest={removeCrest} onGoals={setGoals} getBackup={getBackup} onRestore={restoreBackup} />}
           <nav className="tabbar">
             {[["home", "🏠", "Inicio"], ["log", "📝", "Registro"], ["league", "🏆", "Liga"], ["chat", "💬", "Chat"], ["me", "👤", "Yo"]].map(([id, ic, lb]) => (
               <button key={id} className={"tabbtn" + (tab === id ? " on" : "")}
@@ -1371,8 +1599,8 @@ export default function App() {
           </nav>
         </>
       )}
-      {signing && <SigningOverlay club={signing.club} player={game.player} photo={photo} onDone={confirmSigning} />}
-      {liveMatch && <MatchModal match={liveMatch} club={game.club} onFinish={finishMatch} />}
+      {signing && <SigningOverlay club={signing.club} player={game.player} photo={photo} crest={crest} onDone={confirmSigning} />}
+      {liveMatch && <MatchModal match={liveMatch} club={game.club} onFinish={finishMatch} crest={crest} />}
       {toast && <div className="toast">{toast}</div>}
     </div>
   );

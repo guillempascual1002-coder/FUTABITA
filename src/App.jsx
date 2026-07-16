@@ -129,10 +129,10 @@ const cardTier = (ovr) => (ovr >= 85 ? "special" : ovr >= 75 ? "gold" : ovr >= 6
 const marketValue = (ovr, kgGained) => Math.round((25000 * Math.pow(1.16, ovr - 60)) * (1 + Math.max(0, kgGained) * 0.06));
 
 const FORM_META = {
-  alza: { label: "AL ALZA", icon: "▲▲", color: "#3DDC84" },
-  buen: { label: "BUEN RITMO", icon: "▲", color: "#9CC3E5" },
-  est: { label: "ESTANCADO", icon: "—", color: "#C9A94E" },
-  caida: { label: "EN CAÍDA", icon: "▼", color: "#E14B4B" },
+  alza: { label: "AL ALZA", icon: "▲▲", color: "#2E9E44" },
+  buen: { label: "BUEN RITMO", icon: "▲", color: "#2E6ED6" },
+  est: { label: "ESTANCADO", icon: "—", color: "#B08900" },
+  caida: { label: "EN CAÍDA", icon: "▼", color: "#D9483B" },
 };
 const formFromPct = (p) => (p >= 110 ? "alza" : p >= 95 ? "buen" : p >= 70 ? "est" : "caida");
 
@@ -618,14 +618,14 @@ function pickEvent(g) {
    BUZONES DE CHAT · cada remitente pertenece a una conversación
    ============================================================ */
 const CHAT_META = {
-  coach: { icon: "📋", color: "#3DDC84", title: () => "Entrenador", sub: "Cuerpo técnico" },
-  cap: { icon: "🎖️", color: "#E8825A", title: (g) => g.captain || "Capitán", sub: "Capitán del equipo" },
-  agent: { icon: "🕴️", color: "#9CC3E5", title: () => "Tu agente", sub: "Representante" },
-  squad: { icon: "👥", color: "#B58CF0", title: () => "Vestuario", sub: "Grupo del equipo", group: true },
-  press: { icon: "📰", color: "#C9A94E", title: () => "Prensa", sub: "Medios y radios", group: true },
-  fan: { icon: "📣", color: "#E14B4B", title: () => "Afición", sub: "La grada" },
-  social: { icon: "📱", color: "#5AC8FA", title: () => "Redes", sub: "Lo que se comenta" },
-  club: { icon: "🛡️", color: "#E8C15A", title: (g) => g.club.name, sub: "Comunicación oficial" },
+  coach: { icon: "📋", color: "#1F8A3B", title: () => "Entrenador", sub: "Cuerpo técnico" },
+  cap: { icon: "🎖️", color: "#D65A2E", title: (g) => g.captain || "Capitán", sub: "Capitán del equipo" },
+  agent: { icon: "🕴️", color: "#2E6ED6", title: () => "Tu agente", sub: "Representante" },
+  squad: { icon: "👥", color: "#7A3FD1", title: () => "Vestuario", sub: "Grupo del equipo", group: true },
+  press: { icon: "📰", color: "#A87900", title: () => "Prensa", sub: "Medios y radios", group: true },
+  fan: { icon: "📣", color: "#D0342C", title: () => "Afición", sub: "La grada" },
+  social: { icon: "📱", color: "#0F87B8", title: () => "Redes", sub: "Lo que se comenta" },
+  club: { icon: "🛡️", color: "#7E8F1B", title: (g) => g.club.name, sub: "Comunicación oficial" },
 };
 const CHAT_ORDER = ["coach", "cap", "agent", "squad", "press", "fan", "social", "club"];
 
@@ -746,19 +746,22 @@ function IntroScreen({ onDone, onRestore }) {
   const [txt, setTxt] = useState("");
   return (
     <div className="screen intro-bg" style={{ padding: "48px 26px", display: "flex", flexDirection: "column", justifyContent: "center" }}>
-      <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 13, letterSpacing: 6, color: "#C9A94E", marginBottom: 18 }}
-        className="fade-seq" >FUTABITA 3.1 · TEMPORADA 2026/27</div>
-      <h1 style={{ fontFamily: "'Oswald',sans-serif", fontWeight: 700, fontSize: 44, lineHeight: 1.02, margin: "0 0 26px",
-        color: "#F5EFDF", textTransform: "uppercase" }} className="fade-seq">
-        Tu carrera<br />empieza<br /><span style={{ color: "#E8C15A" }}>hoy</span>
+      <div className="fade-seq" style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
+        <div style={{ height: 22, width: 70, background: "repeating-linear-gradient(90deg,#16190F 0 3px,transparent 3px 6px,#16190F 6px 11px,transparent 11px 13px)" }} />
+        <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 13, letterSpacing: 6, color: "#16190F" }}>FUTABITA 3.1</div>
+      </div>
+      <h1 style={{ fontFamily: "'Oswald',sans-serif", fontWeight: 700, fontSize: 46, lineHeight: 1.04, margin: "0 0 26px",
+        color: "#16190F", textTransform: "uppercase" }} className="fade-seq">
+        Tu carrera<br />empieza<br /><span style={{ background: "#16190F", color: "#CDF546", padding: "0 14px", borderRadius: 14, display: "inline-block" }}>hoy</span>
       </h1>
       {INTRO.map((p, i) => (
-        <p key={i} className="fade-seq" style={{ animationDelay: 0.5 + i * 0.85 + "s", color: "#B9C2CD",
-          fontSize: 14.5, lineHeight: 1.55, margin: "0 0 14px", maxWidth: 340 }}>{p}</p>
+        <p key={i} className="fade-seq" style={{ animationDelay: 0.5 + i * 0.85 + "s", color: "#2A2E1C",
+          fontSize: 14.5, lineHeight: 1.55, margin: "0 0 14px", maxWidth: 340, fontWeight: 500 }}>{p}</p>
       ))}
-      <button className="btn-gold fade-seq" style={{ animationDelay: 0.5 + INTRO.length * 0.85 + "s", marginTop: 14 }}
-        onClick={onDone}>EMPIEZA TU HISTORIA</button>
-      <button className="linky fade-seq" style={{ animationDelay: 0.7 + INTRO.length * 0.85 + "s", textAlign: "center" }}
+      <button className="btn-gold fade-seq" style={{ animationDelay: 0.5 + INTRO.length * 0.85 + "s", marginTop: 14,
+        background: "#16190F", color: "#CDF546", boxShadow: "0 4px 0 rgba(20,23,14,.35)" }}
+        onClick={onDone}>EMPIEZA TU HISTORIA →</button>
+      <button className="linky fade-seq" style={{ animationDelay: 0.7 + INTRO.length * 0.85 + "s", textAlign: "center", color: "#16190F", textDecoration: "underline" }}
         onClick={() => setShowR(!showR)}>¿Ya tenías una partida? Restaurar respaldo</button>
       {showR && (
         <div className="pop-in" style={{ marginTop: 10 }}>
@@ -866,10 +869,10 @@ function ChoiceScreen({ offers, playerName, onSign }) {
             <Crest c1={o.club.c1} c2={o.club.c2} name={o.club.name} size={46} />
             <div style={{ flex: 1 }}>
               <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 17, letterSpacing: 0.5 }}>{o.club.name}</div>
-              <div style={{ fontSize: 11.5, color: "#8b95a3" }}>{o.club.city} · Tercera Federación</div>
+              <div style={{ fontSize: 11.5, color: "#6F7563" }}>{o.club.city} · Tercera Federación</div>
             </div>
           </div>
-          <p style={{ fontSize: 13, color: "#B9C2CD", margin: "10px 0 12px", lineHeight: 1.45 }}>{o.pitch}</p>
+          <p style={{ fontSize: 13, color: "#4A4E3F", margin: "10px 0 12px", lineHeight: 1.45 }}>{o.pitch}</p>
           <button className="btn-gold sm" onClick={() => onSign(o.club)}>✍️ FIRMAR CON {o.club.name.toUpperCase()}</button>
         </div>
       ))}
@@ -890,7 +893,7 @@ function SigningOverlay({ club, player, photo, crest, crestScale, onDone }) {
       {step === 0 && <div className="official-flash">OFICIAL</div>}
       {step >= 1 && (
         <div style={{ textAlign: "center" }} className="pop-in">
-          <div style={{ fontFamily: "'Oswald',sans-serif", letterSpacing: 5, fontSize: 12, color: "#C9A94E" }}>FICHAJE CONFIRMADO</div>
+          <div style={{ fontFamily: "'Oswald',sans-serif", letterSpacing: 5, fontSize: 12, color: "#CDF546" }}>FICHAJE CONFIRMADO</div>
           <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 34, color: "#F5EFDF", margin: "6px 0 16px", textTransform: "uppercase" }}>
             {club.name}</div>
           <div style={{ display: "flex", justifyContent: "center" }} className={step >= 2 ? "card-drop" : ""}
@@ -925,14 +928,14 @@ function MatchModal({ match, club, onFinish, crest, crestScale }) {
   const ga = shown.filter((e) => !e.good && e.text.includes("🥅")).length;
   return (
     <div className="overlay" style={{ background: "radial-gradient(ellipse at 50% 0%, #0E3320, #05070d 75%)", justifyContent: "flex-start", paddingTop: 60 }}>
-      <div className="eyebrow" style={{ textAlign: "center" }}>JORNADA {match.jornada} · EN VIVO</div>
+      <div className="eyebrow" style={{ textAlign: "center", color: "#CDF546" }}>JORNADA {match.jornada} · EN VIVO</div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 18, margin: "14px 0" }}>
         <Crest c1={club.c1} c2={club.c2} name={club.name} size={44} img={crest} imgScale={crestScale} />
         <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 44, color: "#F5EFDF" }}>
           {ended ? match.gf : gf} - {ended ? match.ga : ga}</div>
         <div style={{ width: 44, textAlign: "center", fontSize: 11, color: "#8b95a3" }}>{match.rival}</div>
       </div>
-      <div style={{ fontFamily: "'Oswald',sans-serif", color: "#3DDC84", textAlign: "center", fontSize: 18 }}>
+      <div style={{ fontFamily: "'Oswald',sans-serif", color: "#CDF546", textAlign: "center", fontSize: 18 }}>
         {ended ? "FINAL" : minute + "'"}</div>
       <div style={{ maxWidth: 340, margin: "18px auto 0", width: "100%", flex: 1, overflowY: "auto" }}>
         {shown.map((e, i) => (
@@ -940,14 +943,14 @@ function MatchModal({ match, club, onFinish, crest, crestScale }) {
             background: "rgba(255,255,255,.04)", fontSize: 13.5, color: "#DDE3EA" }}>
             <b style={{ fontFamily: "'Oswald',sans-serif", marginRight: 8 }}>{e.min}'</b>{e.text}
           </div>))}
-        {shown.length === 0 && <div style={{ textAlign: "center", color: "#5b6470", fontSize: 13, marginTop: 30 }}>El balón ya rueda…</div>}
+        {shown.length === 0 && <div style={{ textAlign: "center", color: "#8A8E7C", fontSize: 13, marginTop: 30 }}>El balón ya rueda…</div>}
       </div>
       {ended && (
         <div className="pop-in" style={{ textAlign: "center", padding: "14px 0 40px" }}>
-          <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 22, color: match.res === "V" ? "#3DDC84" : match.res === "E" ? "#C9A94E" : "#E14B4B" }}>
+          <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 22, color: match.res === "V" ? "#3DDC84" : match.res === "E" ? "#CDF546" : "#E14B4B" }}>
             {match.res === "V" ? "¡VICTORIA!" : match.res === "E" ? "EMPATE" : "DERROTA"}</div>
           {match.rating != null
-            ? <div style={{ color: "#B9C2CD", fontSize: 14, margin: "6px 0 14px" }}>Tu nota: <b style={{ color: "#E8C15A", fontSize: 18 }}>{match.rating}</b>
+            ? <div style={{ color: "#B9C2CD", fontSize: 14, margin: "6px 0 14px" }}>Tu nota: <b style={{ color: "#CDF546", fontSize: 18 }}>{match.rating}</b>
                 {match.myGoals ? ` · ${match.myGoals}⚽` : ""}{match.myAssists ? ` · ${match.myAssists}🅰️` : ""}</div>
             : <div style={{ color: "#8b95a3", fontSize: 13, margin: "6px 0 14px" }}>No jugaste: el míster te dejó fuera por tu mala forma.</div>}
           <button className="btn-gold" onClick={onFinish}>CONTINUAR</button>
@@ -973,7 +976,7 @@ function OfferBlock({ m, onOfferAction }) {
         <Crest c1={m.offer.club.c1} c2={m.offer.club.c2} name={m.offer.club.name} size={36} />
         <div>
           <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 15 }}>{m.offer.club.name} {m.offer.club.country || ""}</div>
-          <div style={{ fontSize: 11, color: "#8b95a3" }}>{m.offer.league} · Ficha: {fmtEUR(m.offer.salary)}/año</div>
+          <div style={{ fontSize: 11, color: "#6F7563" }}>{m.offer.league} · Ficha: {fmtEUR(m.offer.salary)}/año</div>
         </div>
       </div>
       {m.status === "pending" && (
@@ -981,8 +984,8 @@ function OfferBlock({ m, onOfferAction }) {
           <button className="btn-gold sm" style={{ flex: 1 }} onClick={() => onOfferAction(m.id, true)}>ACEPTAR ✍️</button>
           <button className="btn-ghost sm" style={{ flex: 1 }} onClick={() => onOfferAction(m.id, false)}>Rechazar</button>
         </div>)}
-      {m.status === "accepted" && <div style={{ marginTop: 8, color: "#3DDC84", fontSize: 12 }}>✓ Oferta aceptada</div>}
-      {m.status === "rejected" && <div style={{ marginTop: 8, color: "#8b95a3", fontSize: 12 }}>✕ Oferta rechazada — lealtad al club</div>}
+      {m.status === "accepted" && <div style={{ marginTop: 8, color: "#2E9E44", fontSize: 12, fontWeight: 600 }}>✓ Oferta aceptada</div>}
+      {m.status === "rejected" && <div style={{ marginTop: 8, color: "#6F7563", fontSize: 12 }}>✕ Oferta rechazada — lealtad al club</div>}
     </>
   );
 }
@@ -1005,7 +1008,7 @@ function ChatTab({ game, onOfferAction, onRead }) {
     return (
       <div style={{ padding: "16px 12px 90px" }}>
         <div className="eyebrow" style={{ padding: "0 4px" }}>MENSAJES</div>
-        {rows.length === 0 && <div style={{ color: "#5b6470", fontSize: 13, marginTop: 20, padding: "0 4px" }}>
+        {rows.length === 0 && <div style={{ color: "#6F7563", fontSize: 13, marginTop: 20, padding: "0 4px" }}>
           Aún no hay mensajes. Juega partidos y progresa: el mundo empezará a hablar de ti.</div>}
         {rows.map((cid) => {
           const meta = CHAT_META[cid], list = byChat[cid], last = list[list.length - 1];
@@ -1017,10 +1020,10 @@ function ChatTab({ game, onOfferAction, onRead }) {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
                   <span className="chat-name">{meta.title(game)}</span>
-                  <span className="chat-time" style={n > 0 ? { color: "#E8C15A" } : {}}>{last.d ? dayLabel(last.d) + " · " : ""}{last.time}</span>
+                  <span className="chat-time" style={n > 0 ? { color: "#16190F", fontWeight: 700 } : {}}>{last.d ? dayLabel(last.d) + " · " : ""}{last.time}</span>
                 </div>
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <span className="chat-prev" style={n > 0 ? { color: "#DDE3EA" } : {}}>{preview}</span>
+                  <span className="chat-prev" style={n > 0 ? { color: "#16190F", fontWeight: 600 } : {}}>{preview}</span>
                   {n > 0 && <span className="chat-badge">{n}</span>}
                 </div>
               </div>
@@ -1054,7 +1057,7 @@ function ChatTab({ game, onOfferAction, onRead }) {
               <div className="wtime">{m.time}</div>
             </div>
           </div>))}
-        {list.length === 0 && <div style={{ color: "#5b6470", fontSize: 13, marginTop: 20 }}>Sin mensajes todavía.</div>}
+        {list.length === 0 && <div style={{ color: "#6F7563", fontSize: 13, marginTop: 20 }}>Sin mensajes todavía.</div>}
         <div ref={endRef} />
       </div>
     </div>
@@ -1075,13 +1078,13 @@ function MonthCal({ game, logDate, onPick }) {
   const colorOf = (ds) => {
     const l = game.logs[ds];
     if (!l) return "transparent";
-    if (!l.closed) return ds <= today ? "rgba(232,193,90,.25)" : "transparent";
-    return l.form === "alza" || l.form === "buen" ? "rgba(61,220,132,.4)" : l.form === "est" ? "rgba(232,193,90,.4)" : "rgba(255,90,90,.4)";
+    if (!l.closed) return ds <= today ? "rgba(205,245,70,.6)" : "transparent";
+    return l.form === "alza" || l.form === "buen" ? "rgba(46,158,68,.35)" : l.form === "est" ? "rgba(176,137,0,.3)" : "rgba(217,72,59,.35)";
   };
   return (
     <div className="panel" style={{ marginTop: 10 }}>
       <div className="ptitle">📅 {["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"][m - 1]} {y}</div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4, fontSize: 10, color: "#5b6470", textAlign: "center", marginBottom: 4 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4, fontSize: 10, color: "#9a9e8e", textAlign: "center", marginBottom: 4 }}>
         {["L","M","X","J","V","S","D"].map((d, i) => <div key={i}>{d}</div>)}
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4 }}>
@@ -1089,14 +1092,14 @@ function MonthCal({ game, logDate, onPick }) {
           <div key={i} onClick={() => onPick(ds)} style={{
             aspectRatio: "1", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center",
             fontSize: 12, fontFamily: "'Oswald',sans-serif", background: colorOf(ds),
-            color: ds > today ? "#3a424e" : "#DDE3EA",
-            border: ds === logDate ? "1.5px solid #E8C15A" : ds === today ? "1px solid rgba(255,255,255,.25)" : "1px solid transparent",
+            color: ds > today ? "#c6c9b8" : "#16190F",
+            border: ds === logDate ? "1.5px solid #16190F" : ds === today ? "1px solid rgba(20,23,14,.35)" : "1px solid transparent",
             cursor: (ds === today || (ds === yesterday && game.logs[yesterday] && !game.logs[yesterday].closed)) ? "pointer" : "default",
             opacity: ds > today ? 0.4 : 1 }}>
             {+ds.slice(8)}
           </div>))}
       </div>
-      <div style={{ fontSize: 10.5, color: "#5b6470", marginTop: 8, lineHeight: 1.6 }}>
+      <div style={{ fontSize: 10.5, color: "#6F7563", marginTop: 8, lineHeight: 1.6 }}>
         🟢 Buen día · 🟡 Estancado · 🔴 En caída · Solo hoy y ayer (si está abierto) son editables
       </div>
     </div>);
@@ -1143,8 +1146,8 @@ function LogTab({ game, log, onLog, logDate, onDate, onCloseDay, savedMeals, onS
   const Bar = ({ val, goal, color, label, unit }) => (
     <div style={{ marginBottom: 10 }}>
       <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 3 }}>
-        <span style={{ color: "#B9C2CD" }}>{label}</span>
-        <span style={{ fontFamily: "'Oswald',sans-serif", color: val >= goal ? "#3DDC84" : "#DDE3EA" }}>{Math.round(val)} / {goal} {unit}</span>
+        <span style={{ color: "#4A4E3F", fontWeight: 500 }}>{label}</span>
+        <span style={{ fontFamily: "'Oswald',sans-serif", color: val >= goal ? "#3F8F2B" : "#16190F" }}>{Math.round(val)} / {goal} {unit}</span>
       </div>
       <div className="track"><div className="fill" style={{ width: Math.min(100, (val / goal) * 100) + "%", background: color }} /></div>
     </div>);
@@ -1170,12 +1173,12 @@ function LogTab({ game, log, onLog, logDate, onDate, onCloseDay, savedMeals, onS
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
           <span style={{ fontFamily: "'Oswald',sans-serif", fontSize: 15 }}>Progreso del día · {pct}%</span>
           <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontSize: 10, color: "#5b6470", textTransform: "uppercase", letterSpacing: .5 }}>proyección</span>
+            <span style={{ fontSize: 10, color: "#9a9e8e", textTransform: "uppercase", letterSpacing: .5 }}>proyección</span>
             <FormBadge form={form} />
           </span>
         </div>
-        <Bar val={log.kcal} goal={g.kcal} color="#E8C15A" label="Calorías" unit="kcal" />
-        <Bar val={log.prot} goal={g.protein} color="#3DDC84" label="Proteína" unit="g" />
+        <Bar val={log.kcal} goal={g.kcal} color="#CDF546" label="Calorías" unit="kcal" />
+        <Bar val={log.prot} goal={g.protein} color="#16190F" label="Proteína" unit="g" />
       </div>
 
       <div className="panel">
@@ -1191,7 +1194,7 @@ function LogTab({ game, log, onLog, logDate, onDate, onCloseDay, savedMeals, onS
           <button className="btn-gold sm" style={{ minWidth: 56 }} onClick={addAI} disabled={loading}>
             {loading ? "…" : "✨ IA"}</button>
           <button className="btn-ghost sm" style={{ minWidth: 74, whiteSpace: "nowrap",
-            ...(manual ? { borderColor: "#E8C15A", color: "#E8C15A" } : {}) }}
+            ...(manual ? { background: "#16190F", color: "#CDF546", borderColor: "#16190F" } : {}) }}
             onClick={() => setManual(!manual)}>✏️ Manual</button>
         </div>
         {err && <div style={{ color: "#E14B4B", fontSize: 12, marginTop: 6 }}>{err}</div>}
@@ -1205,9 +1208,9 @@ function LogTab({ game, log, onLog, logDate, onDate, onCloseDay, savedMeals, onS
         {log.meals.length > 0 && (
           <div style={{ marginTop: 12 }}>
             {log.meals.map((m, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, padding: "6px 0", borderTop: "1px solid rgba(255,255,255,.06)" }}>
-                <span style={{ flex: 1, color: "#DDE3EA" }}>{m.name}</span>
-                <span style={{ color: "#8b95a3" }}>{m.kcal} kcal · {m.prot}g</span>
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, padding: "6px 0", borderTop: "1px solid rgba(20,23,14,.08)" }}>
+                <span style={{ flex: 1, color: "#26291D" }}>{m.name}</span>
+                <span style={{ color: "#6F7563" }}>{m.kcal} kcal · {m.prot}g</span>
                 <button className="linky" style={{ margin: 0 }} onClick={() => onSaveMeal(m)}>💾</button>
                 <button className="linky" style={{ margin: 0, color: "#E14B4B" }} onClick={() => removeMeal(i)}>✕</button>
               </div>))}
@@ -1260,18 +1263,18 @@ function LeagueTab({ game, onPlayMatch, crest, crestScale }) {
     <div style={{ padding: "16px 16px 96px" }}>
       <div className="eyebrow">TEMPORADA {s.num} · {game.tier.league}</div>
       <div className="panel" style={{ marginTop: 10, textAlign: "center" }}>
-        <div style={{ fontSize: 12, color: "#8b95a3" }}>JORNADA {Math.min(s.matchday + 1, SEASON_LENGTH)} / {SEASON_LENGTH}</div>
+        <div style={{ fontSize: 12, color: "#6F7563" }}>JORNADA {Math.min(s.matchday + 1, SEASON_LENGTH)} / {SEASON_LENGTH}</div>
         <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 16, margin: "10px 0" }}>
           <Crest c1={game.club.c1} c2={game.club.c2} name={game.club.name} size={40} img={crest} imgScale={crestScale} />
-          <span style={{ fontFamily: "'Oswald',sans-serif", fontSize: 18, color: "#F5EFDF" }}>VS</span>
-          <div style={{ width: 60, fontSize: 12, color: "#B9C2CD" }}>{s.matchday < SEASON_LENGTH ? nextRival : "—"}</div>
+          <span style={{ fontFamily: "'Oswald',sans-serif", fontSize: 18, color: "#16190F" }}>VS</span>
+          <div style={{ width: 60, fontSize: 12, color: "#4A4E3F" }}>{s.matchday < SEASON_LENGTH ? nextRival : "—"}</div>
         </div>
         {s.matchday >= SEASON_LENGTH ? (
-          <div style={{ color: "#C9A94E", fontSize: 13 }}>Temporada finalizada. Revisa tus mensajes 📬</div>
+          <div style={{ color: "#5C7010", fontSize: 13, fontWeight: 600 }}>Temporada finalizada. Revisa tus mensajes 📬</div>
         ) : matchDue ? (
           <button className="btn-gold" onClick={onPlayMatch}>⚽ JUGAR PARTIDO</button>
         ) : (
-          <div style={{ color: "#8b95a3", fontSize: 13 }}>
+          <div style={{ color: "#6F7563", fontSize: 13 }}>
             Próximo partido: {matchDateFor(s, s.matchday)}<br />
             <span style={{ fontSize: 12 }}>Trabaja fuerte hoy: llegarás al partido con mejor forma.</span></div>
         )}
@@ -1279,9 +1282,9 @@ function LeagueTab({ game, onPlayMatch, crest, crestScale }) {
       <div className="panel">
         <div className="ptitle">📊 Clasificación · vas {myPos}º</div>
         {table.map((t, i) => (
-          <div key={t.name} style={{ display: "flex", padding: "6px 4px", fontSize: 13, background: t.me ? "rgba(232,193,90,.1)" : "transparent",
-            borderRadius: 6, color: t.me ? "#E8C15A" : "#DDE3EA", fontWeight: t.me ? 600 : 400 }}>
-            <span style={{ width: 24, color: "#8b95a3" }}>{i + 1}</span>
+          <div key={t.name} style={{ display: "flex", padding: "7px 8px", fontSize: 13, background: t.me ? "#CDF546" : "transparent",
+            borderRadius: 10, color: t.me ? "#16190F" : "#33362B", fontWeight: t.me ? 700 : 400 }}>
+            <span style={{ width: 24, color: t.me ? "#16190F" : "#9a9e8e" }}>{i + 1}</span>
             <span style={{ flex: 1 }}>{t.name}</span>
             <span style={{ fontFamily: "'Oswald',sans-serif" }}>{t.pts} pts</span>
           </div>))}
@@ -1290,11 +1293,11 @@ function LeagueTab({ game, onPlayMatch, crest, crestScale }) {
         <div className="panel">
           <div className="ptitle">📼 Últimos partidos</div>
           {game.matchHistory.slice(-5).reverse().map((m, i) => (
-            <div key={i} style={{ display: "flex", gap: 8, fontSize: 12.5, padding: "5px 0", color: "#B9C2CD" }}>
-              <span style={{ color: m.res === "V" ? "#3DDC84" : m.res === "E" ? "#C9A94E" : "#E14B4B", fontFamily: "'Oswald',sans-serif", width: 14 }}>{m.res}</span>
+            <div key={i} style={{ display: "flex", gap: 8, fontSize: 12.5, padding: "5px 0", color: "#4A4E3F" }}>
+              <span style={{ color: m.res === "V" ? "#2E9E44" : m.res === "E" ? "#B08900" : "#D9483B", fontFamily: "'Oswald',sans-serif", width: 14 }}>{m.res}</span>
               <span style={{ flex: 1 }}>J{m.jornada} vs {m.rival}</span>
               <span>{m.gf}-{m.ga}</span>
-              <span style={{ color: "#E8C15A" }}>{m.rating != null ? m.rating : "🪑"}</span>
+              <span style={{ color: "#16190F", fontWeight: 700 }}>{m.rating != null ? m.rating : "🪑"}</span>
             </div>))}
         </div>)}
     </div>
@@ -1324,7 +1327,7 @@ function HomeTab({ game, photo, log, crest, crestScale }) {
         <div className="track"><div className="fill" style={{ width: Math.min(100, pct) + "%",
           background: FORM_META[formFromPct(pct)].color }} /></div>
         <div style={{ marginTop: 8, textAlign: "center" }}><FormBadge form={formFromPct(pct)} size={13} /></div>
-        <div style={{ fontSize: 11.5, color: "#8b95a3", textAlign: "center", marginTop: 4 }}>
+        <div style={{ fontSize: 11.5, color: "#6F7563", textAlign: "center", marginTop: 4 }}>
           Al cerrar el día, tu forma decide cuánta XP ganas y si juegas el próximo partido.</div>
       </div>
       <div className="panel">
@@ -1332,11 +1335,11 @@ function HomeTab({ game, photo, log, crest, crestScale }) {
         {STAT_KEYS.map((k) => (
           <div key={k} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
             <span style={{ fontFamily: "'Oswald',sans-serif", width: 34, fontSize: 13 }}>{k}</span>
-            <span style={{ fontFamily: "'Oswald',sans-serif", width: 24, fontSize: 14, color: "#E8C15A" }}>{p.stats[k]}</span>
+            <span style={{ fontFamily: "'Oswald',sans-serif", width: 24, fontSize: 14, color: "#16190F", fontWeight: 700 }}>{p.stats[k]}</span>
             <div className="track" style={{ flex: 1 }}>
-              <div className="fill" style={{ width: Math.min(100, ((p.xp[k] || 0) / xpToNext(p.stats[k])) * 100) + "%", background: "#3DDC84" }} />
+              <div className="fill" style={{ width: Math.min(100, ((p.xp[k] || 0) / xpToNext(p.stats[k])) * 100) + "%", background: "#CDF546" }} />
             </div>
-            <span style={{ fontSize: 10, color: "#5b6470", width: 56, textAlign: "right" }}>{p.xp[k] || 0}/{xpToNext(p.stats[k])} XP</span>
+            <span style={{ fontSize: 10, color: "#9a9e8e", width: 56, textAlign: "right" }}>{p.xp[k] || 0}/{xpToNext(p.stats[k])} XP</span>
           </div>))}
       </div>
     </div>
@@ -1355,9 +1358,9 @@ function BackupPanel({ getBackup, onRestore }) {
     catch (e) { setManual(t); }
   };
   return (
-    <div className="panel" style={{ borderColor: "rgba(232,193,90,.3)" }}>
+    <div className="panel" style={{ borderColor: "#B8E02E", borderWidth: 2 }}>
       <div className="ptitle">💾 Copia de seguridad</div>
-      <div style={{ fontSize: 12, color: "#8b95a3", marginBottom: 10, lineHeight: 1.5 }}>
+      <div style={{ fontSize: 12, color: "#6F7563", marginBottom: 10, lineHeight: 1.5 }}>
         Copia tu partida como texto y guárdala donde quieras (notas, un chat contigo…). Si la app se resetea,
         pégala en "Restaurar" (o en la pantalla inicial) y recuperas todo: stats, temporada, mensajes y foto.
         Hazlo al final de cada día por seguridad.</div>
@@ -1367,7 +1370,7 @@ function BackupPanel({ getBackup, onRestore }) {
       </div>
       {manual && (
         <div style={{ marginTop: 8 }}>
-          <div style={{ fontSize: 11.5, color: "#C9A94E", marginBottom: 4 }}>Copia manualmente este texto (mantén pulsado → seleccionar todo):</div>
+          <div style={{ fontSize: 11.5, color: "#5C7010", marginBottom: 4 }}>Copia manualmente este texto (mantén pulsado → seleccionar todo):</div>
           <textarea className="inp" rows={4} readOnly value={manual} onFocus={(e) => e.target.select()} />
         </div>)}
       {show && (
@@ -1420,11 +1423,12 @@ function ProfileTab({ game, photo, onWeight, onPhoto, onRemovePhoto, crest, onCr
           <div style={{ display: "flex", gap: 4, alignItems: "flex-end", height: 60, marginTop: 12 }}>
             {wl.slice(-10).map((w, i) => {
               const min = Math.min(...wl.map((x) => x.kg)) - 1, max = Math.max(...wl.map((x) => x.kg)) + 1;
-              return <div key={i} title={w.kg} style={{ flex: 1, background: "#3DDC84", opacity: 0.5 + 0.5 * (i / 10), borderRadius: 3,
+              return <div key={i} title={w.kg} style={{ flex: 1, background: "#CDF546", border: "1px solid #16190F",
+                opacity: 0.55 + 0.45 * (i / 10), borderRadius: 5, boxSizing: "border-box",
                 height: Math.max(8, ((w.kg - min) / (max - min)) * 56) }} />;
             })}
           </div>)}
-        {wl.length > 0 && <div style={{ fontSize: 11.5, color: "#8b95a3", marginTop: 6 }}>
+        {wl.length > 0 && <div style={{ fontSize: 11.5, color: "#6F7563", marginTop: 6 }}>
           Último: {wl[wl.length - 1].kg} kg ({wl[wl.length - 1].d}) · {(wl[wl.length - 1].kg - p.weight0) >= 0 ? "+" : ""}{(wl[wl.length - 1].kg - p.weight0).toFixed(1)} kg totales</div>}
       </div>
       <div className="panel">
@@ -1439,7 +1443,7 @@ function ProfileTab({ game, photo, onWeight, onPhoto, onRemovePhoto, crest, onCr
       </div>
       <div className="panel">
         <div className="ptitle">🛡️ Escudo del club</div>
-        <div style={{ fontSize: 12, color: "#8b95a3", marginBottom: 10, lineHeight: 1.5 }}>
+        <div style={{ fontSize: 12, color: "#6F7563", marginBottom: 10, lineHeight: 1.5 }}>
           Sube el escudo real del {game.club.name} para verlo en tu carta, en la cabecera y en los partidos.</div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <label className="btn-ghost filebtn">{crest ? "Cambiar escudo" : "Subir escudo"}
@@ -1455,18 +1459,18 @@ function ProfileTab({ game, photo, onWeight, onPhoto, onRemovePhoto, crest, onCr
                 <button key={lbl} className={"chip" + (Math.abs((crestScale || 1) - v) < 0.01 ? " on" : "")}
                   onClick={() => onCrestScale(v)}>{lbl} · {Math.round(v * 100)}%</button>))}
             </div>
-            <div style={{ fontSize: 11.5, color: "#5b6470" }}>
+            <div style={{ fontSize: 11.5, color: "#9a9e8e" }}>
               Ajústalo si tu PNG se ve pequeño o se sale de su hueco. No afecta al resto de la carta.</div>
           </div>)}
         <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10 }}>
           <Crest c1={game.club.c1} c2={game.club.c2} name={game.club.name} size={48} img={crest} imgScale={crestScale} />
-          <span style={{ fontSize: 11.5, color: "#5b6470" }}>Vista previa</span>
+          <span style={{ fontSize: 11.5, color: "#9a9e8e" }}>Vista previa</span>
         </div>
       </div>
       <div className="panel">
         <div className="ptitle">🎯 Objetivos {edit ? "" : <button className="linky" style={{ margin: 0, float: "right" }} onClick={() => setEdit(true)}>Editar</button>}</div>
         {!edit ? (
-          <div style={{ fontSize: 13, color: "#B9C2CD", lineHeight: 1.7 }}>
+          <div style={{ fontSize: 13, color: "#4A4E3F", lineHeight: 1.7 }}>
             {p.goals.kcal} kcal · {p.goals.protein}g proteína · {p.goals.sleepGoal}h sueño<br />
             Gym: {DOW.filter((d) => p.goals.gymDays.includes(d.v)).map((d) => d.l).join(" ")}<br />
             Hábitos: {p.goals.habits.join(", ") || "—"}
@@ -1489,7 +1493,7 @@ function ProfileTab({ game, photo, onWeight, onPhoto, onRemovePhoto, crest, onCr
             <div className="inplbl" style={{ marginTop: 10 }}>Hábitos extra (opcionales, +6 XP MEN c/u)</div>
             {g.habits.map((h, i) => (
               <div key={i} style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 5 }}>
-                <div style={{ flex: 1, fontSize: 13, color: "#B9C2CD", background: "#141a22", borderRadius: 8, padding: "8px 10px" }}>{h}</div>
+                <div style={{ flex: 1, fontSize: 13, color: "#33362B", background: "#F0EFE5", borderRadius: 10, padding: "8px 10px" }}>{h}</div>
                 <button className="chip" onClick={() => setG({ ...g, habits: g.habits.filter((_, j) => j !== i) })}>✕</button>
               </div>))}
             <div style={{ display: "flex", gap: 6 }}>
@@ -1504,8 +1508,8 @@ function ProfileTab({ game, photo, onWeight, onPhoto, onRemovePhoto, crest, onCr
       <div className="panel">
         <div className="ptitle">🏆 Trayectoria</div>
         {game.careerLog.map((c, i) => (
-          <div key={i} style={{ fontSize: 13, color: "#B9C2CD", padding: "5px 0" }}>
-            <span style={{ color: "#E8C15A", fontFamily: "'Oswald',sans-serif", marginRight: 8 }}>T{c.season}</span>{c.text}
+          <div key={i} style={{ fontSize: 13, color: "#4A4E3F", padding: "5px 0" }}>
+            <span style={{ color: "#5C7010", fontFamily: "'Oswald',sans-serif", fontWeight: 700, marginRight: 8 }}>T{c.season}</span>{c.text}
           </div>))}
       </div>
     </div>
@@ -1839,7 +1843,7 @@ export default function App() {
         <div className="ball">⚽</div>
         <div className="ball-shadow" />
       </div>
-      <div style={{ color: "#C9A94E", fontFamily: "'Oswald',sans-serif", letterSpacing: 4, fontSize: 15 }}>FUTABITA 3.1</div>
+      <div style={{ color: "#16190F", fontFamily: "'Oswald',sans-serif", letterSpacing: 4, fontSize: 15 }}>FUTABITA 3.1</div>
     </div>);
 
   const unreadTotal = Object.values(game.unreadBy || {}).reduce((a, b) => a + (b || 0), 0);
@@ -1857,7 +1861,7 @@ export default function App() {
             <Crest c1={game.club.c1} c2={game.club.c2} name={game.club.name} size={30} img={crest} imgScale={crestScale} />
             <div>
               <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 14, letterSpacing: 0.5 }}>{game.club.name}</div>
-              <div style={{ fontSize: 10.5, color: "#8b95a3" }}>{game.tier.league} · Temporada {game.season.num}</div>
+              <div style={{ fontSize: 10.5, color: "#6F7563" }}>{game.tier.league} · Temporada {game.season.num}</div>
             </div>
             <div style={{ marginLeft: "auto" }}><FormBadge form={game.player.form} /></div>
           </header>
@@ -1893,89 +1897,92 @@ function StyleTag() {
   return (
     <style>{`
       @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;700&family=Barlow:wght@400;500;600&display=swap');
-      .app-root { min-height: 100vh; background: #070A12; color: #DDE3EA; font-family: 'Barlow', system-ui, sans-serif;
+      .app-root { min-height: 100vh; background: #EFEEE3; color: #16190F; font-family: 'Barlow', system-ui, sans-serif;
         max-width: 480px; margin: 0 auto; position: relative; }
       .screen { min-height: 100vh; }
       .intro-bg { background:
-        radial-gradient(ellipse 90% 50% at 50% -10%, rgba(232,193,90,.14), transparent),
-        radial-gradient(ellipse 70% 40% at 80% 110%, rgba(14,107,58,.25), transparent), #070A12; }
-      .eyebrow { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:4px; color:#C9A94E; }
-      .h2 { font-family:'Oswald',sans-serif; font-size:28px; color:#F5EFDF; margin:6px 0 18px; text-transform:uppercase; }
-      .lbl { display:block; font-size:12px; color:#8b95a3; margin:12px 0 5px; }
-      .inp { width:100%; box-sizing:border-box; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.12);
-        color:#F5EFDF; border-radius:8px; padding:11px 12px; font-size:14px; margin-bottom:6px; font-family:'Barlow',sans-serif; }
-      .inplbl { font-size:10.5px; color:#8b95a3; text-transform:uppercase; letter-spacing:.8px; margin-bottom:4px; font-family:'Oswald',sans-serif; }
-      .pendbar { margin-top:10px; background:rgba(232,193,90,.12); border:1px solid rgba(232,193,90,.35); color:#E8C15A;
-        border-radius:10px; padding:10px 12px; font-size:12.5px; cursor:pointer; }
-      .inp:focus { outline:2px solid #E8C15A; outline-offset:1px; }
+        radial-gradient(ellipse 80% 45% at 15% -5%, rgba(255,255,255,.35), transparent),
+        radial-gradient(ellipse 70% 40% at 90% 110%, rgba(20,23,14,.16), transparent), #CDF546; }
+      .eyebrow { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:4px; color:#7A7F62; }
+      .h2 { font-family:'Oswald',sans-serif; font-size:28px; color:#16190F; margin:6px 0 18px; text-transform:uppercase; }
+      .lbl { display:block; font-size:12px; color:#6F7563; margin:12px 0 5px; }
+      .inp { width:100%; box-sizing:border-box; background:#FFFFFF; border:1.5px solid rgba(20,23,14,.14);
+        color:#16190F; border-radius:12px; padding:11px 12px; font-size:14px; margin-bottom:6px; font-family:'Barlow',sans-serif; }
+      .inplbl { font-size:10.5px; color:#7A7F62; text-transform:uppercase; letter-spacing:.8px; margin-bottom:4px; font-family:'Oswald',sans-serif; }
+      .pendbar { margin-top:10px; background:#CDF546; border:1.5px solid #16190F; color:#16190F;
+        border-radius:14px; padding:10px 12px; font-size:12.5px; font-weight:600; cursor:pointer; }
+      .inp:focus { outline:2px solid #16190F; outline-offset:1px; }
       .chips { display:flex; flex-wrap:wrap; gap:7px; margin:4px 0 8px; }
-      .chip { background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.14); color:#B9C2CD;
+      .chip { background:#FFFFFF; border:1.5px solid rgba(20,23,14,.16); color:#3A3E30;
         border-radius:20px; padding:7px 13px; font-size:12.5px; font-family:'Barlow',sans-serif; cursor:pointer; }
       .chip.big { padding:10px 15px; font-size:13.5px; }
-      .chip.on { background:rgba(232,193,90,.16); border-color:#E8C15A; color:#E8C15A; font-weight:600; }
-      .btn-gold { display:block; width:100%; background:linear-gradient(135deg,#E8C15A,#B8892E); color:#1c1204;
-        border:none; border-radius:10px; padding:14px; font-family:'Oswald',sans-serif; font-size:15px; letter-spacing:2px;
-        cursor:pointer; box-shadow:0 4px 18px rgba(232,193,90,.25); }
-      .btn-gold.sm { padding:10px; font-size:13px; letter-spacing:1px; width:auto; }
-      .btn-gold:focus, .btn-ghost:focus, .chip:focus, .tabbtn:focus { outline:2px solid #E8C15A; outline-offset:2px; }
-      .btn-ghost { background:transparent; border:1px solid rgba(255,255,255,.2); color:#B9C2CD; border-radius:10px;
-        padding:11px 14px; font-size:13px; cursor:pointer; font-family:'Barlow',sans-serif; }
+      .chip.on { background:#16190F; border-color:#16190F; color:#CDF546; font-weight:600; }
+      .btn-gold { display:block; width:100%; background:#CDF546; color:#16190F;
+        border:1.5px solid #16190F; border-radius:16px; padding:14px; font-family:'Oswald',sans-serif; font-size:15px; letter-spacing:2px;
+        font-weight:600; cursor:pointer; box-shadow:0 4px 0 #16190F; }
+      .btn-gold:active { transform:translateY(2px); box-shadow:0 2px 0 #16190F; }
+      .btn-gold.sm { padding:10px; font-size:13px; letter-spacing:1px; width:auto; box-shadow:0 3px 0 #16190F; }
+      .btn-gold:focus, .btn-ghost:focus, .chip:focus, .tabbtn:focus { outline:2px solid #16190F; outline-offset:2px; }
+      .btn-ghost { background:#FFFFFF; border:1.5px solid rgba(20,23,14,.25); color:#16190F; border-radius:14px;
+        padding:11px 14px; font-size:13px; cursor:pointer; font-family:'Barlow',sans-serif; font-weight:500; }
       .btn-ghost.sm { padding:9px; }
       .filebtn { display:inline-block; position:relative; overflow:hidden; cursor:pointer; }
       .fileinp { position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; font-size:0; }
-      .linky { background:none; border:none; color:#9CC3E5; font-size:12px; cursor:pointer; padding:0; margin-top:8px; display:inline-block; }
-      .panel { background:rgba(255,255,255,.035); border:1px solid rgba(255,255,255,.07); border-radius:14px;
+      .linky { background:none; border:none; color:#5C7010; font-size:12px; font-weight:600; cursor:pointer; padding:0; margin-top:8px; display:inline-block; }
+      .panel { background:#FDFDF8; border:1.5px solid rgba(20,23,14,.1); border-radius:20px;
         padding:14px; margin-top:12px; }
-      .ptitle { font-family:'Oswald',sans-serif; font-size:14px; letter-spacing:.5px; color:#F5EFDF; margin-bottom:10px; }
-      .track { height:8px; background:rgba(255,255,255,.08); border-radius:6px; overflow:hidden; }
-      .fill { height:100%; border-radius:6px; transition:width .5s ease; }
-      .stat-box { background:rgba(255,255,255,.035); border:1px solid rgba(255,255,255,.07); border-radius:12px;
-        padding:10px 6px; text-align:center; }
-      .sb-num { font-family:'Oswald',sans-serif; font-size:16px; color:#E8C15A; }
-      .sb-lbl { font-size:9.5px; color:#8b95a3; margin-top:2px; }
-      .bubble { background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); border-radius:4px 14px 14px 14px;
-        padding:11px 13px; font-size:13.5px; line-height:1.5; color:#DDE3EA; }
-      .bubble.coach { border-left:3px solid #3DDC84; }
-      .bubble.agent { border-left:3px solid #9CC3E5; }
-      .bubble.cap { border-left:3px solid #E8825A; }
-      .bubble.press { border-left:3px solid #C9A94E; background:rgba(201,169,78,.06); font-style:italic; }
+      .ptitle { font-family:'Oswald',sans-serif; font-size:14px; letter-spacing:.5px; color:#16190F; margin-bottom:10px; }
+      .track { height:14px; background:#E4E3D5; border-radius:999px; overflow:hidden; padding:3px; box-sizing:border-box; }
+      .fill { height:100%; border-radius:999px; transition:width .5s ease; }
+      .stat-box { background:#FDFDF8; border:1.5px solid rgba(20,23,14,.1); border-radius:16px;
+        padding:12px 6px; text-align:center; }
+      .sb-num { font-family:'Oswald',sans-serif; font-size:17px; color:#16190F; }
+      .sb-lbl { font-size:9.5px; color:#7A7F62; margin-top:3px; }
+      .bubble { background:#FFFFFF; border:1.5px solid rgba(20,23,14,.12); border-radius:4px 16px 16px 16px;
+        padding:11px 13px; font-size:13.5px; line-height:1.5; color:#26291D; }
+      .bubble.coach { border-left:3px solid #1F8A3B; }
+      .bubble.agent { border-left:3px solid #2E6ED6; }
+      .bubble.cap { border-left:3px solid #D65A2E; }
+      .bubble.press { border-left:3px solid #A87900; background:#FBF9EE; font-style:italic; }
       .bubble.press .bfrom { font-style:normal; }
-      .bubble.offer { border-left:3px solid #E8C15A; background:rgba(232,193,90,.07); }
-      .bfrom { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:1px; color:#C9A94E; margin-bottom:5px; text-transform:uppercase; }
-      .offer-card { border:1px solid; border-radius:14px; padding:14px; margin-bottom:14px; background:rgba(255,255,255,.03); }
+      .bubble.offer { border-left:3px solid #9DBF17; background:#F7FBE4; }
+      .bfrom { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:1px; color:#7A7F62; margin-bottom:5px; text-transform:uppercase; }
+      .offer-card { border:1.5px solid; border-radius:20px; padding:14px; margin-bottom:14px; background:#FDFDF8; }
       /* --- chat estilo mensajería --- */
-      .chat-row { display:flex; gap:12px; align-items:center; padding:11px 8px; border-bottom:1px solid rgba(255,255,255,.05);
-        cursor:pointer; border-radius:12px; }
-      .chat-row:active { background:rgba(255,255,255,.05); }
+      .chat-row { display:flex; gap:12px; align-items:center; padding:12px 10px; margin-bottom:8px;
+        cursor:pointer; border-radius:18px; background:#FDFDF8; border:1.5px solid rgba(20,23,14,.1); }
+      .chat-row:active { background:#F3F3E8; }
       .chat-ava { border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-      .chat-name { font-family:'Oswald',sans-serif; font-size:14.5px; letter-spacing:.4px; color:#F5EFDF;
+      .chat-name { font-family:'Oswald',sans-serif; font-size:14.5px; letter-spacing:.4px; color:#16190F;
         white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-      .chat-time { font-size:10.5px; color:#5b6470; flex-shrink:0; margin-left:8px; }
-      .chat-prev { flex:1; min-width:0; font-size:12.5px; color:#8b95a3; white-space:nowrap; overflow:hidden;
+      .chat-time { font-size:10.5px; color:#9a9e8e; flex-shrink:0; margin-left:8px; }
+      .chat-prev { flex:1; min-width:0; font-size:12.5px; color:#7A7F62; white-space:nowrap; overflow:hidden;
         text-overflow:ellipsis; margin-top:2px; }
-      .chat-badge { background:#E8C15A; color:#1c1204; font-size:10.5px; font-weight:700; border-radius:10px;
-        padding:1px 7px; flex-shrink:0; }
+      .chat-badge { background:#CDF546; color:#16190F; font-size:10.5px; font-weight:700; border-radius:10px;
+        border:1px solid #16190F; padding:1px 7px; flex-shrink:0; }
       .chat-head { position:sticky; top:0; z-index:30; display:flex; gap:10px; align-items:center;
-        padding:10px 12px; background:rgba(7,10,18,.96); backdrop-filter:blur(8px); border-bottom:1px solid rgba(255,255,255,.08); }
-      .chat-back { background:none; border:none; color:#E8C15A; font-size:22px; cursor:pointer; padding:2px 8px 2px 2px; line-height:1; }
-      .chat-sub { font-size:10.5px; color:#8b95a3; }
-      .wbubble { position:relative; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.09);
-        border-radius:4px 14px 14px 14px; padding:9px 12px 18px; font-size:13.5px; line-height:1.5; color:#DDE3EA;
+        padding:10px 12px; background:rgba(239,238,227,.96); backdrop-filter:blur(8px); border-bottom:1.5px solid rgba(20,23,14,.1); }
+      .chat-back { background:#FFFFFF; border:1.5px solid rgba(20,23,14,.2); border-radius:50%; width:34px; height:34px;
+        color:#16190F; font-size:17px; cursor:pointer; line-height:1; flex-shrink:0; }
+      .chat-sub { font-size:10.5px; color:#7A7F62; }
+      .wbubble { position:relative; background:#FFFFFF; border:1.5px solid rgba(20,23,14,.12);
+        border-radius:4px 16px 16px 16px; padding:9px 12px 18px; font-size:13.5px; line-height:1.5; color:#26291D;
         margin-bottom:10px; max-width:88%; }
       .wfrom { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:.8px; margin-bottom:3px; text-transform:uppercase; }
-      .wtime { position:absolute; right:10px; bottom:4px; font-size:9.5px; color:#5b6470; }
+      .wtime { position:absolute; right:10px; bottom:4px; font-size:9.5px; color:#9a9e8e; }
       .day-sep { display:flex; justify-content:center; margin:14px 0 10px; }
-      .day-sep span { background:rgba(255,255,255,.07); color:#8b95a3; font-size:10.5px; border-radius:10px;
+      .day-sep span { background:#16190F; color:#EFEEE3; font-size:10.5px; border-radius:10px;
         padding:3px 12px; font-family:'Oswald',sans-serif; letter-spacing:1px; }
-      .tabbar { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px;
-        display:flex; background:rgba(7,10,18,.96); border-top:1px solid rgba(255,255,255,.08); backdrop-filter:blur(8px); z-index:40; }
-      .tabbtn { flex:1; background:none; border:none; color:#5b6470; padding:9px 0 11px; display:flex; flex-direction:column;
-        align-items:center; gap:2px; cursor:pointer; font-family:'Barlow',sans-serif; }
-      .tabbtn.on { color:#E8C15A; }
-      .dot { position:absolute; top:-4px; right:-10px; background:#E14B4B; color:#fff; font-size:9px; border-radius:8px;
-        padding:1px 5px; font-weight:700; }
-      .fut-card { position:relative; border-radius:16px; overflow:hidden; box-shadow:0 10px 40px rgba(0,0,0,.55);
-        border:1px solid rgba(255,255,255,.25); }
+      .tabbar { position:fixed; bottom:10px; left:50%; transform:translateX(-50%); width:calc(100% - 20px); max-width:460px;
+        display:flex; background:#16190F; border-radius:22px; padding:5px 6px; z-index:40;
+        box-shadow:0 8px 24px rgba(20,23,14,.35); }
+      .tabbtn { flex:1; background:none; border:none; color:#8d9279; padding:8px 0 9px; display:flex; flex-direction:column;
+        align-items:center; gap:2px; cursor:pointer; font-family:'Barlow',sans-serif; border-radius:16px; }
+      .tabbtn.on { color:#16190F; background:#CDF546; font-weight:600; }
+      .dot { position:absolute; top:-4px; right:-10px; background:#CDF546; color:#16190F; font-size:9px; border-radius:8px;
+        border:1px solid #16190F; padding:1px 5px; font-weight:700; }
+      .fut-card { position:relative; border-radius:18px; overflow:hidden; box-shadow:0 12px 32px rgba(20,23,14,.35);
+        border:1.5px solid rgba(20,23,14,.4); }
       /* el barrido va SIEMPRE por encima del contenido de la carta (foto incluida):
          ojo, un filter/transform en la foto crearía stacking context y la colaría por encima */
       .fut-shine { position:absolute; inset:0; background:linear-gradient(105deg, transparent 42%, rgba(255,255,255,.38) 50%, transparent 58%);
@@ -1999,8 +2006,8 @@ function StyleTag() {
       @keyframes evin { from { opacity:0; transform:translateX(-14px);} to { opacity:1; transform:none; } }
       .fade-seq { opacity:0; animation:fadeup .9s ease forwards; }
       @keyframes fadeup { from { opacity:0; transform:translateY(14px);} to { opacity:1; transform:none; } }
-      .toast { position:fixed; bottom:74px; left:50%; transform:translateX(-50%); background:#12182a; color:#F5EFDF;
-        border:1px solid rgba(232,193,90,.4); border-radius:10px; padding:10px 16px; font-size:13px; z-index:80;
+      .toast { position:fixed; bottom:84px; left:50%; transform:translateX(-50%); background:#16190F; color:#EFEEE3;
+        border:1.5px solid #CDF546; border-radius:14px; padding:10px 16px; font-size:13px; z-index:80;
         animation:pop .3s ease both; max-width:90%; text-align:center; }
       @media (prefers-reduced-motion: reduce) { .fut-shine, .fade-seq, .official-flash, .card-drop, .pop-in, .event-in { animation:none !important; opacity:1 !important; } }
     `}</style>

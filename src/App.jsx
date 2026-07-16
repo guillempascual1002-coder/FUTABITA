@@ -497,10 +497,16 @@ function FormBadge({ form, size }) {
   );
 }
 
-function Crest({ c1, c2, name, size = 40, img }) {
+const CREST_SIZES = [["Pequeño", 0.8], ["Normal", 1], ["Grande", 1.25]];
+
+function Crest({ c1, c2, name, size = 40, img, imgScale = 1 }) {
+  /* el escudo subido se escala sobre su hueco sin mover el layout: el contenedor
+     mantiene el tamaño base y la imagen crece/mengua dentro */
   if (img) return (
-    <img src={img} alt="" style={{ width: size, height: size * 1.15, objectFit: "cover", borderRadius: 4,
-      border: "1px solid rgba(255,255,255,.25)" }} />
+    <div style={{ width: size, height: size * 1.15, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <img src={img} alt="" style={{ width: size * imgScale, height: size * 1.15 * imgScale,
+        objectFit: "contain", background: "transparent" }} />
+    </div>
   );
   const initials = name.split(" ").filter((w) => w.length > 2 || /^[A-Z]/.test(w)).slice(0, 2).map((w) => w[0]).join("");
   return (
@@ -513,7 +519,7 @@ function Crest({ c1, c2, name, size = 40, img }) {
   );
 }
 
-function PlayerCard({ player, photo, club, small, crest }) {
+function PlayerCard({ player, photo, club, small, crest, crestScale }) {
   const ovr = calcOVR(player.stats);
   const tier = cardTier(ovr);
   const grad = {
@@ -533,14 +539,14 @@ function PlayerCard({ player, photo, club, small, crest }) {
           <div style={{ fontFamily: "'Oswald',sans-serif", fontWeight: 700, fontSize: W * 0.19, lineHeight: 1 }}>{ovr}</div>
           <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: W * 0.07, letterSpacing: 2 }}>{player.position}</div>
           <div style={{ marginTop: 6, display: "flex", justifyContent: "center" }}>
-            {club ? <Crest c1={club.c1} c2={club.c2} name={club.name} size={W * 0.13} img={crest} /> : null}
+            {club ? <Crest c1={club.c1} c2={club.c2} name={club.name} size={W * 0.13} img={crest} imgScale={crestScale} /> : null}
           </div>
           <div style={{ fontSize: W * 0.075, marginTop: 4 }}>🇪🇸</div>
         </div>
         <div style={{ flex: 1, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
           {photo ? (
             <img src={photo} alt="" style={{ width: W * 0.55, height: W * 0.6, objectFit: "contain", objectPosition: "bottom",
-              filter: "drop-shadow(0 4px 8px rgba(0,0,0,.35))", borderRadius: 4 }} />
+              borderRadius: 4 }} />
           ) : (
             <div style={{ width: W * 0.55, height: W * 0.6, display: "flex", alignItems: "center", justifyContent: "center",
               fontSize: W * 0.3, opacity: 0.5 }}>👤</div>
@@ -703,7 +709,7 @@ function ChoiceScreen({ offers, playerName, onSign }) {
 }
 
 /* ---------- ANIMACIÓN DE FICHAJE ---------- */
-function SigningOverlay({ club, player, photo, crest, onDone }) {
+function SigningOverlay({ club, player, photo, crest, crestScale, onDone }) {
   const [step, setStep] = useState(0);
   useEffect(() => {
     const t1 = setTimeout(() => setStep(1), 900);
@@ -719,7 +725,8 @@ function SigningOverlay({ club, player, photo, crest, onDone }) {
           <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 34, color: "#F5EFDF", margin: "6px 0 16px", textTransform: "uppercase" }}>
             {club.name}</div>
           <div style={{ display: "flex", justifyContent: "center" }} className={step >= 2 ? "card-drop" : ""}
-            children={step >= 2 ? <PlayerCard player={player} photo={photo} club={club} crest={crest} /> : <Crest c1={club.c1} c2={club.c2} name={club.name} size={80} img={crest} />} />
+            children={step >= 2 ? <PlayerCard player={player} photo={photo} club={club} crest={crest} crestScale={crestScale} />
+              : <Crest c1={club.c1} c2={club.c2} name={club.name} size={80} img={crest} imgScale={crestScale} />} />
           {step >= 2 && (
             <button className="btn-gold" style={{ marginTop: 26 }} onClick={onDone}>COMENZAR LA AVENTURA</button>
           )}
@@ -730,7 +737,7 @@ function SigningOverlay({ club, player, photo, crest, onDone }) {
 }
 
 /* ---------- SIMULACIÓN DE PARTIDO EN VIVO ---------- */
-function MatchModal({ match, club, onFinish, crest }) {
+function MatchModal({ match, club, onFinish, crest, crestScale }) {
   const [minute, setMinute] = useState(0);
   const [shown, setShown] = useState([]);
   const [ended, setEnded] = useState(false);
@@ -751,7 +758,7 @@ function MatchModal({ match, club, onFinish, crest }) {
     <div className="overlay" style={{ background: "radial-gradient(ellipse at 50% 0%, #0E3320, #05070d 75%)", justifyContent: "flex-start", paddingTop: 60 }}>
       <div className="eyebrow" style={{ textAlign: "center" }}>JORNADA {match.jornada} · EN VIVO</div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 18, margin: "14px 0" }}>
-        <Crest c1={club.c1} c2={club.c2} name={club.name} size={44} img={crest} />
+        <Crest c1={club.c1} c2={club.c2} name={club.name} size={44} img={crest} imgScale={crestScale} />
         <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 44, color: "#F5EFDF" }}>
           {ended ? match.gf : gf} - {ended ? match.ga : ga}</div>
         <div style={{ width: 44, textAlign: "center", fontSize: 11, color: "#8b95a3" }}>{match.rival}</div>
@@ -1006,7 +1013,7 @@ function LogTab({ game, log, onLog, logDate, onDate, onCloseDay, savedMeals, onS
 }
 
 /* ---------- LIGA ---------- */
-function LeagueTab({ game, onPlayMatch, crest }) {
+function LeagueTab({ game, onPlayMatch, crest, crestScale }) {
   const s = game.season;
   const matchDue = s.matchday < SEASON_LENGTH && dayDiff(s.startDate, todayStr()) >= (s.matchday + 1) * 2 - 1;
   const nextRival = s.rivals[s.matchday % s.rivals.length];
@@ -1018,7 +1025,7 @@ function LeagueTab({ game, onPlayMatch, crest }) {
       <div className="panel" style={{ marginTop: 10, textAlign: "center" }}>
         <div style={{ fontSize: 12, color: "#8b95a3" }}>JORNADA {Math.min(s.matchday + 1, SEASON_LENGTH)} / {SEASON_LENGTH}</div>
         <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 16, margin: "10px 0" }}>
-          <Crest c1={game.club.c1} c2={game.club.c2} name={game.club.name} size={40} img={crest} />
+          <Crest c1={game.club.c1} c2={game.club.c2} name={game.club.name} size={40} img={crest} imgScale={crestScale} />
           <span style={{ fontFamily: "'Oswald',sans-serif", fontSize: 18, color: "#F5EFDF" }}>VS</span>
           <div style={{ width: 60, fontSize: 12, color: "#B9C2CD" }}>{s.matchday < SEASON_LENGTH ? nextRival : "—"}</div>
         </div>
@@ -1058,7 +1065,7 @@ function LeagueTab({ game, onPlayMatch, crest }) {
 }
 
 /* ---------- INICIO ---------- */
-function HomeTab({ game, photo, log, crest }) {
+function HomeTab({ game, photo, log, crest, crestScale }) {
   const p = game.player;
   const ovr = calcOVR(p.stats);
   const kg0 = p.weight0;
@@ -1068,7 +1075,7 @@ function HomeTab({ game, photo, log, crest }) {
   return (
     <div style={{ padding: "18px 16px 96px" }}>
       <div style={{ display: "flex", justifyContent: "center", marginTop: 6 }}>
-        <PlayerCard player={p} photo={photo} club={game.club} crest={crest} />
+        <PlayerCard player={p} photo={photo} club={game.club} crest={crest} crestScale={crestScale} />
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginTop: 18 }}>
         <div className="stat-box"><div className="sb-num">{fmtEUR(mv)}</div><div className="sb-lbl">Valor de mercado</div></div>
@@ -1136,28 +1143,30 @@ function BackupPanel({ getBackup, onRestore }) {
 }
 
 /* ---------- PERFIL / OBJETIVOS ---------- */
-function ProfileTab({ game, photo, onWeight, onPhoto, onRemovePhoto, crest, onCrest, onRemoveCrest, onGoals, getBackup, onRestore }) {
+function ProfileTab({ game, photo, onWeight, onPhoto, onRemovePhoto, crest, onCrest, onRemoveCrest,
+  crestScale, onCrestScale, onGoals, getBackup, onRestore }) {
   const p = game.player;
   const [kg, setKg] = useState("");
   const [edit, setEdit] = useState(false);
   const [newHabit, setNewHabit] = useState("");
   const [g, setG] = useState({ ...p.goals, gymDays: [...p.goals.gymDays] });
-  /* redimensiona una imagen subida y devuelve un dataURL, para foto o escudo */
-  const processImg = (e, cb, max = 420) => {
+  /* redimensiona una imagen subida y devuelve un dataURL, para foto o escudo.
+     forcePng: el escudo se guarda siempre en PNG para conservar la transparencia (el JPEG la rellenaría de blanco) */
+  const processImg = (e, cb, max = 420, forcePng = false) => {
     const file = e.target.files && e.target.files[0]; if (!file) return;
     const img = new Image();
     img.onload = () => {
       const cv = document.createElement("canvas"); const s = Math.min(1, max / img.width);
       cv.width = img.width * s; cv.height = img.height * s;
       cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
-      const isPng = (file.type || "").includes("png");
-      cb(isPng ? cv.toDataURL("image/png") : cv.toDataURL("image/jpeg", 0.82));
+      const png = forcePng || (file.type || "").includes("png");
+      cb(png ? cv.toDataURL("image/png") : cv.toDataURL("image/jpeg", 0.82));
     };
     const r = new FileReader(); r.onload = () => (img.src = r.result); r.readAsDataURL(file);
     e.target.value = "";
   };
   const handleFile = (e) => processImg(e, onPhoto);
-  const handleCrest = (e) => processImg(e, onCrest, 240);
+  const handleCrest = (e) => processImg(e, onCrest, 240, true);
   const wl = p.weightLog;
   return (
     <div style={{ padding: "16px 16px 96px" }}>
@@ -1201,8 +1210,20 @@ function ProfileTab({ game, photo, onWeight, onPhoto, onRemovePhoto, crest, onCr
           </label>
           {crest && <button className="btn-ghost sm" style={{ color: "#E14B4B" }} onClick={onRemoveCrest}>Quitar escudo</button>}
         </div>
-        <div style={{ marginTop: 10 }}>
-          <Crest c1={game.club.c1} c2={game.club.c2} name={game.club.name} size={48} img={crest} />
+        {crest && (
+          <div style={{ marginTop: 12 }}>
+            <div className="inplbl">Tamaño del escudo</div>
+            <div className="chips">
+              {CREST_SIZES.map(([lbl, v]) => (
+                <button key={lbl} className={"chip" + (Math.abs((crestScale || 1) - v) < 0.01 ? " on" : "")}
+                  onClick={() => onCrestScale(v)}>{lbl} · {Math.round(v * 100)}%</button>))}
+            </div>
+            <div style={{ fontSize: 11.5, color: "#5b6470" }}>
+              Ajústalo si tu PNG se ve pequeño o se sale de su hueco. No afecta al resto de la carta.</div>
+          </div>)}
+        <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10 }}>
+          <Crest c1={game.club.c1} c2={game.club.c2} name={game.club.name} size={48} img={crest} imgScale={crestScale} />
+          <span style={{ fontSize: 11.5, color: "#5b6470" }}>Vista previa</span>
         </div>
       </div>
       <div className="panel">
@@ -1261,6 +1282,7 @@ export default function App() {
   const [game, setGame] = useState(null);
   const [photo, setPhoto] = useState(null);
   const [crest, setCrest] = useState(null);
+  const [crestScale, setCrestScale] = useState(1);
   const [loaded, setLoaded] = useState(false);
   const [signing, setSigning] = useState(null); // club en animación de fichaje
   const [liveMatch, setLiveMatch] = useState(null);
@@ -1280,8 +1302,10 @@ export default function App() {
       const g = await stGet("game");
       const ph = await stGet("photo");
       const cr = await stGet("crest");
+      const cs = await stGet("crestScale");
       if (ph) setPhoto(ph);
       if (cr) setCrest(cr);
+      if (cs) setCrestScale(cs);
       if (g) setGame(processNewDays(sanitizeGame(g)));
       else setGame({ phase: "intro" });
       setLoaded(true);
@@ -1299,6 +1323,7 @@ export default function App() {
   const removePhoto = () => { setPhoto(null); try { localStorage.removeItem("futabita:photo"); } catch (e) {} };
   const saveCrest = (url) => { setCrest(url); stSet("crest", url); };
   const removeCrest = () => { setCrest(null); try { localStorage.removeItem("futabita:crest"); } catch (e) {} };
+  const saveCrestScale = (v) => { setCrestScale(v); stSet("crestScale", v); };
 
   /* cierre de días pasados */
   function processNewDays(g) {
@@ -1541,7 +1566,7 @@ export default function App() {
   });
 
   /* respaldo manual (independiente del almacenamiento automático) */
-  const getBackup = () => JSON.stringify({ v: 1, game, photo, crest });
+  const getBackup = () => JSON.stringify({ v: 1, game, photo, crest, crestScale });
   const restoreBackup = (txt) => {
     try {
       const b = JSON.parse(txt.trim());
@@ -1550,6 +1575,7 @@ export default function App() {
       setGame(g); stSet("game", g);
       if (b.photo) savePhoto(b.photo);
       if (b.crest) saveCrest(b.crest);
+      if (b.crestScale) saveCrestScale(b.crestScale);
       setTab("home");
       pushToast("✓ Carrera restaurada. ¡Bienvenido de vuelta!");
     } catch (e) { pushToast("✗ Ese texto no es un respaldo válido"); }
@@ -1574,20 +1600,22 @@ export default function App() {
       {game.phase === "main" && (
         <>
           <header style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 16px 8px" }}>
-            <Crest c1={game.club.c1} c2={game.club.c2} name={game.club.name} size={30} img={crest} />
+            <Crest c1={game.club.c1} c2={game.club.c2} name={game.club.name} size={30} img={crest} imgScale={crestScale} />
             <div>
               <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 14, letterSpacing: 0.5 }}>{game.club.name}</div>
               <div style={{ fontSize: 10.5, color: "#8b95a3" }}>{game.tier.league} · Temporada {game.season.num}</div>
             </div>
             <div style={{ marginLeft: "auto" }}><FormBadge form={game.player.form} /></div>
           </header>
-          {tab === "home" && <HomeTab game={game} photo={photo} crest={crest} log={(game.logs && game.logs[todayStr()]) || EMPTY_LOG()} />}
+          {tab === "home" && <HomeTab game={game} photo={photo} crest={crest} crestScale={crestScale}
+            log={(game.logs && game.logs[todayStr()]) || EMPTY_LOG()} />}
           {tab === "log" && <LogTab game={game} log={activeLog} onLog={setActiveLog} logDate={logDate} onDate={setLogDate}
             onCloseDay={closePendingDay} savedMeals={game.savedMeals || []} onSaveMeal={saveMeal} />}
-          {tab === "league" && <LeagueTab game={game} onPlayMatch={playMatch} crest={crest} />}
+          {tab === "league" && <LeagueTab game={game} onPlayMatch={playMatch} crest={crest} crestScale={crestScale} />}
           {tab === "chat" && <ChatTab messages={game.messages} onOfferAction={offerAction} />}
           {tab === "me" && <ProfileTab game={game} photo={photo} onWeight={addWeight} onPhoto={savePhoto} onRemovePhoto={removePhoto}
-            crest={crest} onCrest={saveCrest} onRemoveCrest={removeCrest} onGoals={setGoals} getBackup={getBackup} onRestore={restoreBackup} />}
+            crest={crest} onCrest={saveCrest} onRemoveCrest={removeCrest} crestScale={crestScale} onCrestScale={saveCrestScale}
+            onGoals={setGoals} getBackup={getBackup} onRestore={restoreBackup} />}
           <nav className="tabbar">
             {[["home", "🏠", "Inicio"], ["log", "📝", "Registro"], ["league", "🏆", "Liga"], ["chat", "💬", "Chat"], ["me", "👤", "Yo"]].map(([id, ic, lb]) => (
               <button key={id} className={"tabbtn" + (tab === id ? " on" : "")}
@@ -1599,8 +1627,8 @@ export default function App() {
           </nav>
         </>
       )}
-      {signing && <SigningOverlay club={signing.club} player={game.player} photo={photo} crest={crest} onDone={confirmSigning} />}
-      {liveMatch && <MatchModal match={liveMatch} club={game.club} onFinish={finishMatch} crest={crest} />}
+      {signing && <SigningOverlay club={signing.club} player={game.player} photo={photo} crest={crest} crestScale={crestScale} onDone={confirmSigning} />}
+      {liveMatch && <MatchModal match={liveMatch} club={game.club} onFinish={finishMatch} crest={crest} crestScale={crestScale} />}
       {toast && <div className="toast">{toast}</div>}
     </div>
   );
@@ -1670,8 +1698,10 @@ function StyleTag() {
         padding:1px 5px; font-weight:700; }
       .fut-card { position:relative; border-radius:16px; overflow:hidden; box-shadow:0 10px 40px rgba(0,0,0,.55);
         border:1px solid rgba(255,255,255,.25); }
+      /* el barrido va SIEMPRE por encima del contenido de la carta (foto incluida):
+         ojo, un filter/transform en la foto crearía stacking context y la colaría por encima */
       .fut-shine { position:absolute; inset:0; background:linear-gradient(105deg, transparent 42%, rgba(255,255,255,.38) 50%, transparent 58%);
-        background-size:300% 100%; animation:shine 3.2s linear infinite; pointer-events:none; }
+        background-size:300% 100%; animation:shine 3.2s linear infinite; pointer-events:none; z-index:3; }
       @keyframes shine { from { background-position:250% 0; } to { background-position:-150% 0; } }
       .ball-wrap { position:relative; height:90px; width:70px; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; }
       .ball { font-size:44px; line-height:1; animation: bounce .65s cubic-bezier(.5,.05,.5,.95) infinite alternate; position:relative; z-index:2; }

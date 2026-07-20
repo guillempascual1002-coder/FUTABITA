@@ -124,7 +124,10 @@ const isMatchDue = (season, dateStr) =>
   !!season && season.matchday < SEASON_LENGTH && dayDiff(season.startDate, dateStr) >= season.matchday + 1;
 
 const calcOVR = (stats) => Math.round(STAT_KEYS.reduce((s, k) => s + stats[k] * OVR_WEIGHTS[k], 0));
-const xpToNext = (v) => Math.round(40 + Math.max(0, v - 58) * 12);
+const xpToNext = (v) => Math.round(36 + Math.max(0, v - 58) * 10);
+/* multiplicador de XP por racha: +2% por día de racha, techo +20% (racha 10+).
+   Tolera streak undefined (partidas antiguas) tratándolo como 0. */
+const streakMultOf = (s) => 1 + Math.min(s || 0, 10) * 0.02;
 const cardTier = (ovr) => (ovr >= 85 ? "special" : ovr >= 75 ? "gold" : ovr >= 65 ? "silver" : "bronze");
 const marketValue = (ovr, kgGained) => Math.round((25000 * Math.pow(1.16, ovr - 60)) * (1 + Math.max(0, kgGained) * 0.06));
 
@@ -175,6 +178,16 @@ function sanitizeGame(g) {
     }
   }
   if (out.savedMeals) out.savedMeals = out.savedMeals.filter((m) => m && Number.isFinite(m.kcal) && Number.isFinite(m.prot));
+  /* partidas de versiones viejas: sin plantel de vestuario ni su chat. Se reparan una sola vez
+     (si ya existe algún mensaje "· Vestuario", no se inyecta nada) */
+  if (out.phase === "main" && out.player && Array.isArray(out.messages)) {
+    if (!out.squad || !out.squad.length) out.squad = makeSquad();
+    if (!out.messages.some((m) => m && typeof m.from === "string" && m.from.includes("· Vestuario"))) {
+      out.messages = [...out.messages, { id: Date.now() + Math.random(), from: out.squad[0].name + " · Vestuario",
+        text: pick(SQUAD_WELCOMES(out.player.name, out.squad[0])), time: nowTime(), d: todayStr() }];
+      out.unreadBy = { ...(out.unreadBy || {}), squad: ((out.unreadBy || {}).squad || 0) + 1 };
+    }
+  }
   return out;
 }
 
@@ -207,20 +220,31 @@ function applyDayClose(player, log, dateStr) {
   if ((log.kcal || 0) >= g.kcal) gains.NUT += 10;
   if ((log.prot || 0) >= g.protein) gains.NUT += 10;
   if ((log.kcal || 0) >= g.kcal && (log.prot || 0) >= g.protein) gains.NUT += 5;
-  if (log.gym) { gains.FIS += 14; if (log.gymProgress) gains.FUE += 12; }
+  if (log.gym) { gains.FIS += 22; gains.FUE += 6; if (log.gymProgress) gains.FUE += 18; }
+  /* día de descanso bien cumplido: trabajo ligero, FIS no se congela entre gimnasios */
+  if ((form === "alza" || form === "buen") && !isGymDay) gains.FIS += 5;
   if (log.sleep != null && log.sleep >= g.sleepGoal) gains.REC += 10;
   gains.MEN += (log.habitsDone || []).length * 6;
   /* MEN pasiva: la constancia también es mentalidad */
   let flatMEN = 0;
   if ((log.meals || []).length > 0) flatMEN += 3; /* registrar comida: siempre suma, sin multiplicador */
   if (form === "alza" || form === "buen") gains.MEN += 4;
+  /* multiplicador por racha: se calcula con la racha ENTRANTE (los días previos ya
+     acumulados), ANTES de recalcularla para hoy — así el día que continúa la racha
+     disfruta del bonus que generaron los anteriores, y romperla hoy no borra
+     retroactivamente el bonus del día que estás cerrando. Es el mismo valor que
+     muestra la UI en el momento de registrar. */
+  const sMult = streakMultOf(player.streak);
   let streak = player.streak || 0;
-  if (form === "alza" || form === "buen") { streak += 1; gains.RES += 4; if (streak % 7 === 0) gains.RES += 20; }
+  if (form === "alza" || form === "buen") { streak += 1; gains.RES += 7; if (streak % 7 === 0) gains.RES += 25; }
   else if (form === "caida") streak = 0;
   const stats = { ...player.stats }, xp = { ...player.xp };
   const ups = [];
   STAT_KEYS.forEach((k) => {
-    xp[k] = (xp[k] || 0) + Math.round(gains[k] * mult) + (k === "MEN" ? flatMEN : 0);
+    /* forma y racha multiplican juntas; la XP pasiva de MEN (flatMEN) queda fuera de
+       AMBOS multiplicadores a propósito: es la recompensa fija por constancia de uso
+       y no queremos tocar ese equilibrio */
+    xp[k] = (xp[k] || 0) + Math.round(gains[k] * mult * sMult) + (k === "MEN" ? flatMEN : 0);
     while (stats[k] < 99 && xp[k] >= xpToNext(stats[k])) { xp[k] -= xpToNext(stats[k]); stats[k] += 1; ups.push(k); }
   });
   let badDays = form === "caida" ? (player.badDays || 0) + 1 : 0;
@@ -307,7 +331,8 @@ function buildTable(myClub, tierId) {
    Variables: {player} {club} {position} {league} {ovr} {season} {goals} {assists}
    Condición opcional `w`: solo aparece cuando tiene sentido (racha, suplente, etc.)
    ============================================================ */
-const CAT_W = { press: 3, fan: 3, social: 3, club: 2, coach: 2.5, cap: 2.5, agent: 1.6, squad: 3 };
+/* pesos de categoría: "squad" ≈ prensa+afición+club para que el vestuario suene tanto como los medios */
+const CAT_W = { press: 2.2, fan: 2.2, social: 2, club: 1.6, coach: 1.4, cap: 1.4, agent: 1, squad: 6 };
 
 /* compañeros de vestuario: 4 fijos por club, con personalidad. Cambian al fichar por otro equipo. */
 const SQUAD_POOL = [
@@ -321,6 +346,12 @@ const SQUAD_POOL = [
   { name: "Lucho Ibarra", tag: "el filósofo" },
 ];
 const makeSquad = () => pickN(SQUAD_POOL, 4);
+/* bienvenidas al grupo del vestuario: se usan al fichar y al reparar partidas antiguas sin este chat */
+const SQUAD_WELCOMES = (playerName, m) => [
+  `Te acabamos de meter al grupo del vestuario 📲 Aquí se habla de todo menos de táctica. Bienvenido, ${playerName}.`,
+  `¡El nuevo ya está en el grupo! Norma número uno: lo que se dice en el vestuario, se queda en el vestuario. Norma dos: los memes son sagrados.`,
+  `Bienvenido al grupo, ${playerName} 🙌 Yo soy ${m.name}, ${m.tag}. Ya irás conociendo al resto de la banda.`,
+];
 const COND = {
   good: (c) => c.good, hot: (c) => c.hot, bad: (c) => c.bad,
   starter: (c) => c.starter, benched: (c) => c.benched,
@@ -497,6 +528,25 @@ const FLAVOR = [
   { c: "cap", t: "Cuando era joven me habría venido bien un espejo como tú. Sigue currando así.", w: "hot" },
   { c: "cap", t: "El de seguridad de la puerta 3 siempre me pregunta por ti. Le caes mejor que yo y no lo entiendo 😂", w: "good" },
   { c: "cap", t: "Semana dura, ¿eh? Mañana te reto a la diana en el entreno. Si me ganas, café pagado.", w: "bad" },
+  /* ---- VESTUARIO INTERACTIVO: preguntas con respuestas a elegir ---- */
+  { c: "squad", t: "¿Pádel el jueves después del entreno? Faltan dos.", replies: [
+    { t: "Claro, cuenta conmigo", r: ["¡GRANDE! Te espero con la pala buena 🎾", "Eso es. Luego no llores cuando te gane 😏"] },
+    { t: "Va, pero pago yo la última", r: ["Apuntado queda, invita el crack 😎", "Con compañeros así da gusto, oye"] }] },
+  { c: "squad", t: "¿Quién trae el desayuno post-entreno mañana?", replies: [
+    { t: "Yo me encargo", r: ["Un señor. El vestuario no lo olvida 🫡", "Así se lidera, sí señor"] },
+    { t: "Que le toque al nuevo", r: ["JAJAJA clásico. Aprobado por unanimidad 😂", "El nuevo aún no sabe dónde se ha metido"] }] },
+  { c: "squad", t: "El míster pregunta quién quiere tirar los penaltis esta temporada. ¿Te apuntas?", replies: [
+    { t: "Yo los tiro", r: ["Valiente. Me gusta 🔥 Se lo digo al míster", "Anotado. Presión máxima, crack"] },
+    { t: "Mejor que los tire el capi", r: ["Prudente. El capi lo agradece 🫡", "Ok, pero el día que falle uno te lo recuerdo 😂"] }] },
+  { c: "squad", t: "Estamos montando la playlist del vestuario. ¿Qué mandas?", replies: [
+    { t: "Algo para motivar", r: ["Eso es, caña para salir a morder 🤘", "Aprobado por el DJ oficial (o sea, yo)"] },
+    { t: "Reggaeton clásico", r: ["JAJA el vestuario entero perreando en el calentamiento 😂", "Clásico nunca falla. Dentro."] }] },
+  { c: "squad", t: "¿Cine el domingo con el grupo? Vamos a ver la de acción.", replies: [
+    { t: "Me apunto", r: ["Palomitas a medias entonces 🍿", "Este equipo también hace piña fuera. Me gusta."] },
+    { t: "Descanso en casa", r: ["Descansa, máquina. El lunes te quiero fresco", "Ok abuelo 😂 te contamos el final"] }] },
+  { c: "squad", t: "Piques de FIFA esta noche en casa del capi. ¿Vienes?", replies: [
+    { t: "Voy y os gano a todos", r: ["JAJAJA la confianza del killer 😎 te espero", "Anotado. Si pierdes, mañana corres el doble"] },
+    { t: "Paso, mañana hay que rendir", r: ["Profesional total. Por eso juegas tú y yo chupo banquillo 😂", "Respeto. El míster estaría orgulloso"] }] },
 ];
 
 const fillTpl = (str, c) => str.replace(/\{(\w+)\}/g, (_, k) => (c[k] != null ? String(c[k]) : ""));
@@ -539,28 +589,34 @@ function senderFor(cat, g) {
   return pick(PRESS);
 }
 
-/* elige n frases distintas y ponderadas que tengan sentido hoy */
+/* elige n frases distintas y ponderadas que tengan sentido hoy.
+   - no repite templates usados recientemente (g.recentTpl)
+   - amortigua la categoría ya elegida en esta tanda para que salga variado */
 function pickFlavor(g, n) {
   const c = flavorCtx(g);
-  const pool = FLAVOR.filter((f) => !f.w || (COND[f.w] && COND[f.w](c)));
+  const recent = g.recentTpl || [];
+  const pool = FLAVOR.filter((f) => (!f.w || (COND[f.w] && COND[f.w](c))) && !recent.includes(f.t));
   const out = [];
   const used = new Set();
+  const catN = {};
+  const wOf = (f) => (CAT_W[f.c] || 1) * Math.pow(0.25, catN[f.c] || 0);
   let guard = 0;
-  while (out.length < n && used.size < pool.length && guard < 80) {
+  while (out.length < n && used.size < pool.length && guard < 120) {
     guard++;
     let total = 0;
-    for (let i = 0; i < pool.length; i++) if (!used.has(i)) total += (CAT_W[pool[i].c] || 1);
+    for (let i = 0; i < pool.length; i++) if (!used.has(i)) total += wOf(pool[i]);
     if (total <= 0) break;
     let r = Math.random() * total, idx = -1;
     for (let i = 0; i < pool.length; i++) {
       if (used.has(i)) continue;
-      r -= (CAT_W[pool[i].c] || 1);
+      r -= wOf(pool[i]);
       if (r <= 0) { idx = i; break; }
     }
     if (idx < 0) break;
     used.add(idx);
     const f = pool[idx];
-    out.push({ from: senderFor(f.c, g), text: fillTpl(f.t, c) });
+    catN[f.c] = (catN[f.c] || 0) + 1;
+    out.push({ from: senderFor(f.c, g), text: fillTpl(f.t, c), t: f.t, replies: f.replies });
   }
   return out;
 }
@@ -611,7 +667,7 @@ function pickEvent(g) {
   const pool = EVENTS.filter((e) => !e.w || (COND[e.w] && COND[e.w](c)));
   if (!pool.length) return null;
   const ev = pick(pool);
-  return ev.msgs.map((m) => ({ from: senderFor(m.c, g), text: fillTpl(m.t, c) }));
+  return ev.msgs.map((m) => ({ from: senderFor(m.c, g), text: fillTpl(m.t, c), t: m.t }));
 }
 
 /* ============================================================
@@ -990,7 +1046,7 @@ function OfferBlock({ m, onOfferAction }) {
   );
 }
 
-function ChatTab({ game, onOfferAction, onRead }) {
+function ChatTab({ game, onOfferAction, onRead, onAsk }) {
   const [open, setOpen] = useState(null);
   const endRef = useRef();
   const messages = game.messages;
@@ -1012,7 +1068,8 @@ function ChatTab({ game, onOfferAction, onRead }) {
           Aún no hay mensajes. Juega partidos y progresa: el mundo empezará a hablar de ti.</div>}
         {rows.map((cid) => {
           const meta = CHAT_META[cid], list = byChat[cid], last = list[list.length - 1];
-          const preview = (last.kind === "offer" ? "📄 Oferta de contrato · " + last.offer.club.name : last.text).replace(/\n/g, " ");
+          const preview = ((last.mine ? "Tú: " : "") +
+            (last.kind === "offer" ? "📄 Oferta de contrato · " + last.offer.club.name : last.text)).replace(/\n/g, " ");
           const n = unread[cid] || 0;
           return (
             <div key={cid} className="chat-row" onClick={() => setOpen(cid)}>
@@ -1050,10 +1107,16 @@ function ChatTab({ game, onOfferAction, onRead }) {
           <div key={m.id}>
             {m.d && (i === 0 || list[i - 1].d !== m.d) && (
               <div className="day-sep"><span>{dayLabel(m.d)}</span></div>)}
-            <div className="wbubble" style={{ borderLeft: `3px solid ${meta.color}` }}>
-              {meta.group && <div className="wfrom" style={{ color: meta.color }}>{m.from.replace(" · Vestuario", "")}</div>}
+            <div className={"wbubble" + (m.mine ? " mine" : "")} style={m.mine ? {} : { borderLeft: `3px solid ${meta.color}` }}>
+              {meta.group && !m.mine && <div className="wfrom" style={{ color: meta.color }}>{m.from.replace(" · Vestuario", "")}</div>}
               <OfferBlock m={m} onOfferAction={onOfferAction} />
               <div style={{ whiteSpace: "pre-wrap" }}>{m.text}</div>
+              {m.kind === "ask" && m.askStatus !== "answered" && m.replies && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 10 }}>
+                  {m.replies.map((o, j) => (
+                    <button key={j} className="btn-ghost sm" style={{ textAlign: "left" }}
+                      onClick={() => onAsk(m.id, j)}>💬 {o.t}</button>))}
+                </div>)}
               <div className="wtime">{m.time}</div>
             </div>
           </div>))}
@@ -1320,7 +1383,11 @@ function HomeTab({ game, photo, log, crest, crestScale }) {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginTop: 18 }}>
         <div className="stat-box"><div className="sb-num">{fmtEUR(mv)}</div><div className="sb-lbl">Valor de mercado</div></div>
         <div className="stat-box"><div className="sb-num">{kgNow} kg</div><div className="sb-lbl">{kgNow > kg0 ? `+${(kgNow - kg0).toFixed(1)} desde el inicio` : "Peso actual"}</div></div>
-        <div className="stat-box"><div className="sb-num">{p.streak || 0}🔥</div><div className="sb-lbl">Racha de días</div></div>
+        <div className="stat-box"><div className="sb-num">{p.streak || 0}🔥</div>
+          {(p.streak || 0) >= 1 && (
+            <div style={{ fontSize: 9.5, fontWeight: 700, color: (p.streak || 0) >= 10 ? "#1F8A3B" : "#2E9E44", marginTop: 1 }}>
+              +{Math.round((streakMultOf(p.streak) - 1) * 100)}% XP{(p.streak || 0) >= 10 ? " · MAX" : ""}</div>)}
+          <div className="sb-lbl">Racha de días</div></div>
       </div>
       <div className="panel" style={{ marginTop: 14 }}>
         <div className="ptitle">Hoy · {pct}% del día</div>
@@ -1541,6 +1608,23 @@ export default function App() {
   };
   const markChatRead = (cid) => setGame((g) => ({ ...g, unreadBy: { ...(g.unreadBy || {}), [cid]: 0 } }));
 
+  /* responder a una pregunta del vestuario: tu mensaje entra al hilo y el compañero replica.
+     Sin efecto en stats: solo ambiente (y un toast de buen rollo) */
+  const answerAsk = (msgId, idx) => {
+    setGame((g) => {
+      const msg = g.messages.find((m) => m.id === msgId);
+      if (!msg || msg.askStatus === "answered" || !msg.replies || !msg.replies[idx]) return g;
+      const opt = msg.replies[idx];
+      let out = { ...g, messages: g.messages.map((m) => (m.id === msgId ? { ...m, askStatus: "answered" } : m)) };
+      /* tu respuesta: sin pasar por addMsg para no marcarte tu propio mensaje como no leído */
+      out.messages = [...out.messages, { id: Date.now() + Math.random(), from: "Tú · Vestuario",
+        text: opt.t, time: nowTime(), d: todayStr(), mine: true }];
+      out = addMsg(out, msg.from, pick(opt.r));
+      return out;
+    });
+    pushToast(pick(["😄 Buen rollo en el vestuario", "🤝 El grupo hace piña", "😂 Risas en el grupo"]));
+  };
+
   /* carga inicial */
   useEffect(() => {
     (async () => {
@@ -1606,16 +1690,26 @@ export default function App() {
     }
     /* partidas antiguas sin vestuario: se genera uno al vuelo */
     if (!out.squad || !out.squad.length) out.squad = makeSquad();
-    /* vida diaria: unas veces un pequeño evento (2 mensajes coordinados), otras frases sueltas */
-    if (out.lastFlavor !== today) {
-      const matchDueToday = isMatchDue(out.season, today);
-      const ev = Math.random() < 0.3 ? pickEvent(out) : null;
-      if (ev) ev.forEach((m) => { out = addMsg(out, m.from, m.text); });
-      else {
-        const n = matchDueToday ? 1 : (Math.random() < 0.5 ? 2 : 1);
-        pickFlavor(out, n).forEach((fv) => { out = addMsg(out, fv.from, fv.text); });
-      }
-      out.lastFlavor = today;
+    /* ambiente diario: cupo por fecha con recargas al reabrir la app.
+       - primera tanda del día: 3-4 mensajes sin partido, 1-2 con partido
+       - reaperturas: +1-2 hasta el cupo, con mínimo 2h entre tandas para no saturar
+       - los eventos (2 mensajes coordinados) cuentan contra el cupo */
+    const amb = out.ambient && out.ambient.d === today ? { ...out.ambient } : { d: today, count: 0, at: 0 };
+    const matchDueToday = isMatchDue(out.season, today);
+    const quota = matchDueToday ? 2 : 4;
+    let want = 0;
+    if (amb.count === 0) want = matchDueToday ? 1 + Math.round(Math.random()) : 3 + Math.round(Math.random());
+    else if (amb.count < quota && Date.now() - amb.at > 2 * 3600 * 1000)
+      want = Math.min(quota - amb.count, 1 + Math.round(Math.random()));
+    if (want > 0) {
+      let made = [];
+      if (want >= 2 && Math.random() < 0.25) { const ev = pickEvent(out); if (ev) made = ev; }
+      if (made.length < want) made = made.concat(pickFlavor(out, want - made.length));
+      made.forEach((m) => {
+        out = addMsg(out, m.from, m.text, m.replies ? { kind: "ask", replies: m.replies, askStatus: "pending" } : {});
+      });
+      out.recentTpl = [...(out.recentTpl || []), ...made.map((m) => m.t).filter(Boolean)].slice(-10);
+      out.ambient = { d: today, count: amb.count + made.length, at: Date.now() };
     }
     return out;
   }
@@ -1668,10 +1762,7 @@ export default function App() {
         `OFICIAL ✍️ | El ${club.name} anuncia el fichaje de ${g.player.name} (${g.player.position}). ${viaTransfer ? "Movimiento sonado en el mercado que ilusiona a la afición." : "El club apuesta por una joven promesa con hambre de fútbol."}`);
       /* club nuevo, vestuario nuevo */
       out.squad = makeSquad();
-      out = addMsg(out, out.squad[0].name + " · Vestuario", pick([
-        `Te acabamos de meter al grupo del vestuario 📲 Aquí se habla de todo menos de táctica. Bienvenido, ${g.player.name}.`,
-        `¡El nuevo ya está en el grupo! Norma número uno: lo que se dice en el vestuario, se queda en el vestuario. Norma dos: los memes son sagrados.`,
-        `Bienvenido al grupo, ${g.player.name} 🙌 Yo soy ${out.squad[0].name}, ${out.squad[0].tag}. Ya irás conociendo al resto de la banda.`]));
+      out = addMsg(out, out.squad[0].name + " · Vestuario", pick(SQUAD_WELCOMES(g.player.name, out.squad[0])));
       return out;
     });
     setSigning(null);
@@ -1870,7 +1961,7 @@ export default function App() {
           {tab === "log" && <LogTab game={game} log={activeLog} onLog={setActiveLog} logDate={logDate} onDate={setLogDate}
             onCloseDay={closePendingDay} savedMeals={game.savedMeals || []} onSaveMeal={saveMeal} />}
           {tab === "league" && <LeagueTab game={game} onPlayMatch={playMatch} crest={crest} crestScale={crestScale} />}
-          {tab === "chat" && <ChatTab game={game} onOfferAction={offerAction} onRead={markChatRead} />}
+          {tab === "chat" && <ChatTab game={game} onOfferAction={offerAction} onRead={markChatRead} onAsk={answerAsk} />}
           {tab === "me" && <ProfileTab game={game} photo={photo} onWeight={addWeight} onPhoto={savePhoto} onRemovePhoto={removePhoto}
             crest={crest} onCrest={saveCrest} onRemoveCrest={removeCrest} crestScale={crestScale} onCrestScale={saveCrestScale}
             onGoals={setGoals} getBackup={getBackup} onRestore={restoreBackup} />}
@@ -1968,6 +2059,7 @@ function StyleTag() {
       .wbubble { position:relative; background:#FFFFFF; border:1.5px solid rgba(20,23,14,.12);
         border-radius:4px 16px 16px 16px; padding:9px 12px 18px; font-size:13.5px; line-height:1.5; color:#26291D;
         margin-bottom:10px; max-width:88%; }
+      .wbubble.mine { margin-left:auto; background:#CDF546; border:1.5px solid #16190F; border-radius:16px 4px 16px 16px; }
       .wfrom { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:.8px; margin-bottom:3px; text-transform:uppercase; }
       .wtime { position:absolute; right:10px; bottom:4px; font-size:9.5px; color:#9a9e8e; }
       .day-sep { display:flex; justify-content:center; margin:14px 0 10px; }

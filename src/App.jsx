@@ -127,7 +127,42 @@ const calcOVR = (stats) => Math.round(STAT_KEYS.reduce((s, k) => s + stats[k] * 
 const xpToNext = (v) => Math.round(36 + Math.max(0, v - 58) * 10);
 /* multiplicador de XP por racha: +2% por día de racha, techo +20% (racha 10+).
    Tolera streak undefined (partidas antiguas) tratándolo como 0. */
-const streakMultOf = (s) => 1 + Math.min(s || 0, 10) * 0.02;
+const streakMultOf = (s) => 1 + Math.min(s || 0, 25) * 0.02;
+
+/* haptics: vibración sutil en hitos. Activada por defecto, interruptor en Yo.
+   El flag lo sincroniza App con la preferencia guardada. */
+let HAPTICS = true;
+const buzz = (p) => { if (!HAPTICS) return; try { if (navigator.vibrate) navigator.vibrate(p); } catch (e) {} };
+
+/* derbi narrativo: una jornada por temporada, derivada de forma determinista
+   (sin estado nuevo) — solo texto/presentación, cero cambios de balance */
+const derbiJornadaOf = (s) => 1 + ((s.num * 5 + 3) % SEASON_LENGTH);
+
+/* mini-rachas informativas por hábito (no tocan XP ni multiplicadores):
+   días consecutivos cerrados cumpliendo un predicado, contando desde ayer */
+function catStreak(game, pred) {
+  let n = 0, d = addDays(todayStr(), -1);
+  for (let i = 0; i < 30; i++) {
+    const l = game.logs && game.logs[d];
+    if (!l || !l.closed || !pred(l, d)) break;
+    n++; d = addDays(d, -1);
+  }
+  return n;
+}
+/* racha de gym: solo cuentan (y solo rompen) los días que tocaba gym */
+function gymStreakOf(game, gymDays) {
+  let n = 0, d = addDays(todayStr(), -1);
+  for (let i = 0; i < 30; i++) {
+    const l = game.logs && game.logs[d];
+    const dow = new Date(d + "T12:00").getDay();
+    if (gymDays.includes(dow)) {
+      if (!l || !l.closed || !l.gym) break;
+      n++;
+    }
+    d = addDays(d, -1);
+  }
+  return n;
+}
 const cardTier = (ovr) => (ovr >= 85 ? "special" : ovr >= 75 ? "gold" : ovr >= 65 ? "silver" : "bronze");
 const marketValue = (ovr, kgGained) => Math.round((25000 * Math.pow(1.16, ovr - 60)) * (1 + Math.max(0, kgGained) * 0.06));
 
@@ -336,14 +371,14 @@ const CAT_W = { press: 2.2, fan: 2.2, social: 2, club: 1.6, coach: 1.4, cap: 1.4
 
 /* compañeros de vestuario: 4 fijos por club, con personalidad. Cambian al fichar por otro equipo. */
 const SQUAD_POOL = [
-  { name: "Chino Vega", tag: "el gracioso" },
-  { name: "Rafa Ortiz", tag: "el veterano" },
-  { name: "Andresito", tag: "el canterano" },
-  { name: "Piru Gómez", tag: "el portero" },
-  { name: "Kiko Ferrer", tag: "el segundo capitán" },
-  { name: "Samu Vidal", tag: "el silencioso" },
-  { name: "Toni Roca", tag: "el cocinillas" },
-  { name: "Lucho Ibarra", tag: "el filósofo" },
+  { name: "Chino Vega", tag: "el gracioso", bio: "Capaz de sacar un meme de cualquier derrota. El vestuario se ríe hasta cuando no toca." },
+  { name: "Rafa Ortiz", tag: "el veterano", bio: "15 temporadas en las piernas. Habla poco, pero cuando habla, todos callan." },
+  { name: "Andresito", tag: "el canterano", bio: "Subió del filial con 18 años y todavía pide permiso para sentarse en el bus." },
+  { name: "Piru Gómez", tag: "el portero", bio: "Dice que los porteros están locos y lo demuestra a diario. Manos de piedra, corazón de oro." },
+  { name: "Kiko Ferrer", tag: "el segundo capitán", bio: "El que organiza las cenas, los regalos y las multas. Sin él, esto sería un caos." },
+  { name: "Samu Vidal", tag: "el silencioso", bio: "Dos frases por semana, pero corre por tres. El míster lo pondría hasta lesionado." },
+  { name: "Toni Roca", tag: "el cocinillas", bio: "Lleva táperes al vestuario y jura que su arroz cambia partidos. Nadie lo discute ya." },
+  { name: "Lucho Ibarra", tag: "el filósofo", bio: "Cita a entrenadores muertos y a su abuelo a partes iguales. Acierta más que el VAR." },
 ];
 const makeSquad = () => pickN(SQUAD_POOL, 4);
 /* bienvenidas al grupo del vestuario: se usan al fichar y al reparar partidas antiguas sin este chat */
@@ -357,6 +392,7 @@ const COND = {
   starter: (c) => c.starter, benched: (c) => c.benched,
   hasGoals: (c) => c.hasGoals, scorer: (c) => c.scorer,
   seasonStart: (c) => c.seasonStart, seasonEnd: (c) => c.seasonEnd,
+  win: (c) => c.win, loss: (c) => c.loss, kgUp: (c) => c.kgUp, derbiSoon: (c) => c.derbiSoon,
 };
 const FLAVOR = [
   /* ---- PRENSA (tercera persona) ---- */
@@ -547,6 +583,18 @@ const FLAVOR = [
   { c: "squad", t: "Piques de FIFA esta noche en casa del capi. ¿Vienes?", replies: [
     { t: "Voy y os gano a todos", r: ["JAJAJA la confianza del killer 😎 te espero", "Anotado. Si pierdes, mañana corres el doble"] },
     { t: "Paso, mañana hay que rendir", r: ["Profesional total. Por eso juegas tú y yo chupo banquillo 😂", "Respeto. El míster estaría orgulloso"] }] },
+  /* ---- MEMORIA NARRATIVA: referencias a tu historial real ---- */
+  { c: "press", t: "La estadística del día: {streak} días seguidos al máximo nivel. La regularidad de {player} ya es marca de la casa.", w: "hot" },
+  { c: "cap", t: "{streak} días seguidos currando como un animal. Ni yo en mis mejores tiempos, chaval.", w: "hot" },
+  { c: "cap", t: "Todavía me dura la sonrisa del partido contra el {lastRival}. Así se compite 😄", w: "win" },
+  { c: "coach", t: "Lo del {lastRival} ya está analizado y enterrado. Hoy toca levantar la cabeza y currar.", w: "loss" },
+  { c: "squad", t: "He vuelto a ver los highlights contra el {lastRival}. Salgo espectacular de fondo 😂", w: "win", who: "el gracioso" },
+  { c: "press", t: "La transformación física de {player} es un hecho: +{kg} kg desde su llegada. El gimnasio del {club} tiene inquilino fijo.", w: "kgUp" },
+  { c: "squad", t: "Tras lo del {lastRival}, mi consejo: los partidos se olvidan en 24 horas, los buenos y los malos. Mañana, a lo nuestro.", w: "loss", who: "el veterano" },
+  /* ---- DERBI: anticipación del partidazo ---- */
+  { c: "press", t: "🔥 Semana de PARTIDAZO: el {club} se mide al {derbiRival} y la ciudad no habla de otra cosa.", w: "derbiSoon" },
+  { c: "fan", t: "La grada del {club} prepara un recibimiento especial para el duelo contra el {derbiRival}. Se palpa el ambiente.", w: "derbiSoon" },
+  { c: "squad", t: "Esta semana toca el {derbiRival}... En estos partidos es cuando se hace uno grande. Dormid bien todos.", w: "derbiSoon", who: "el veterano" },
 ];
 
 const fillTpl = (str, c) => str.replace(/\{(\w+)\}/g, (_, k) => (c[k] != null ? String(c[k]) : ""));
@@ -574,6 +622,17 @@ function flavorCtx(g) {
      se refiere a la recta final (aún jugable), no a un estado que casi nunca existiría */
   c.seasonStart = s ? s.matchday <= 1 : true;
   c.seasonEnd = s ? s.matchday >= SEASON_LENGTH - 2 : false;
+  /* memoria narrativa: hechos reales del historial disponibles como variables */
+  const wl = p.weightLog || [];
+  const gained = wl.length ? wl[wl.length - 1].kg - p.weight0 : 0;
+  c.kg = gained.toFixed(1);
+  c.streak = p.streak || 0;
+  c.lastRival = last ? last.rival : "el último rival";
+  c.win = last ? last.res === "V" : false;
+  c.loss = last ? last.res === "D" : false;
+  c.kgUp = gained >= 1;
+  c.derbiSoon = !!s && s.matchday < SEASON_LENGTH && s.matchday + 1 === derbiJornadaOf(s);
+  c.derbiRival = s ? s.rivals[s.matchday % s.rivals.length] : "";
   return c;
 }
 
@@ -616,7 +675,11 @@ function pickFlavor(g, n) {
     used.add(idx);
     const f = pool[idx];
     catN[f.c] = (catN[f.c] || 0) + 1;
-    out.push({ from: senderFor(f.c, g), text: fillTpl(f.t, c), t: f.t, replies: f.replies });
+    /* frases con "who": las dice el compañero cuyo tag encaja (el gracioso bromea, el veterano aconseja) */
+    const from = f.c === "squad" && f.who && g.squad && g.squad.length
+      ? (g.squad.find((s) => s.tag === f.who) || pick(g.squad)).name + " · Vestuario"
+      : senderFor(f.c, g);
+    out.push({ from, text: fillTpl(f.t, c), t: f.t, replies: f.replies });
   }
   return out;
 }
@@ -976,15 +1039,27 @@ function MatchModal({ match, club, onFinish, crest, crestScale }) {
         if (nm >= 92) { clearInterval(int); setEnded(true); return 90; }
         return nm;
       });
-    }, 220);
+    }, 260);
     return () => clearInterval(int);
   }, []);
-  useEffect(() => { setShown(match.events.filter((e) => e.min <= minute)); }, [minute, match]);
+  /* revelar eventos con ritmo: vibración sutil cuando entra un gol nuestro */
+  const seenRef = useRef(0);
+  useEffect(() => {
+    const list = match.events.filter((e) => e.min <= minute);
+    if (list.length > seenRef.current) {
+      list.slice(seenRef.current).forEach((e) => {
+        if (e.good && e.text.includes("⚽")) buzz(e.text.includes("GOOOL") ? [30, 40, 30] : 20);
+      });
+      seenRef.current = list.length;
+    }
+    setShown(list);
+  }, [minute, match]);
   const gf = shown.filter((e) => e.good && e.text.includes("⚽")).length;
   const ga = shown.filter((e) => !e.good && e.text.includes("🥅")).length;
   return (
     <div className="overlay" style={{ background: "radial-gradient(ellipse at 50% 0%, #0E3320, #05070d 75%)", justifyContent: "flex-start", paddingTop: 60 }}>
-      <div className="eyebrow" style={{ textAlign: "center", color: "#CDF546" }}>JORNADA {match.jornada} · EN VIVO</div>
+      <div className="eyebrow" style={{ textAlign: "center", color: "#CDF546" }}>
+        {match.derbi ? "🔥 PARTIDAZO · " : ""}JORNADA {match.jornada} · EN VIVO</div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 18, margin: "14px 0" }}>
         <Crest c1={club.c1} c2={club.c2} name={club.name} size={44} img={crest} imgScale={crestScale} />
         <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 44, color: "#F5EFDF" }}>
@@ -995,7 +1070,8 @@ function MatchModal({ match, club, onFinish, crest, crestScale }) {
         {ended ? "FINAL" : minute + "'"}</div>
       <div style={{ maxWidth: 340, margin: "18px auto 0", width: "100%", flex: 1, overflowY: "auto" }}>
         {shown.map((e, i) => (
-          <div key={i} className="event-in" style={{ padding: "8px 12px", marginBottom: 6, borderLeft: `3px solid ${e.good ? "#3DDC84" : "#E14B4B"}`,
+          <div key={i} className={"event-in" + (i === shown.length - 1 && !ended ? " event-new" : "")}
+            style={{ padding: "8px 12px", marginBottom: 6, borderLeft: `3px solid ${e.good ? "#3DDC84" : "#E14B4B"}`,
             background: "rgba(255,255,255,.04)", fontSize: 13.5, color: "#DDE3EA" }}>
             <b style={{ fontFamily: "'Oswald',sans-serif", marginRight: 8 }}>{e.min}'</b>{e.text}
           </div>))}
@@ -1046,7 +1122,14 @@ function OfferBlock({ m, onOfferAction }) {
   );
 }
 
-function ChatTab({ game, onOfferAction, onRead, onAsk }) {
+function ChatTab({ game, onOfferAction, onRead, onAsk, notify }) {
+  /* tocar el nombre de un compañero muestra su mini-bio */
+  const showBio = (from) => {
+    const name = from.replace(" · Vestuario", "");
+    const m = (game.squad || []).find((s) => s.name === name);
+    const p = m || SQUAD_POOL.find((s) => s.name === name);
+    if (p && p.bio) notify(`${p.name} · ${p.tag}. ${p.bio}`);
+  };
   const [open, setOpen] = useState(null);
   const endRef = useRef();
   const messages = game.messages;
@@ -1064,8 +1147,8 @@ function ChatTab({ game, onOfferAction, onRead, onAsk }) {
     return (
       <div style={{ padding: "16px 12px 90px" }}>
         <div className="eyebrow" style={{ padding: "0 4px" }}>MENSAJES</div>
-        {rows.length === 0 && <div style={{ color: "#6F7563", fontSize: 13, marginTop: 20, padding: "0 4px" }}>
-          Aún no hay mensajes. Juega partidos y progresa: el mundo empezará a hablar de ti.</div>}
+        {rows.length === 0 && <div className="empty"><span className="em-ico">📭</span>
+          Aún no hay mensajes.<br />Juega partidos y progresa: el mundo empezará a hablar de ti.</div>}
         {rows.map((cid) => {
           const meta = CHAT_META[cid], list = byChat[cid], last = list[list.length - 1];
           const preview = ((last.mine ? "Tú: " : "") +
@@ -1108,7 +1191,8 @@ function ChatTab({ game, onOfferAction, onRead, onAsk }) {
             {m.d && (i === 0 || list[i - 1].d !== m.d) && (
               <div className="day-sep"><span>{dayLabel(m.d)}</span></div>)}
             <div className={"wbubble" + (m.mine ? " mine" : "")} style={m.mine ? {} : { borderLeft: `3px solid ${meta.color}` }}>
-              {meta.group && !m.mine && <div className="wfrom" style={{ color: meta.color }}>{m.from.replace(" · Vestuario", "")}</div>}
+              {meta.group && !m.mine && <div className="wfrom" style={{ color: meta.color, cursor: "pointer" }}
+                onClick={() => showBio(m.from)}>{m.from.replace(" · Vestuario", "")}</div>}
               <OfferBlock m={m} onOfferAction={onOfferAction} />
               <div style={{ whiteSpace: "pre-wrap" }}>{m.text}</div>
               {m.kind === "ask" && m.askStatus !== "answered" && m.replies && (
@@ -1168,7 +1252,7 @@ function MonthCal({ game, logDate, onPick }) {
     </div>);
 }
 
-function LogTab({ game, log, onLog, logDate, onDate, onCloseDay, savedMeals, onSaveMeal }) {
+function LogTab({ game, log, onLog, logDate, onDate, onCloseDay, savedMeals, onSaveMeal, onUseSaved, notify }) {
   const [meal, setMeal] = useState("");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState(null);
@@ -1180,12 +1264,19 @@ function LogTab({ game, log, onLog, logDate, onDate, onCloseDay, savedMeals, onS
   const yLog = game.logs[yesterday];
   const yPending = yLog && !yLog.closed;
   const isToday = logDate === today;
+  /* feedback inmediato: al cruzar un objetivo con esta comida, toast + vibración al momento */
+  const addMealLog = (r) => {
+    const nk = log.kcal + r.kcal, np = log.prot + r.prot;
+    if (log.prot < g.protein && np >= g.protein) { notify("💪 ¡Proteína en verde!"); buzz(25); }
+    else if (log.kcal < g.kcal && nk >= g.kcal) { notify("🔥 Calorías al objetivo"); buzz(25); }
+    onLog({ ...log, meals: [...log.meals, r], kcal: nk, prot: np });
+  };
   const addAI = async () => {
     if (!meal.trim() || loading) return;
     setLoading(true); setErr(null);
     try {
       const r = await estimateNutrition(meal.trim());
-      onLog({ ...log, meals: [...log.meals, r], kcal: log.kcal + r.kcal, prot: log.prot + r.prot });
+      addMealLog(r);
       setMeal("");
     } catch (e) {
       if (e.message === "no-ia") { setErr("La estimación por IA no está activada. Usa 'Entrada manual' para apuntar kcal y proteína."); setManual(true); }
@@ -1195,25 +1286,47 @@ function LogTab({ game, log, onLog, logDate, onDate, onCloseDay, savedMeals, onS
   };
   const addManual = () => {
     if (!mn.trim() || !+mk) return;
-    const r = { name: mn.trim(), kcal: Math.round(+mk), prot: Math.round(+mp || 0) };
-    onLog({ ...log, meals: [...log.meals, r], kcal: log.kcal + r.kcal, prot: log.prot + r.prot });
+    addMealLog({ name: mn.trim(), kcal: Math.round(+mk), prot: Math.round(+mp || 0) });
     setMn(""); setMk(""); setMp(""); setManual(false);
   };
-  const addSaved = (m) => onLog({ ...log, meals: [...log.meals, m], kcal: log.kcal + m.kcal, prot: log.prot + m.prot });
+  const addSaved = (m) => { addMealLog({ name: m.name, kcal: m.kcal, prot: m.prot }); onUseSaved(m.name); };
   const removeMeal = (i) => { const m = log.meals[i];
     onLog({ ...log, meals: log.meals.filter((_, j) => j !== i), kcal: log.kcal - m.kcal, prot: log.prot - m.prot }); };
   const dow = new Date().getDay();
   const isGymDay = g.gymDays.includes(dow);
   const pct = dayPct(log, game.player, logDate);
   const form = formFromPct(pct);
-  const Bar = ({ val, goal, color, label, unit }) => (
+  const Bar = ({ val, goal, color, label, unit, mini }) => (
     <div style={{ marginBottom: 10 }}>
       <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 3 }}>
-        <span style={{ color: "#4A4E3F", fontWeight: 500 }}>{label}</span>
+        <span style={{ color: "#4A4E3F", fontWeight: 500 }}>{label}
+          {mini >= 2 && <span style={{ fontSize: 10.5, color: "#2E9E44", fontWeight: 700 }}> · {mini}d🔥</span>}</span>
         <span style={{ fontFamily: "'Oswald',sans-serif", color: val >= goal ? "#3F8F2B" : "#16190F" }}>{Math.round(val)} / {goal} {unit}</span>
       </div>
-      <div className="track"><div className="fill" style={{ width: Math.min(100, (val / goal) * 100) + "%", background: color }} /></div>
+      {/* el relleno se pone verde al alcanzar el objetivo: feedback visual inmediato */}
+      <div className="track"><div className="fill" style={{ width: Math.min(100, (val / goal) * 100) + "%",
+        background: val >= goal ? "#2E9E44" : color }} /></div>
     </div>);
+  /* mini-rachas informativas por hábito */
+  const stProt = catStreak(game, (l) => (l.prot || 0) >= g.protein);
+  const stKcal = catStreak(game, (l) => (l.kcal || 0) >= g.kcal);
+  const stSleep = catStreak(game, (l) => l.sleep != null && l.sleep >= g.sleepGoal);
+  const stGym = gymStreakOf(game, g.gymDays);
+  /* comidas frecuentes: ordenadas por uso real; ⭐ a la más probable a esta hora */
+  const smSorted = [...savedMeals].sort((a, b) => (b.uses || 0) - (a.uses || 0));
+  const nowH = new Date().getHours();
+  const avgH = (m) => (m.hours && m.hours.length ? m.hours.reduce((a, b) => a + b, 0) / m.hours.length : null);
+  const starCand = smSorted.filter((m) => avgH(m) != null)
+    .sort((a, b) => Math.abs(avgH(a) - nowH) - Math.abs(avgH(b) - nowH))[0];
+  const starName = starCand && Math.abs(avgH(starCand) - nowH) <= 2 ? starCand.name : null;
+  /* vista semanal: % de los últimos 7 días (cerrados con su pct; hoy en proyección) */
+  const week = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = addDays(today, -i);
+    const l = game.logs[d];
+    const p = l ? (l.closed ? l.pct : (d === today ? dayPct(l, game.player, d) : null)) : null;
+    week.push({ d, p, hoy: d === today });
+  }
   return (
     <div style={{ padding: "16px 16px 96px" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -1240,16 +1353,30 @@ function LogTab({ game, log, onLog, logDate, onDate, onCloseDay, savedMeals, onS
             <FormBadge form={form} />
           </span>
         </div>
-        <Bar val={log.kcal} goal={g.kcal} color="#CDF546" label="Calorías" unit="kcal" />
-        <Bar val={log.prot} goal={g.protein} color="#16190F" label="Proteína" unit="g" />
+        <Bar val={log.kcal} goal={g.kcal} color="#CDF546" label="Calorías" unit="kcal" mini={stKcal} />
+        <Bar val={log.prot} goal={g.protein} color="#16190F" label="Proteína" unit="g" mini={stProt} />
+      </div>
+
+      <div className="panel">
+        <div className="ptitle">📈 Tu semana</div>
+        <div style={{ display: "flex", gap: 6, alignItems: "flex-end", height: 58 }}>
+          {week.map((w) => (
+            <div key={w.d} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+              <div style={{ width: "100%", borderRadius: 6, background: w.p == null ? "#E4E3D5" : FORM_META[formFromPct(w.p)].color,
+                opacity: w.hoy ? 0.55 : 1, height: w.p == null ? 6 : Math.max(8, Math.min(48, w.p * 0.4)) }} />
+              <span style={{ fontSize: 9, color: w.hoy ? "#16190F" : "#9a9e8e", fontWeight: w.hoy ? 700 : 400 }}>
+                {["D", "L", "M", "X", "J", "V", "S"][new Date(w.d + "T12:00").getDay()]}</span>
+            </div>))}
+        </div>
       </div>
 
       <div className="panel">
         <div className="ptitle">🍽️ Añadir comida</div>
-        {savedMeals.length > 0 && (
+        {smSorted.length > 0 && (
           <div className="chips" style={{ marginBottom: 10 }}>
-            {savedMeals.map((m, i) => (
-              <button key={i} className="chip" onClick={() => addSaved(m)}>{m.name} · {m.kcal}kcal</button>))}
+            {smSorted.map((m, i) => (
+              <button key={i} className="chip" onClick={() => addSaved(m)}>
+                {m.name === starName ? "⭐ " : ""}{m.name} · {m.kcal}kcal</button>))}
           </div>)}
         <div style={{ display: "flex", gap: 6 }}>
           <input className="inp" style={{ flex: 1, marginBottom: 0 }} value={meal} placeholder='ej. "2 huevos, arroz y un batido"'
@@ -1281,9 +1408,11 @@ function LogTab({ game, log, onLog, logDate, onDate, onCloseDay, savedMeals, onS
       </div>
 
       <div className="panel">
-        <div className="ptitle">🏋️ Gym {isGymDay ? "· hoy toca" : "· día de descanso"}</div>
+        <div className="ptitle">🏋️ Gym {isGymDay ? "· hoy toca" : "· día de descanso"}
+          {stGym >= 2 && <span style={{ fontSize: 10.5, color: "#2E9E44", fontWeight: 700 }}> · {stGym} seguidos🔥</span>}</div>
         <div style={{ display: "flex", gap: 8 }}>
-          <button className={"chip big" + (log.gym ? " on" : "")} onClick={() => onLog({ ...log, gym: !log.gym, gymProgress: log.gym ? false : log.gymProgress })}>
+          <button className={"chip big" + (log.gym ? " on" : "")} onClick={() => { if (!log.gym) buzz(15);
+            onLog({ ...log, gym: !log.gym, gymProgress: log.gym ? false : log.gymProgress }); }}>
             {log.gym ? "✓ Gym completado" : "Marcar gym hecho"}</button>
           {log.gym && (
             <button className={"chip big" + (log.gymProgress ? " on" : "")} onClick={() => onLog({ ...log, gymProgress: !log.gymProgress })}>
@@ -1292,10 +1421,12 @@ function LogTab({ game, log, onLog, logDate, onDate, onCloseDay, savedMeals, onS
       </div>
 
       <div className="panel">
-        <div className="ptitle">😴 Sueño de anoche</div>
+        <div className="ptitle">😴 Sueño de anoche
+          {stSleep >= 2 && <span style={{ fontSize: 10.5, color: "#2E9E44", fontWeight: 700 }}> · {stSleep}d🔥</span>}</div>
         <div className="chips">
           {[5, 6, 6.5, 7, 7.5, 8, 8.5, 9].map((h) => (
-            <button key={h} className={"chip" + (log.sleep === h ? " on" : "")} onClick={() => onLog({ ...log, sleep: h })}>{h}h</button>))}
+            <button key={h} className={"chip" + (log.sleep === h ? " on" : "")}
+              onClick={() => { if (log.sleep !== h && h >= g.sleepGoal) buzz(12); onLog({ ...log, sleep: h }); }}>{h}h</button>))}
         </div>
       </div>
 
@@ -1326,7 +1457,10 @@ function LeagueTab({ game, onPlayMatch, crest, crestScale }) {
     <div style={{ padding: "16px 16px 96px" }}>
       <div className="eyebrow">TEMPORADA {s.num} · {game.tier.league}</div>
       <div className="panel" style={{ marginTop: 10, textAlign: "center" }}>
-        <div style={{ fontSize: 12, color: "#6F7563" }}>JORNADA {Math.min(s.matchday + 1, SEASON_LENGTH)} / {SEASON_LENGTH}</div>
+        <div style={{ fontSize: 12, color: "#6F7563" }}>JORNADA {Math.min(s.matchday + 1, SEASON_LENGTH)} / {SEASON_LENGTH}
+          {s.matchday < SEASON_LENGTH && s.matchday + 1 === derbiJornadaOf(s) && (
+            <span style={{ marginLeft: 8, background: "#16190F", color: "#CDF546", borderRadius: 8, padding: "2px 8px",
+              fontSize: 10, fontFamily: "'Oswald',sans-serif", letterSpacing: 1 }}>🔥 PARTIDAZO</span>)}</div>
         <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 16, margin: "10px 0" }}>
           <Crest c1={game.club.c1} c2={game.club.c2} name={game.club.name} size={40} img={crest} imgScale={crestScale} />
           <span style={{ fontFamily: "'Oswald',sans-serif", fontSize: 18, color: "#16190F" }}>VS</span>
@@ -1352,6 +1486,17 @@ function LeagueTab({ game, onPlayMatch, crest, crestScale }) {
             <span style={{ fontFamily: "'Oswald',sans-serif" }}>{t.pts} pts</span>
           </div>))}
       </div>
+      {game.matchHistory.filter((m) => m.rating != null).length > 0 && (
+        <div className="panel">
+          <div className="ptitle">⭐ Mejores actuaciones</div>
+          {[...game.matchHistory].filter((m) => m.rating != null).sort((a, b) => b.rating - a.rating).slice(0, 3).map((m, i) => (
+            <div key={i} style={{ display: "flex", gap: 8, fontSize: 12.5, padding: "5px 0", color: "#4A4E3F", alignItems: "center" }}>
+              <span style={{ fontFamily: "'Oswald',sans-serif", width: 18, color: "#9a9e8e" }}>{i + 1}º</span>
+              <span style={{ flex: 1 }}>vs {m.rival}{m.myGoals ? ` · ${m.myGoals}⚽` : ""}{m.myAssists ? ` · ${m.myAssists}🅰️` : ""}</span>
+              <span style={{ fontFamily: "'Oswald',sans-serif", fontWeight: 700, background: (game.bestRating || 0) === m.rating ? "#CDF546" : "transparent",
+                borderRadius: 7, padding: "1px 7px" }}>{m.rating}</span>
+            </div>))}
+        </div>)}
       {game.matchHistory.length > 0 && (
         <div className="panel">
           <div className="ptitle">📼 Últimos partidos</div>
@@ -1386,7 +1531,7 @@ function HomeTab({ game, photo, log, crest, crestScale }) {
         <div className="stat-box"><div className="sb-num">{p.streak || 0}🔥</div>
           {(p.streak || 0) >= 1 && (
             <div style={{ fontSize: 9.5, fontWeight: 700, color: (p.streak || 0) >= 10 ? "#1F8A3B" : "#2E9E44", marginTop: 1 }}>
-              +{Math.round((streakMultOf(p.streak) - 1) * 100)}% XP{(p.streak || 0) >= 10 ? " · MAX" : ""}</div>)}
+              +{Math.round((streakMultOf(p.streak) - 1) * 100)}% XP{(p.streak || 0) >= 25 ? " · MAX" : ""}</div>)}
           <div className="sb-lbl">Racha de días</div></div>
       </div>
       <div className="panel" style={{ marginTop: 14 }}>
@@ -1451,7 +1596,7 @@ function BackupPanel({ getBackup, onRestore }) {
 
 /* ---------- PERFIL / OBJETIVOS ---------- */
 function ProfileTab({ game, photo, onWeight, onPhoto, onRemovePhoto, crest, onCrest, onRemoveCrest,
-  crestScale, onCrestScale, onGoals, getBackup, onRestore }) {
+  crestScale, onCrestScale, onGoals, getBackup, onRestore, haptics, onHaptics }) {
   const p = game.player;
   const [kg, setKg] = useState("");
   const [edit, setEdit] = useState(false);
@@ -1574,10 +1719,42 @@ function ProfileTab({ game, photo, onWeight, onPhoto, onRemovePhoto, crest, onCr
       </div>
       <div className="panel">
         <div className="ptitle">🏆 Trayectoria</div>
-        {game.careerLog.map((c, i) => (
-          <div key={i} style={{ fontSize: 13, color: "#4A4E3F", padding: "5px 0" }}>
-            <span style={{ color: "#5C7010", fontFamily: "'Oswald',sans-serif", fontWeight: 700, marginRight: 8 }}>T{c.season}</span>{c.text}
-          </div>))}
+        {game.careerLog.length === 0 ? (
+          <div className="empty"><span className="em-ico">📖</span>Tu historia se empieza a escribir.<br />Cada temporada dejará aquí su huella.</div>
+        ) : (
+          <div style={{ borderLeft: "2.5px solid #16190F", marginLeft: 7, paddingLeft: 16 }}>
+            {game.careerLog.map((c, i) => (
+              <div key={i} style={{ position: "relative", paddingBottom: i === game.careerLog.length - 1 ? 2 : 14 }}>
+                <div style={{ position: "absolute", left: -23, top: 3, width: 11, height: 11, borderRadius: "50%",
+                  background: "#CDF546", border: "2px solid #16190F" }} />
+                <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 11, letterSpacing: 1, color: "#5C7010" }}>TEMPORADA {c.season}</div>
+                <div style={{ fontSize: 13, color: "#4A4E3F" }}>{c.text}</div>
+              </div>))}
+          </div>)}
+      </div>
+      <div className="panel">
+        <div className="ptitle">🎯 Metas de carrera</div>
+        {(() => {
+          const ovr = calcOVR(p.stats), played = (game.matchHistory || []).length;
+          return [
+            { t: "Llegar a Segunda Federación", pr: game.tier.id >= 1 ? 1 : Math.min(1, ovr / 66), n: game.tier.id >= 1 ? "✓" : ovr + "/66" },
+            { t: "Llegar a Primera Federación", pr: game.tier.id >= 2 ? 1 : Math.min(1, ovr / 70), n: game.tier.id >= 2 ? "✓" : ovr + "/70" },
+            { t: "Carta de oro (media 75)", pr: Math.min(1, ovr / 75), n: ovr >= 75 ? "✓" : ovr + "/75" },
+            { t: "Jugar 100 partidos", pr: Math.min(1, played / 100), n: played >= 100 ? "✓" : played + "/100" },
+            { t: "Un partido de 9+", pr: Math.min(1, (game.bestRating || 0) / 9), n: (game.bestRating || 0) >= 9 ? "✓" : (game.bestRating || "—") + "/9" },
+          ].map((m, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 7 }}>
+              <span style={{ flex: 1, fontSize: 12.5, color: m.pr >= 1 ? "#3F8F2B" : "#4A4E3F", fontWeight: m.pr >= 1 ? 700 : 400 }}>{m.t}</span>
+              <div className="track" style={{ width: 74, height: 10, padding: 2 }}>
+                <div className="fill" style={{ width: (m.pr * 100) + "%", background: m.pr >= 1 ? "#2E9E44" : "#CDF546" }} /></div>
+              <span style={{ fontSize: 10.5, color: "#9a9e8e", width: 44, textAlign: "right", fontFamily: "'Oswald',sans-serif" }}>{m.n}</span>
+            </div>));
+        })()}
+      </div>
+      <div className="panel">
+        <div className="ptitle">⚙️ Ajustes</div>
+        <button className={"chip big" + (haptics ? " on" : "")} onClick={() => onHaptics(!haptics)}>
+          📳 Vibración en hitos {haptics ? "· activada" : "· desactivada"}</button>
       </div>
     </div>
   );
@@ -1591,7 +1768,12 @@ export default function App() {
   const [photo, setPhoto] = useState(null);
   const [crest, setCrest] = useState(null);
   const [crestScale, setCrestScale] = useState(1);
+  const [haptics, setHaptics] = useState(true);
+  const [tierUp, setTierUp] = useState(null);
   const [loaded, setLoaded] = useState(false);
+  const setHapticsPref = (v) => { setHaptics(v); HAPTICS = v; stSet("haptics", v); };
+  const useSavedMeal = (name) => setGame((g) => ({ ...g, savedMeals: (g.savedMeals || []).map((m) =>
+    m.name === name ? { ...m, uses: (m.uses || 0) + 1, hours: [...(m.hours || []), new Date().getHours()].slice(-6) } : m) }));
   const [signing, setSigning] = useState(null); // club en animación de fichaje
   const [liveMatch, setLiveMatch] = useState(null);
   const [tab, setTab] = useState("home");
@@ -1632,9 +1814,11 @@ export default function App() {
       const ph = await stGet("photo");
       const cr = await stGet("crest");
       const cs = await stGet("crestScale");
+      const hp = await stGet("haptics");
       if (ph) setPhoto(ph);
       if (cr) setCrest(cr);
       if (cs) setCrestScale(cs);
+      if (hp === false) { setHaptics(false); HAPTICS = false; }
       if (g) setGame(processNewDays(sanitizeGame(g)));
       else setGame({ phase: "intro" });
       setLoaded(true);
@@ -1647,6 +1831,20 @@ export default function App() {
     clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => stSet("game", game), 400);
   }, [game, loaded]);
+
+  /* celebración de nueva carta: se dispara solo al CAMBIAR de tier respecto al último visto
+     (cardTierSeen), nunca en cada render. Partidas antiguas: se registra el tier actual
+     en silencio la primera vez, sin celebrar. */
+  useEffect(() => {
+    if (!loaded || !game || game.phase !== "main") return;
+    const order = ["bronze", "silver", "gold", "special"];
+    const t = cardTier(calcOVR(game.player.stats));
+    if (!game.cardTierSeen) { setGame((g) => ({ ...g, cardTierSeen: t })); return; }
+    if (order.indexOf(t) > order.indexOf(game.cardTierSeen)) {
+      setTierUp(t); buzz([30, 40, 60]);
+      setGame((g) => ({ ...g, cardTierSeen: t }));
+    }
+  }, [loaded, game && game.phase === "main" ? calcOVR(game.player.stats) : -1]);
 
   const savePhoto = (url) => { setPhoto(url); stSet("photo", url); };
   const removePhoto = () => { setPhoto(null); try { localStorage.removeItem("futabita:photo"); } catch (e) {} };
@@ -1690,6 +1888,23 @@ export default function App() {
     }
     /* partidas antiguas sin vestuario: se genera uno al vuelo */
     if (!out.squad || !out.squad.length) out.squad = makeSquad();
+    /* aniversarios de carrera: 30/60/100 días desde el fichaje (una sola vez cada uno).
+       Partidas antiguas sin signedAt: empieza a contar desde hoy. */
+    if (!out.signedAt) out.signedAt = today;
+    else {
+      const dd = dayDiff(out.signedAt, today);
+      const ms = [...(out.milestonesSeen || [])];
+      [[30, "Entrenador", "Hoy hace 30 días que llegaste. Un mes de trabajo serio — el vestuario ya no se imagina esto sin ti. 💪"],
+       [60, null, "¡60 días juntos ya, crack! 🤝 De 'el nuevo' a uno más de la familia. Lo que hemos crecido, ¿eh?"],
+       [100, "📰 La Grada Digital", "Se cumplen 100 días desde la llegada del fichaje que cambió el vestuario: de apuesta a realidad."]]
+        .forEach(([n, from, txt]) => {
+          if (dd >= n && !ms.includes(n)) {
+            out = addMsg(out, from || (out.captain || "Capitán") + " · Capitán", txt);
+            ms.push(n);
+          }
+        });
+      out.milestonesSeen = ms;
+    }
     /* ambiente diario: cupo por fecha con recargas al reabrir la app.
        - primera tanda del día: 3-4 mensajes sin partido, 1-2 con partido
        - reaperturas: +1-2 hasta el cupo, con mínimo 2h entre tandas para no saturar
@@ -1763,6 +1978,14 @@ export default function App() {
       /* club nuevo, vestuario nuevo */
       out.squad = makeSquad();
       out = addMsg(out, out.squad[0].name + " · Vestuario", pick(SQUAD_WELCOMES(g.player.name, out.squad[0])));
+      /* fecha de inicio de carrera (para aniversarios) y primer ascenso de categoría */
+      out.signedAt = out.signedAt || todayStr();
+      if (viaTransfer && tierId > g.tier.id) buzz([30, 40, 60]);
+      if (viaTransfer && tierId > g.tier.id && !g.firstRiseDone) {
+        out.firstRiseDone = true;
+        out = addMsg(out, "Tu agente",
+          "Tu primer salto de categoría. 📈 El primero de muchos. Firmé contigo por días como hoy — disfrútalo.");
+      }
       return out;
     });
     setSigning(null);
@@ -1774,6 +1997,7 @@ export default function App() {
     const s = game.season;
     const rival = s.rivals[s.matchday % s.rivals.length];
     const m = simulateMatch(game.player, rival, s.matchday + 1);
+    m.derbi = s.matchday + 1 === derbiJornadaOf(s);
     setLiveMatch(m);
   };
 
@@ -1787,6 +2011,17 @@ export default function App() {
         const r = Math.random(); return { ...t, pts: t.pts + (r < 0.42 ? 3 : r < 0.7 ? 1 : 0) };
       });
       let out = { ...g, season: s, matchHistory: [...g.matchHistory, m] };
+      /* récord personal de nota: hito la primera vez que superas tu mejor partido */
+      if (m.rating != null && m.rating > (g.bestRating || 0)) {
+        out.bestRating = m.rating;
+        if (g.bestRating) { setTimeout(() => pushToast("🌟 ¡Nuevo mejor partido de tu carrera! " + m.rating), 700); buzz([20, 30, 20]); }
+      }
+      /* primer gol de la carrera */
+      if ((m.myGoals || 0) > 0 && !g.firstGoalDone) {
+        out.firstGoalDone = true;
+        out = addMsg(out, (g.captain || "Capitán") + " · Capitán",
+          "¡TU PRIMER GOL! ⚽ Guarda ese balón donde puedas verlo. El primero no se olvida nunca, crack.");
+      }
       out = addMsg(out, "Entrenador", coachMessage(m, g.player));
       const cap = (g.captain || "Capitán") + " · Capitán";
       if (!m.benched && m.rating >= 8.5 && Math.random() < 0.6) {
@@ -1802,7 +2037,7 @@ export default function App() {
       }
       const ovr = calcOVR(g.player.stats);
       /* ventana de mitad de temporada */
-      if (s.matchday === MID_WINDOW && !s.midOfferDone) {
+      if (s.matchday >= MID_WINDOW && !s.midOfferDone) {
         s.midOfferDone = true;
         const next = TIERS.find((t) => t.id === g.tier.id + 1);
         if (next && ovr >= next.minOvr - 1 && Math.random() < 0.8) {
@@ -1826,6 +2061,17 @@ export default function App() {
         out = addMsg(out, "Entrenador",
           `🏁 FIN DE TEMPORADA ${s.num}.\nPosición final: ${pos}º de 10.\nTus goles: ${goals} · Nota media: ${avgR}.\n${pos <= 3 ? "Temporada histórica. Eres el nombre del vestuario." : pos <= 6 ? "Temporada digna. El año que viene, más." : "Temporada dura. Que sirva de gasolina."}`);
         out.careerLog = [...out.careerLog, { season: s.num, text: `${pos}º con ${g.club.name} · ${goals} goles · media ${avgR}` }];
+        /* memoria del año: resumen sobre datos ya guardados (partidos, logs, pesos) */
+        const assists = seasonMatches.reduce((a, x) => a + (x.myAssists || 0), 0);
+        const bestR = ratings.length ? Math.max(...ratings.map((x) => x.rating)) : null;
+        const seasonLogs = Object.entries(g.logs || {}).filter(([d]) => d >= s.startDate);
+        const gymCount = seasonLogs.filter(([, l]) => l.gym).length;
+        const wlSeason = (g.player.weightLog || []).filter((w) => w.d >= s.startDate);
+        const kgDelta = wlSeason.length >= 2 ? (wlSeason[wlSeason.length - 1].kg - wlSeason[0].kg) : null;
+        let topMeal = null;
+        seasonLogs.forEach(([, l]) => (l.meals || []).forEach((mm) => { if (!topMeal || mm.prot > topMeal.prot) topMeal = mm; }));
+        out.pendingSummary = { season: s.num, club: g.club.name, pos, goals, assists, avgR, bestR, gymCount, kgDelta,
+          topMeal: topMeal ? { name: topMeal.name, prot: topMeal.prot } : null };
         /* ofertas de verano */
         const next = TIERS.find((t) => t.id === g.tier.id + 1);
         let offered = false;
@@ -1893,7 +2139,20 @@ export default function App() {
     return { ...g, player: { ...p, stats, xp,
       weightLog: [...p.weightLog, { d: todayStr(), kg }] } };
   }); pushToast("⚖️ Peso registrado — tu valor de mercado se actualiza · +8 XP MEN"); };
-  const setGoals = (goals) => setGame((g) => ({ ...g, player: { ...g.player, goals } }));
+  /* el vestuario "se entera" cuando ajustas tus objetivos de kcal/proteína */
+  const setGoals = (goals) => setGame((g) => {
+    const old = g.player.goals;
+    let out = { ...g, player: { ...g.player, goals } };
+    if (goals.kcal !== old.kcal || goals.protein !== old.protein) {
+      const up = goals.kcal > old.kcal || goals.protein > old.protein;
+      out = addMsg(out, pick(["Entrenador", (g.captain || "Capitán") + " · Capitán"]),
+        up ? pick(["Me ha llegado que has subido el listón de tu preparación. Esa ambición es justo lo que quiero ver. 💪",
+                   "¿Apretando más todavía? Así se hace. El techo lo pones tú."])
+           : pick(["He visto que has ajustado tu plan. Escuchar al cuerpo también es de profesionales.",
+                   "Plan nuevo, ¿eh? Lo importante no es el número, es no fallar un día. Sigue."]));
+    }
+    return out;
+  });
 
   /* cerrar manualmente un día pendiente (normalmente ayer) */
   const closePendingDay = (dateStr) => setGame((g) => {
@@ -1908,6 +2167,8 @@ export default function App() {
       const txt = Object.entries(counts).map(([k, n]) => `${STAT_LABELS[k]} +${n}`).join(", ");
       out = addMsg(out, "Entrenador", `Informe de entrenamiento: ${txt}. El staff está impresionado con tu trabajo. 💪`);
     }
+    if (r.form === "alza") buzz([20, 30, 20]);
+    if (r.ups.length) buzz(30);
     setTimeout(() => pushToast(`📋 Día ${dateStr.slice(8)}/${dateStr.slice(5, 7)} cerrado · ${r.pct}%`), 100);
     return out;
   });
@@ -1956,15 +2217,17 @@ export default function App() {
             </div>
             <div style={{ marginLeft: "auto" }}><FormBadge form={game.player.form} /></div>
           </header>
-          {tab === "home" && <HomeTab game={game} photo={photo} crest={crest} crestScale={crestScale}
-            log={(game.logs && game.logs[todayStr()]) || EMPTY_LOG()} />}
-          {tab === "log" && <LogTab game={game} log={activeLog} onLog={setActiveLog} logDate={logDate} onDate={setLogDate}
-            onCloseDay={closePendingDay} savedMeals={game.savedMeals || []} onSaveMeal={saveMeal} />}
-          {tab === "league" && <LeagueTab game={game} onPlayMatch={playMatch} crest={crest} crestScale={crestScale} />}
-          {tab === "chat" && <ChatTab game={game} onOfferAction={offerAction} onRead={markChatRead} onAsk={answerAsk} />}
-          {tab === "me" && <ProfileTab game={game} photo={photo} onWeight={addWeight} onPhoto={savePhoto} onRemovePhoto={removePhoto}
-            crest={crest} onCrest={saveCrest} onRemoveCrest={removeCrest} crestScale={crestScale} onCrestScale={saveCrestScale}
-            onGoals={setGoals} getBackup={getBackup} onRestore={restoreBackup} />}
+          <div key={tab} className="tab-in">
+            {tab === "home" && <HomeTab game={game} photo={photo} crest={crest} crestScale={crestScale}
+              log={(game.logs && game.logs[todayStr()]) || EMPTY_LOG()} />}
+            {tab === "log" && <LogTab game={game} log={activeLog} onLog={setActiveLog} logDate={logDate} onDate={setLogDate}
+              onCloseDay={closePendingDay} savedMeals={game.savedMeals || []} onSaveMeal={saveMeal} onUseSaved={useSavedMeal} notify={pushToast} />}
+            {tab === "league" && <LeagueTab game={game} onPlayMatch={playMatch} crest={crest} crestScale={crestScale} />}
+            {tab === "chat" && <ChatTab game={game} onOfferAction={offerAction} onRead={markChatRead} onAsk={answerAsk} notify={pushToast} />}
+            {tab === "me" && <ProfileTab game={game} photo={photo} onWeight={addWeight} onPhoto={savePhoto} onRemovePhoto={removePhoto}
+              crest={crest} onCrest={saveCrest} onRemoveCrest={removeCrest} crestScale={crestScale} onCrestScale={saveCrestScale}
+              onGoals={setGoals} getBackup={getBackup} onRestore={restoreBackup} haptics={haptics} onHaptics={setHapticsPref} />}
+          </div>
           <nav className="tabbar">
             {[["home", "🏠", "Inicio"], ["log", "📝", "Registro"], ["league", "🏆", "Liga"], ["chat", "💬", "Chat"], ["me", "👤", "Yo"]].map(([id, ic, lb]) => (
               <button key={id} className={"tabbtn" + (tab === id ? " on" : "")}
@@ -1976,6 +2239,41 @@ export default function App() {
           </nav>
         </>
       )}
+      {game.pendingSummary && !liveMatch && (
+        <div className="overlay" style={{ background: "radial-gradient(ellipse at 50% 0%, #0E3320, #05070d 75%)", overflowY: "auto" }}>
+          <div className="pop-in" style={{ width: "100%", maxWidth: 340, padding: "30px 0" }}>
+            <div style={{ textAlign: "center", fontFamily: "'Oswald',sans-serif", letterSpacing: 5, fontSize: 12, color: "#CDF546" }}>MEMORIA DEL AÑO</div>
+            <div style={{ textAlign: "center", fontFamily: "'Oswald',sans-serif", fontSize: 28, color: "#F5EFDF", margin: "4px 0 16px", textTransform: "uppercase" }}>
+              Temporada {game.pendingSummary.season}</div>
+            {[["🏆 Posición final", game.pendingSummary.pos + "º con " + game.pendingSummary.club],
+              ["⚽ Goles · Asistencias", game.pendingSummary.goals + " · " + game.pendingSummary.assists],
+              ["📊 Nota media", game.pendingSummary.avgR],
+              ["🌟 Mejor partido", game.pendingSummary.bestR != null ? game.pendingSummary.bestR : "—"],
+              ["🏋️ Sesiones de gym", game.pendingSummary.gymCount],
+              ["⚖️ Peso en la temporada", game.pendingSummary.kgDelta != null ? (game.pendingSummary.kgDelta >= 0 ? "+" : "") + game.pendingSummary.kgDelta.toFixed(1) + " kg" : "—"],
+              ["🍽️ Plato top (proteína)", game.pendingSummary.topMeal ? `${game.pendingSummary.topMeal.name} (${game.pendingSummary.topMeal.prot}g)` : "—"]]
+              .map(([k, v], i) => (
+                <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "9px 4px", fontSize: 13.5,
+                  borderBottom: "1px solid rgba(255,255,255,.1)", color: "#B9C2CD" }}>
+                  <span>{k}</span><span style={{ color: "#F5EFDF", fontFamily: "'Oswald',sans-serif" }}>{v}</span>
+                </div>))}
+            <button className="btn-gold" style={{ marginTop: 22 }}
+              onClick={() => { buzz(20); setGame((g) => { const o = { ...g }; delete o.pendingSummary; return o; }); }}>
+              EMPEZAR LA TEMPORADA {game.pendingSummary.season + 1} →</button>
+          </div>
+        </div>)}
+      {tierUp && (
+        <div className="overlay" style={{ background: "radial-gradient(circle at 50% 30%, rgba(205,245,70,.28), #05070d 72%)" }}>
+          <div className="pop-in" style={{ textAlign: "center" }}>
+            <div style={{ fontFamily: "'Oswald',sans-serif", letterSpacing: 5, fontSize: 12, color: "#CDF546" }}>¡NUEVA CARTA!</div>
+            <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 32, color: "#F5EFDF", margin: "6px 0 16px", textTransform: "uppercase" }}>
+              {{ bronze: "Bronce", silver: "Plata 🥈", gold: "Oro 🥇", special: "Especial 💎" }[tierUp]}</div>
+            <div className="card-drop" style={{ display: "flex", justifyContent: "center" }}>
+              <PlayerCard player={game.player} photo={photo} club={game.club} crest={crest} crestScale={crestScale} />
+            </div>
+            <button className="btn-gold" style={{ marginTop: 26 }} onClick={() => setTierUp(null)}>SEGUIR MI CARRERA</button>
+          </div>
+        </div>)}
       {signing && <SigningOverlay club={signing.club} player={game.player} photo={photo} crest={crest} crestScale={crestScale} onDone={confirmSigning} />}
       {liveMatch && <MatchModal match={liveMatch} club={game.club} onFinish={finishMatch} crest={crest} crestScale={crestScale} />}
       {toast && <div className="toast">{toast}</div>}
@@ -2096,6 +2394,15 @@ function StyleTag() {
       @keyframes drop { from { opacity:0; transform:translateY(-60px) rotateY(60deg) scale(.7);} to { opacity:1; transform:none; } }
       .event-in { animation:evin .35s ease both; }
       @keyframes evin { from { opacity:0; transform:translateX(-14px);} to { opacity:1; transform:none; } }
+      /* lenguaje de animación común: micro .22-.25s ease, celebraciones .5s+ */
+      .tab-in { animation:tabin .22s ease both; }
+      @keyframes tabin { from { opacity:0; transform:translateY(8px);} to { opacity:1; transform:none; } }
+      .chip.on { animation:chippop .25s cubic-bezier(.2,1.4,.4,1); }
+      @keyframes chippop { 0% { transform:scale(.92);} 60% { transform:scale(1.06);} 100% { transform:none; } }
+      .event-new { animation:evflash .8s ease both; }
+      @keyframes evflash { 0% { background:rgba(205,245,70,.45);} 100% { background:rgba(255,255,255,.04);} }
+      .empty { text-align:center; color:#8A8E7C; font-size:13px; padding:26px 12px; line-height:1.6; }
+      .empty .em-ico { font-size:30px; display:block; margin-bottom:6px; }
       .fade-seq { opacity:0; animation:fadeup .9s ease forwards; }
       @keyframes fadeup { from { opacity:0; transform:translateY(14px);} to { opacity:1; transform:none; } }
       .toast { position:fixed; bottom:84px; left:50%; transform:translateX(-50%); background:#16190F; color:#EFEEE3;

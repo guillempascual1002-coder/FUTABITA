@@ -249,21 +249,20 @@ async function stSet(key, val) { try { localStorage.setItem("futabita:" + key, J
 
 /* IA nutrición */
 const toNum = (v) => { const n = parseFloat(String(v).replace(",", ".").replace(/[^\d.]/g, "")); return Number.isFinite(n) ? Math.round(n) : null; };
+/* /api/estimate ya devuelve el resultado limpio: aquí solo se valida.
+   501 = sin clave configurada -> la UI ofrece entrada manual. */
 async function estimateNutrition(text) {
   const res = await fetch("/api/estimate", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text }),
+    body: JSON.stringify({ text: text.slice(0, 200) }),
   });
-  if (!res.ok) throw new Error("no-ia");
-  const data = await res.json();
-  const txt = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
-  const clean = txt.replace(/```json|```/g, "").trim();
-  const parsed = JSON.parse(clean.slice(clean.indexOf("{"), clean.lastIndexOf("}") + 1));
-  if (parsed.error) throw new Error("no-food");
-  const kcal = toNum(parsed.kcal), prot = toNum(parsed.proteina);
+  if (res.status === 501) throw new Error("no-ia");
+  const d = await res.json().catch(() => ({}));
+  if (!res.ok || d.error) throw new Error(d.error === "no-food" ? "no-food" : "bad-numbers");
+  const kcal = toNum(d.kcal), prot = toNum(d.prot);
   if (kcal == null || prot == null) throw new Error("bad-numbers");
-  return { name: String(parsed.nombre || text).slice(0, 40), kcal: Math.max(0, kcal), prot: Math.max(0, prot) };
+  return { name: String(d.name || text).slice(0, 40), kcal: Math.max(0, kcal), prot: Math.max(0, prot) };
 }
 
 /* saneo de datos: repara NaN/null heredados y recalcula totales */

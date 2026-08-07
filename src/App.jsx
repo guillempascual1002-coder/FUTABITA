@@ -149,6 +149,75 @@ function catStreak(game, pred) {
   }
   return n;
 }
+/* ============================================================
+   GYM · catálogo, rutinas, sesiones y récords
+   Tipos de ejercicio: "w" peso+reps · "bw" peso corporal (reps, lastre opcional) · "t" tiempo
+   ============================================================ */
+const MUSCLES = [
+  { id: "pecho", label: "Pecho", emoji: "🫀" },
+  { id: "espalda", label: "Espalda", emoji: "🦾" },
+  { id: "pierna", label: "Pierna", emoji: "🦵" },
+  { id: "hombro", label: "Hombro", emoji: "🏔️" },
+  { id: "brazo", label: "Brazo", emoji: "💪" },
+  { id: "core", label: "Core", emoji: "🎯" },
+  { id: "cardio", label: "Cardio", emoji: "🏃" },
+];
+const EX_CATALOG = [
+  ["press-banca", "Press banca", "pecho", "w"], ["press-inclinado", "Press inclinado mancuernas", "pecho", "w"],
+  ["press-banca-manc", "Press banca mancuernas", "pecho", "w"], ["aperturas-polea", "Aperturas en polea", "pecho", "w"],
+  ["fondos-paralelas", "Fondos en paralelas", "pecho", "bw"], ["press-declinado", "Press declinado", "pecho", "w"],
+  ["pec-deck", "Contractor de pecho", "pecho", "w"],
+  ["dominadas", "Dominadas", "espalda", "bw"], ["remo-barra", "Remo con barra", "espalda", "w"],
+  ["jalon-pecho", "Jalón al pecho", "espalda", "w"], ["remo-polea", "Remo en polea baja", "espalda", "w"],
+  ["remo-mancuerna", "Remo con mancuerna", "espalda", "w"], ["pullover", "Pull-over", "espalda", "w"],
+  ["peso-muerto", "Peso muerto", "espalda", "w"], ["encogimientos", "Encogimientos de trapecio", "espalda", "w"],
+  ["sentadilla", "Sentadilla", "pierna", "w"], ["prensa", "Prensa de piernas", "pierna", "w"],
+  ["zancadas", "Zancadas", "pierna", "w"], ["peso-muerto-rumano", "Peso muerto rumano", "pierna", "w"],
+  ["curl-femoral", "Curl femoral", "pierna", "w"], ["extension-cuadriceps", "Extensión de cuádriceps", "pierna", "w"],
+  ["hip-thrust", "Hip thrust", "pierna", "w"], ["gemelos", "Gemelos de pie", "pierna", "w"],
+  ["sentadilla-bulgara", "Sentadilla búlgara", "pierna", "w"], ["abductores", "Abductores", "pierna", "w"],
+  ["press-militar", "Press militar", "hombro", "w"], ["elevaciones-laterales", "Elevaciones laterales", "hombro", "w"],
+  ["elevaciones-frontales", "Elevaciones frontales", "hombro", "w"], ["pajaro", "Pájaro (deltoide posterior)", "hombro", "w"],
+  ["press-arnold", "Press Arnold", "hombro", "w"], ["face-pull", "Face pull", "hombro", "w"],
+  ["curl-barra", "Curl con barra", "brazo", "w"], ["curl-mancuernas", "Curl con mancuernas", "brazo", "w"],
+  ["curl-martillo", "Curl martillo", "brazo", "w"], ["curl-predicador", "Curl predicador", "brazo", "w"],
+  ["triceps-polea", "Extensión de tríceps en polea", "brazo", "w"], ["press-frances", "Press francés", "brazo", "w"],
+  ["fondos-banco", "Fondos en banco", "brazo", "bw"], ["curl-concentrado", "Curl concentrado", "brazo", "w"],
+  ["plancha", "Plancha", "core", "t"], ["crunch", "Crunch abdominal", "core", "bw"],
+  ["elevacion-piernas", "Elevación de piernas", "core", "bw"], ["rueda-abdominal", "Rueda abdominal", "core", "bw"],
+  ["russian-twist", "Russian twist", "core", "w"], ["plancha-lateral", "Plancha lateral", "core", "t"],
+  ["cinta", "Cinta de correr", "cardio", "t"], ["bici", "Bici estática", "cardio", "t"],
+  ["eliptica", "Elíptica", "cardio", "t"], ["remo-ergometro", "Remo ergómetro", "cardio", "t"],
+  ["comba", "Comba", "cardio", "t"],
+].map(([id, name, muscle, type]) => ({ id, name, muscle, type }));
+
+const DEFAULT_ROUTINES = [
+  { id: "r-pecho", name: "Pecho y tríceps", emoji: "🫀", ex: ["press-banca", "press-inclinado", "aperturas-polea", "triceps-polea", "press-frances"] },
+  { id: "r-espalda", name: "Espalda y bíceps", emoji: "🦾", ex: ["dominadas", "remo-barra", "jalon-pecho", "curl-barra", "curl-martillo"] },
+  { id: "r-pierna", name: "Pierna", emoji: "🦵", ex: ["sentadilla", "prensa", "curl-femoral", "extension-cuadriceps", "gemelos"] },
+  { id: "r-torso", name: "Torso completo", emoji: "🏔️", ex: ["press-militar", "elevaciones-laterales", "remo-polea", "press-banca-manc", "plancha"] },
+];
+const emptyGym = () => ({ routines: DEFAULT_ROUTINES.map((r) => ({ ...r })), custom: [], sessions: [], prs: {}, active: null, restDefault: 90 });
+const allExercises = (gym) => [...EX_CATALOG, ...((gym && gym.custom) || [])];
+const exById = (gym, id) => allExercises(gym).find((e) => e.id === id) || { id, name: id, muscle: "pecho", type: "w" };
+/* 1RM estimado (Epley) para comparar progresión entre pesos y repeticiones distintas */
+const e1rm = (w, reps) => (!w || !reps ? 0 : Math.round(w * (1 + reps / 30) * 10) / 10);
+const setVolume = (s) => (s.type === "t" ? 0 : (s.w || 0) * (s.reps || 0));
+const sessionVolume = (sets) => (sets || []).filter((s) => s.done).reduce((a, s) => a + setVolume(s), 0);
+const fmtDur = (sec) => {
+  const m = Math.floor(sec / 60), r = sec % 60;
+  return m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}min` : m > 0 ? `${m}:${String(r).padStart(2, "0")}` : `${r}s`;
+};
+/* el respaldo se copia a mano: el detalle de series solo se guarda ~120 días,
+   lo más antiguo se compacta a resumen (fecha, rutina, volumen, duración, PRs) */
+function pruneGym(gym) {
+  if (!gym || !gym.sessions) return gym;
+  const limit = addDays(todayStr(), -120);
+  return { ...gym, sessions: gym.sessions.map((s) =>
+    s.d < limit && s.sets ? { id: s.id, d: s.d, name: s.name, durSec: s.durSec, volume: s.volume,
+      nSets: s.sets.filter((x) => x.done).length, groups: s.groups, prs: s.prs, compact: true } : s) };
+}
+
 /* racha de gym: solo cuentan (y solo rompen) los días que tocaba gym */
 function gymStreakOf(game, gymDays) {
   let n = 0, d = addDays(todayStr(), -1);
@@ -213,6 +282,8 @@ function sanitizeGame(g) {
     }
   }
   if (out.savedMeals) out.savedMeals = out.savedMeals.filter((m) => m && Number.isFinite(m.kcal) && Number.isFinite(m.prot));
+  /* gym: crear estructura en partidas anteriores al módulo y compactar sesiones antiguas */
+  out.gym = pruneGym({ ...emptyGym(), ...(out.gym || {}) });
   /* partidas de versiones viejas: sin plantel de vestuario ni su chat. Se reparan una sola vez
      (si ya existe algún mensaje "· Vestuario", no se inyecta nada) */
   if (out.phase === "main" && out.player && Array.isArray(out.messages)) {
@@ -255,7 +326,17 @@ function applyDayClose(player, log, dateStr) {
   if ((log.kcal || 0) >= g.kcal) gains.NUT += 10;
   if ((log.prot || 0) >= g.protein) gains.NUT += 10;
   if ((log.kcal || 0) >= g.kcal && (log.prot || 0) >= g.protein) gains.NUT += 5;
-  if (log.gym) { gains.FIS += 22; gains.FUE += 6; if (log.gymProgress) gains.FUE += 18; }
+  if (log.gym) {
+    gains.FIS += 22; gains.FUE += 6; if (log.gymProgress) gains.FUE += 18;
+    /* bonus por la sesión registrada en el módulo de gym (techo ~+13 XP).
+       Los días marcados a mano o de versiones antiguas no traen estos campos y no puntúan extra. */
+    const gr = log.gymGroups || [];
+    if (gr.some((x) => ["pierna", "espalda"].includes(x))) gains.FIS += 4;
+    if (gr.some((x) => ["pecho", "hombro", "brazo"].includes(x))) gains.FUE += 4;
+    if (gr.some((x) => ["core", "cardio"].includes(x))) gains.RES += 4;
+    if ((log.gymMin || 0) >= 40) gains.RES += 4;
+    if (log.gymPR) gains.MEN += 5;
+  }
   /* día de descanso bien cumplido: trabajo ligero, FIS no se congela entre gimnasios */
   if ((form === "alza" || form === "buen") && !isGymDay) gains.FIS += 5;
   if (log.sleep != null && log.sleep >= g.sleepGoal) gains.REC += 10;
@@ -1252,7 +1333,8 @@ function MonthCal({ game, logDate, onPick }) {
     </div>);
 }
 
-function LogTab({ game, log, onLog, logDate, onDate, onCloseDay, savedMeals, onSaveMeal, onUseSaved, notify }) {
+function LogTab({ game, log, onLog, logDate, onDate, onCloseDay, savedMeals, onSaveMeal, onUseSaved, notify, onGoGym }) {
+  const sesionesHoy = ((game.gym && game.gym.sessions) || []).filter((s) => s.d === logDate);
   const [meal, setMeal] = useState("");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState(null);
@@ -1410,14 +1492,26 @@ function LogTab({ game, log, onLog, logDate, onDate, onCloseDay, savedMeals, onS
       <div className="panel">
         <div className="ptitle">🏋️ Gym {isGymDay ? "· hoy toca" : "· día de descanso"}
           {stGym >= 2 && <span style={{ fontSize: 10.5, color: "#2E9E44", fontWeight: 700 }}> · {stGym} seguidos🔥</span>}</div>
+        {/* sesiones registradas hoy en el módulo de gym */}
+        {sesionesHoy.length > 0 && (
+          <div style={{ marginBottom: 10 }}>
+            {sesionesHoy.map((s) => (
+              <div key={s.id} style={{ display: "flex", gap: 8, fontSize: 12.5, color: "#4A4E3F", padding: "3px 0" }}>
+                <span style={{ flex: 1 }}>✓ {s.name}</span>
+                <span>{fmtDur(s.durSec)} · {Math.round(s.volume)} kg{s.prs && s.prs.length ? " · PR 🌟" : ""}</span>
+              </div>))}
+          </div>)}
         <div style={{ display: "flex", gap: 8 }}>
+          {isToday && <button className="btn-gold sm" style={{ flex: 1 }} onClick={onGoGym}>
+            {game.gym && game.gym.active ? "⏳ Continuar entreno" : "🏋️ Abrir gimnasio"}</button>}
           <button className={"chip big" + (log.gym ? " on" : "")} onClick={() => { if (!log.gym) buzz(15);
             onLog({ ...log, gym: !log.gym, gymProgress: log.gym ? false : log.gymProgress }); }}>
-            {log.gym ? "✓ Gym completado" : "Marcar gym hecho"}</button>
-          {log.gym && (
-            <button className={"chip big" + (log.gymProgress ? " on" : "")} onClick={() => onLog({ ...log, gymProgress: !log.gymProgress })}>
-              {log.gymProgress ? "✓ Subí peso/reps 💪" : "¿Progresaste hoy?"}</button>)}
+            {log.gym ? "✓ Gym completado" : "Marcar a mano"}</button>
         </div>
+        {log.gym && (
+          <button className={"chip big" + (log.gymProgress ? " on" : "")} style={{ marginTop: 8 }}
+            onClick={() => onLog({ ...log, gymProgress: !log.gymProgress })}>
+            {log.gymProgress ? "✓ Subí peso/reps 💪" : "¿Progresaste hoy?"}</button>)}
       </div>
 
       <div className="panel">
@@ -1444,6 +1538,366 @@ function LogTab({ game, log, onLog, logDate, onDate, onCloseDay, savedMeals, onS
         </div>)}
     </div>
   );
+}
+
+/* ============================================================ GYM · UI */
+function ExercisePicker({ gym, onPick, onClose, onCreate }) {
+  const [mus, setMus] = useState("pecho");
+  const [q, setQ] = useState("");
+  const [nuevo, setNuevo] = useState("");
+  const list = allExercises(gym).filter((e) => (q ? e.name.toLowerCase().includes(q.toLowerCase()) : e.muscle === mus));
+  return (
+    <div className="overlay" style={{ background: "rgba(20,23,14,.55)", justifyContent: "flex-end", padding: 0 }} onClick={onClose}>
+      <div className="sheet" onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+          <div className="ptitle" style={{ flex: 1, margin: 0 }}>Añadir ejercicio</div>
+          <button className="chat-back" onClick={onClose}>✕</button>
+        </div>
+        <input className="inp" placeholder="Buscar…" value={q} onChange={(e) => setQ(e.target.value)} />
+        {!q && (
+          <div className="chips">
+            {MUSCLES.map((m) => (
+              <button key={m.id} className={"chip" + (mus === m.id ? " on" : "")} onClick={() => setMus(m.id)}>{m.emoji} {m.label}</button>))}
+          </div>)}
+        <div style={{ maxHeight: "42vh", overflowY: "auto", margin: "4px -4px" }}>
+          {list.map((e) => (
+            <div key={e.id} className="ex-row" onClick={() => onPick(e.id)}>
+              <span style={{ flex: 1 }}>{e.name}</span>
+              <span style={{ fontSize: 10.5, color: "#9a9e8e" }}>{e.type === "t" ? "tiempo" : e.type === "bw" ? "peso corporal" : "kg × reps"}</span>
+            </div>))}
+          {list.length === 0 && <div className="empty"><span className="em-ico">🔍</span>Ningún ejercicio con ese nombre.</div>}
+        </div>
+        <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+          <input className="inp" style={{ flex: 1, marginBottom: 0 }} placeholder="Crear ejercicio propio…" value={nuevo}
+            onChange={(e) => setNuevo(e.target.value)} />
+          <button className="btn-ghost sm" onClick={() => { if (nuevo.trim()) { onCreate(nuevo.trim(), q ? "pecho" : mus); setNuevo(""); } }}>＋</button>
+        </div>
+      </div>
+    </div>);
+}
+
+function GymTab({ game, api, notify }) {
+  const gym = game.gym || emptyGym();
+  const [view, setView] = useState(gym.active ? "session" : "home");
+  const [picker, setPicker] = useState(null); /* "session" | routineId */
+  const [editR, setEditR] = useState(null);
+  const [detail, setDetail] = useState(null); /* sesión abierta */
+  const [exStat, setExStat] = useState(null); /* progresión de un ejercicio */
+  const [now, setNow] = useState(Date.now());
+  const act = gym.active;
+  /* un solo tick por segundo mientras hay sesión: mueve cronómetro y descanso */
+  useEffect(() => {
+    if (!act) return;
+    const i = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(i);
+  }, [!!act]);
+  /* aviso al acabar el descanso */
+  const restLeft = act && act.restUntil ? Math.max(0, Math.ceil((act.restUntil - now) / 1000)) : 0;
+  const firedRef = useRef(0);
+  useEffect(() => {
+    if (act && act.restUntil && restLeft === 0 && firedRef.current !== act.restUntil) {
+      firedRef.current = act.restUntil;
+      buzz([40, 60, 40]); notify("⏱️ Descanso terminado · ¡a por la siguiente!");
+      api.updateActive((a) => ({ ...a, restUntil: null }));
+    }
+  }, [restLeft, act && act.restUntil]);
+
+  const weekSessions = gym.sessions.filter((s) => s.d > addDays(todayStr(), -7));
+  const prList = Object.entries(gym.prs || {}).map(([id, p]) => ({ id, ...p })).sort((a, b) => (a.d < b.d ? 1 : -1)).slice(0, 4);
+
+  /* ---------- SESIÓN EN MARCHA ---------- */
+  if (view === "session" && act) {
+    const groups = [];
+    act.sets.forEach((s, i) => {
+      let g = groups.find((x) => x.exId === s.exId);
+      if (!g) { g = { exId: s.exId, idx: [] }; groups.push(g); }
+      g.idx.push(i);
+    });
+    const dur = Math.floor((now - act.startedAt) / 1000);
+    const doneN = act.sets.filter((s) => s.done).length;
+    return (
+      <div style={{ padding: "16px 14px 96px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ flex: 1 }}>
+            <div className="eyebrow">EN MARCHA</div>
+            <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 22, color: "#16190F" }}>{act.name}</div>
+          </div>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 22, color: "#16190F" }}>{fmtDur(dur)}</div>
+            <div style={{ fontSize: 10.5, color: "#7A7F62" }}>{doneN} series · {Math.round(sessionVolume(act.sets))} kg</div>
+          </div>
+        </div>
+
+        {restLeft > 0 && (
+          <div className="rest-bar">
+            <div className="rest-fill" style={{ width: (restLeft / (act.restLen || 90)) * 100 + "%" }} />
+            <div className="rest-txt">⏱️ Descanso {fmtDur(restLeft)}
+              <span>
+                <button className="chip" style={{ padding: "3px 9px" }} onClick={() => api.updateActive((a) => ({ ...a, restUntil: a.restUntil + 30000 }))}>+30s</button>
+                <button className="chip" style={{ padding: "3px 9px", marginLeft: 5 }} onClick={() => api.updateActive((a) => ({ ...a, restUntil: null }))}>Saltar</button>
+              </span>
+            </div>
+          </div>)}
+
+        {groups.map((g) => {
+          const ex = exById(gym, g.exId);
+          const pr = (gym.prs || {})[g.exId];
+          return (
+            <div className="panel" key={g.exId}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 8 }}>
+                <div className="ptitle" style={{ margin: 0, flex: 1 }}>{ex.name}</div>
+                {pr && <span style={{ fontSize: 10.5, color: "#7A7F62" }}>PR {ex.type === "t" ? fmtDur(pr.reps) : `${pr.w}kg × ${pr.reps}`}</span>}
+              </div>
+              {g.idx.map((i, n) => {
+                const s = act.sets[i];
+                return (
+                  <div key={i} className="set-row">
+                    <span className="set-n">{n + 1}</span>
+                    {ex.type === "t" ? (
+                      <><input className="setinp" type="number" inputMode="numeric" placeholder="seg" value={s.reps || ""}
+                        onChange={(e) => api.setField(i, "reps", e.target.value)} /><span className="set-u">seg</span></>
+                    ) : (
+                      <>
+                        {ex.type === "w" && <>
+                          <input className="setinp" type="number" inputMode="decimal" placeholder="kg" value={s.w || ""}
+                            onChange={(e) => api.setField(i, "w", e.target.value)} /><span className="set-u">kg</span></>}
+                        <input className="setinp" type="number" inputMode="numeric" placeholder="reps" value={s.reps || ""}
+                          onChange={(e) => api.setField(i, "reps", e.target.value)} /><span className="set-u">reps</span>
+                      </>)}
+                    <button className={"set-ok" + (s.done ? " on" : "")} onClick={() => api.toggleSet(i)}>{s.done ? "✓" : ""}</button>
+                    <button className="linky" style={{ margin: 0, color: "#C0463A" }} onClick={() => api.delSet(i)}>✕</button>
+                  </div>);
+              })}
+              <button className="linky" onClick={() => api.addSet(g.exId)}>＋ Añadir serie</button>
+            </div>);
+        })}
+
+        {groups.length === 0 && <div className="empty"><span className="em-ico">🏋️</span>Entreno libre.<br />Añade el primer ejercicio para empezar.</div>}
+
+        <button className="btn-ghost" style={{ width: "100%", marginTop: 12 }} onClick={() => setPicker("session")}>＋ Añadir ejercicio</button>
+        <button className="btn-gold" style={{ marginTop: 10 }} onClick={() => { api.finish(); setView("home"); }}>✅ TERMINAR ENTRENO</button>
+        <button className="linky" style={{ display: "block", margin: "10px auto 0", color: "#C0463A" }}
+          onClick={() => { if (window.confirm("¿Descartar esta sesión? No se guardará nada.")) { api.cancel(); setView("home"); } }}>Descartar sesión</button>
+
+        {picker && <ExercisePicker gym={gym} onClose={() => setPicker(null)}
+          onPick={(id) => { api.addSet(id, true); setPicker(null); }}
+          onCreate={(name, muscle) => { const id = api.createEx(name, muscle); api.addSet(id, true); setPicker(null); }} />}
+      </div>);
+  }
+
+  /* ---------- EDITOR DE RUTINA ---------- */
+  if (view === "routines" && editR) {
+    const r = editR;
+    return (
+      <div style={{ padding: "16px 14px 96px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <button className="chat-back" onClick={() => setEditR(null)}>←</button>
+          <div className="ptitle" style={{ margin: 0, flex: 1 }}>Editar rutina</div>
+        </div>
+        <div className="panel">
+          <div className="inplbl">Nombre</div>
+          <input className="inp" value={r.name} onChange={(e) => setEditR({ ...r, name: e.target.value })} />
+          <div className="inplbl">Icono</div>
+          <div className="chips">
+            {["🫀", "🦾", "🦵", "🏔️", "💪", "🎯", "🏃", "🔥"].map((em) => (
+              <button key={em} className={"chip" + (r.emoji === em ? " on" : "")} onClick={() => setEditR({ ...r, emoji: em })}>{em}</button>))}
+          </div>
+        </div>
+        <div className="panel">
+          <div className="ptitle">Ejercicios ({r.ex.length})</div>
+          {r.ex.map((id, i) => (
+            <div key={i} className="set-row">
+              <span style={{ flex: 1, fontSize: 13 }}>{exById(gym, id).name}</span>
+              <button className="chip" style={{ padding: "3px 8px" }} disabled={i === 0}
+                onClick={() => { const e2 = [...r.ex]; [e2[i - 1], e2[i]] = [e2[i], e2[i - 1]]; setEditR({ ...r, ex: e2 }); }}>↑</button>
+              <button className="chip" style={{ padding: "3px 8px" }} disabled={i === r.ex.length - 1}
+                onClick={() => { const e2 = [...r.ex]; [e2[i + 1], e2[i]] = [e2[i], e2[i + 1]]; setEditR({ ...r, ex: e2 }); }}>↓</button>
+              <button className="linky" style={{ margin: 0, color: "#C0463A" }}
+                onClick={() => setEditR({ ...r, ex: r.ex.filter((_, j) => j !== i) })}>✕</button>
+            </div>))}
+          {r.ex.length === 0 && <div className="empty" style={{ padding: 14 }}>Sin ejercicios todavía.</div>}
+          <button className="linky" onClick={() => setPicker(r.id)}>＋ Añadir ejercicio</button>
+        </div>
+        <button className="btn-gold" style={{ marginTop: 12 }}
+          onClick={() => { api.saveRoutine(r); setEditR(null); notify("💾 Rutina guardada"); }}>GUARDAR RUTINA</button>
+        <button className="linky" style={{ display: "block", margin: "10px auto 0", color: "#C0463A" }}
+          onClick={() => { if (window.confirm("¿Eliminar esta rutina?")) { api.delRoutine(r.id); setEditR(null); } }}>Eliminar rutina</button>
+        {picker && <ExercisePicker gym={gym} onClose={() => setPicker(null)}
+          onPick={(id) => { setEditR({ ...r, ex: [...r.ex, id] }); setPicker(null); }}
+          onCreate={(name, muscle) => { const id = api.createEx(name, muscle); setEditR({ ...r, ex: [...r.ex, id] }); setPicker(null); }} />}
+      </div>);
+  }
+
+  /* ---------- LISTA DE RUTINAS ---------- */
+  if (view === "routines") {
+    return (
+      <div style={{ padding: "16px 14px 96px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <button className="chat-back" onClick={() => setView("home")}>←</button>
+          <div className="ptitle" style={{ margin: 0, flex: 1 }}>Mis rutinas</div>
+        </div>
+        {gym.routines.map((r) => (
+          <div key={r.id} className="chat-row" onClick={() => setEditR({ ...r, ex: [...r.ex] })}>
+            <div className="chat-ava" style={{ width: 42, height: 42, fontSize: 19, background: "#CDF54633", border: "1.5px solid #16190F33" }}>{r.emoji}</div>
+            <div style={{ flex: 1 }}>
+              <div className="chat-name">{r.name}</div>
+              <div className="chat-prev">{r.ex.length} ejercicios · {[...new Set(r.ex.map((e) => exById(gym, e).muscle))].join(", ")}</div>
+            </div>
+            <span style={{ color: "#9a9e8e" }}>›</span>
+          </div>))}
+        <button className="btn-ghost" style={{ width: "100%", marginTop: 10 }}
+          onClick={() => setEditR({ id: "r-" + Date.now(), name: "Nueva rutina", emoji: "🔥", ex: [] })}>＋ Crear rutina</button>
+      </div>);
+  }
+
+  /* ---------- PROGRESIÓN DE UN EJERCICIO ---------- */
+  if (view === "history" && exStat) {
+    const ex = exById(gym, exStat);
+    const pts = gym.sessions.filter((s) => s.sets).map((s) => {
+      const ss = s.sets.filter((x) => x.done && x.exId === exStat);
+      if (!ss.length) return null;
+      return { d: s.d, best: Math.max(...ss.map((x) => (ex.type === "t" ? x.reps : e1rm(x.w, x.reps)))) };
+    }).filter(Boolean).slice(-12);
+    const max = pts.length ? Math.max(...pts.map((p) => p.best)) : 1;
+    return (
+      <div style={{ padding: "16px 14px 96px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <button className="chat-back" onClick={() => setExStat(null)}>←</button>
+          <div className="ptitle" style={{ margin: 0, flex: 1 }}>{ex.name}</div>
+        </div>
+        <div className="panel">
+          <div className="ptitle">{ex.type === "t" ? "Mejor tiempo por sesión" : "1RM estimado por sesión"}</div>
+          {pts.length < 2 ? <div className="empty"><span className="em-ico">📈</span>Necesitas al menos dos sesiones con este ejercicio para ver la progresión.</div> : (
+            <>
+              <div style={{ display: "flex", gap: 5, alignItems: "flex-end", height: 90 }}>
+                {pts.map((p, i) => (
+                  <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+                    <span style={{ fontSize: 9, color: "#7A7F62" }}>{Math.round(p.best)}</span>
+                    <div style={{ width: "100%", background: i === pts.length - 1 ? "#16190F" : "#CDF546", borderRadius: 6,
+                      border: "1.5px solid #16190F", boxSizing: "border-box", height: Math.max(8, (p.best / max) * 62) }} />
+                  </div>))}
+              </div>
+              <div style={{ fontSize: 11, color: "#7A7F62", marginTop: 8 }}>
+                De {Math.round(pts[0].best)} a {Math.round(pts[pts.length - 1].best)}{ex.type === "t" ? " seg" : " kg"} en {pts.length} sesiones
+                {pts[pts.length - 1].best > pts[0].best && <b style={{ color: "#2E9E44" }}> · +{Math.round(pts[pts.length - 1].best - pts[0].best)}</b>}
+              </div>
+            </>)}
+        </div>
+      </div>);
+  }
+
+  /* ---------- HISTORIAL ---------- */
+  if (view === "history") {
+    const usedEx = [...new Set(gym.sessions.filter((s) => s.sets).flatMap((s) => s.sets.filter((x) => x.done).map((x) => x.exId)))];
+    return (
+      <div style={{ padding: "16px 14px 96px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <button className="chat-back" onClick={() => setView("home")}>←</button>
+          <div className="ptitle" style={{ margin: 0, flex: 1 }}>Historial</div>
+        </div>
+        {usedEx.length > 0 && (
+          <div className="panel">
+            <div className="ptitle">📈 Progresión por ejercicio</div>
+            <div className="chips">
+              {usedEx.slice(0, 12).map((id) => (
+                <button key={id} className="chip" onClick={() => setExStat(id)}>{exById(gym, id).name}</button>))}
+            </div>
+          </div>)}
+        {gym.sessions.length === 0 ? <div className="empty"><span className="em-ico">📋</span>Todavía no has registrado ningún entreno.</div> :
+          [...gym.sessions].reverse().map((s) => (
+            <div key={s.id} className="panel" style={{ marginTop: 10 }} onClick={() => setDetail(detail === s.id ? null : s.id)}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                <div className="ptitle" style={{ margin: 0, flex: 1 }}>{s.name}</div>
+                <span style={{ fontSize: 10.5, color: "#9a9e8e" }}>{dayLabel(s.d)}</span>
+              </div>
+              <div style={{ fontSize: 12, color: "#4A4E3F", marginTop: 4 }}>
+                {fmtDur(s.durSec)} · {Math.round(s.volume)} kg de volumen · {s.compact ? s.nSets : s.sets.filter((x) => x.done).length} series
+                {s.prs && s.prs.length > 0 && <b style={{ color: "#2E9E44" }}> · {s.prs.length} PR 🌟</b>}
+              </div>
+              {detail === s.id && s.sets && (
+                <div style={{ marginTop: 8, borderTop: "1px solid rgba(20,23,14,.1)", paddingTop: 6 }}>
+                  {[...new Set(s.sets.filter((x) => x.done).map((x) => x.exId))].map((id) => {
+                    const ex = exById(gym, id), ss = s.sets.filter((x) => x.done && x.exId === id);
+                    return (
+                      <div key={id} style={{ display: "flex", gap: 8, fontSize: 12, padding: "3px 0", color: "#4A4E3F" }}>
+                        <span style={{ flex: 1 }}>{ex.name}</span>
+                        <span style={{ color: "#16190F" }}>{ss.map((x) => ex.type === "t" ? `${x.reps}s` : ex.type === "bw" ? `${x.reps}` : `${x.w}×${x.reps}`).join(" · ")}</span>
+                      </div>);
+                  })}
+                </div>)}
+            </div>))}
+      </div>);
+  }
+
+  /* ---------- INICIO DEL GYM ---------- */
+  const week = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = addDays(todayStr(), -i);
+    week.push({ d, vol: gym.sessions.filter((s) => s.d === d).reduce((a, s) => a + s.volume, 0) });
+  }
+  const maxVol = Math.max(1, ...week.map((w) => w.vol));
+  const todaySession = gym.sessions.find((s) => s.d === todayStr());
+  return (
+    <div style={{ padding: "16px 14px 96px" }}>
+      <div className="eyebrow">GIMNASIO</div>
+      <h2 className="h2" style={{ fontSize: 24, margin: "4px 0 12px" }}>Tu entrenamiento</h2>
+
+      {act ? (
+        <div className="panel" style={{ background: "#CDF546", borderColor: "#16190F", borderWidth: 2 }}>
+          <div className="ptitle">⏳ Sesión en marcha · {act.name}</div>
+          <div style={{ fontSize: 12.5, color: "#3A3E30", marginBottom: 10 }}>
+            Llevas {fmtDur(Math.floor((now - act.startedAt) / 1000))} y {act.sets.filter((s) => s.done).length} series completadas.</div>
+          <button className="btn-gold" style={{ background: "#16190F", color: "#CDF546" }} onClick={() => setView("session")}>CONTINUAR ENTRENO →</button>
+        </div>
+      ) : (
+        <div className="panel">
+          <div className="ptitle">🏋️ Empezar entreno</div>
+          {todaySession && <div style={{ fontSize: 12, color: "#2E9E44", fontWeight: 600, marginBottom: 8 }}>
+            ✓ Hoy ya entrenaste ({todaySession.name}). Puedes hacer otra sesión si quieres.</div>}
+          <div className="chips">
+            {gym.routines.map((r) => (
+              <button key={r.id} className="chip big" onClick={() => { api.start(r.id); setView("session"); buzz(20); }}>
+                {r.emoji} {r.name}</button>))}
+          </div>
+          <button className="btn-ghost sm" style={{ width: "100%", marginTop: 4 }}
+            onClick={() => { api.start(null); setView("session"); }}>Entreno libre (sin rutina)</button>
+        </div>)}
+
+      <div className="panel">
+        <div className="ptitle">📊 Volumen de la semana</div>
+        <div style={{ display: "flex", gap: 6, alignItems: "flex-end", height: 62 }}>
+          {week.map((w) => (
+            <div key={w.d} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+              <div style={{ width: "100%", borderRadius: 6, background: w.vol > 0 ? "#CDF546" : "#E4E3D5",
+                border: w.vol > 0 ? "1.5px solid #16190F" : "none", boxSizing: "border-box",
+                height: w.vol > 0 ? Math.max(10, (w.vol / maxVol) * 48) : 6 }} />
+              <span style={{ fontSize: 9, color: w.d === todayStr() ? "#16190F" : "#9a9e8e", fontWeight: w.d === todayStr() ? 700 : 400 }}>
+                {["D", "L", "M", "X", "J", "V", "S"][new Date(w.d + "T12:00").getDay()]}</span>
+            </div>))}
+        </div>
+        <div style={{ fontSize: 11.5, color: "#7A7F62", marginTop: 8 }}>
+          {weekSessions.length} sesiones · {Math.round(week.reduce((a, w) => a + w.vol, 0)).toLocaleString("es-ES")} kg movidos</div>
+      </div>
+
+      {prList.length > 0 && (
+        <div className="panel">
+          <div className="ptitle">🌟 Tus récords</div>
+          {prList.map((p) => {
+            const ex = exById(gym, p.id);
+            return (
+              <div key={p.id} style={{ display: "flex", gap: 8, fontSize: 12.5, padding: "4px 0", color: "#4A4E3F" }}>
+                <span style={{ flex: 1 }}>{ex.name}</span>
+                <span style={{ fontFamily: "'Oswald',sans-serif", color: "#16190F" }}>
+                  {ex.type === "t" ? fmtDur(p.reps) : ex.type === "bw" ? `${p.reps} reps` : `${p.w} kg × ${p.reps}`}</span>
+              </div>);
+          })}
+        </div>)}
+
+      <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+        <button className="btn-ghost" style={{ flex: 1 }} onClick={() => setView("routines")}>📋 Rutinas</button>
+        <button className="btn-ghost" style={{ flex: 1 }} onClick={() => setView("history")}>📈 Historial</button>
+      </div>
+    </div>);
 }
 
 /* ---------- LIGA ---------- */
@@ -2140,6 +2594,112 @@ export default function App() {
       weightLog: [...p.weightLog, { d: todayStr(), kg }] } };
   }); pushToast("⚖️ Peso registrado — tu valor de mercado se actualiza · +8 XP MEN"); };
   /* el vestuario "se entera" cuando ajustas tus objetivos de kcal/proteína */
+  /* ---------- acciones del gym ---------- */
+  const setGym = (fn) => setGame((g) => ({ ...g, gym: fn(g.gym || emptyGym()) }));
+  /* al añadir series se precargan peso y reps de la última vez que hiciste ese ejercicio */
+  const lastSetOf = (gy, exId) => {
+    for (let i = gy.sessions.length - 1; i >= 0; i--) {
+      const s = gy.sessions[i];
+      if (!s.sets) continue;
+      const hit = s.sets.filter((x) => x.done && x.exId === exId).pop();
+      if (hit) return hit;
+    }
+    return null;
+  };
+  const bestOf = (s, type) => (type === "t" || type === "bw" ? (s.reps || 0) : e1rm(s.w, s.reps));
+  const gymApi = {
+    start: (routineId) => setGym((gy) => {
+      const r = routineId ? gy.routines.find((x) => x.id === routineId) : null;
+      const sets = [];
+      (r ? r.ex : []).forEach((exId) => {
+        const last = lastSetOf(gy, exId);
+        for (let i = 0; i < 3; i++) sets.push({ exId, w: last ? last.w : "", reps: last ? last.reps : "", done: false });
+      });
+      return { ...gy, active: { routineId, name: r ? r.name : "Entreno libre", startedAt: Date.now(),
+        sets, restUntil: null, restLen: gy.restDefault || 90 } };
+    }),
+    updateActive: (fn) => setGym((gy) => (gy.active ? { ...gy, active: fn(gy.active) } : gy)),
+    setField: (i, k, v) => setGym((gy) => ({ ...gy, active: { ...gy.active,
+      sets: gy.active.sets.map((s, j) => (j === i ? { ...s, [k]: v === "" ? "" : Number(v) } : s)) } })),
+    addSet: (exId, nuevo) => setGym((gy) => {
+      const last = lastSetOf(gy, exId);
+      const prev = [...gy.active.sets].reverse().find((s) => s.exId === exId);
+      const base = prev || last;
+      return { ...gy, active: { ...gy.active,
+        sets: [...gy.active.sets, { exId, w: base ? base.w : "", reps: base ? base.reps : "", done: false }] } };
+    }),
+    delSet: (i) => setGym((gy) => ({ ...gy, active: { ...gy.active, sets: gy.active.sets.filter((_, j) => j !== i) } })),
+    toggleSet: (i) => {
+      /* el récord se decide DENTRO del updater, sobre el estado fresco: si marcas varias
+         series seguidas del mismo ejercicio, gana la mejor y no la última */
+      let aviso = null, marco = false;
+      setGym((g2) => {
+        const a = g2.active, s = a.sets[i], ex = exById(g2, s.exId);
+        const marcando = !s.done;
+        marco = marcando;
+        const prs = { ...(g2.prs || {}) };
+        if (marcando && s.reps) {
+          const pr = prs[s.exId];
+          if (!pr || bestOf(s, ex.type) > bestOf(pr, ex.type)) {
+            prs[s.exId] = { w: s.w || 0, reps: s.reps, e1rm: e1rm(s.w, s.reps), d: todayStr() };
+            aviso = ex.name;
+          }
+        }
+        const sets = a.sets.map((x, j) => (j === i ? { ...x, done: marcando } : x));
+        return { ...g2, prs, active: { ...a, sets,
+          restUntil: marcando ? Date.now() + (a.restLen || 90) * 1000 : a.restUntil } };
+      });
+      setTimeout(() => {
+        if (marco) buzz(15);
+        if (aviso) { buzz([30, 40, 30]); pushToast(`🌟 ¡RÉCORD en ${aviso}!`); }
+      }, 0);
+    },
+    finish: () => {
+      let res = null;
+      setGame((g) => {
+        const gy = g.gym, a = gy.active;
+        if (!a) return g;
+        const done = a.sets.filter((s) => s.done && s.reps);
+        if (done.length === 0) { res = { vacio: true }; return { ...g, gym: { ...gy, active: null } }; }
+        const t = todayStr();
+        const durSec = Math.floor((Date.now() - a.startedAt) / 1000);
+        const volume = sessionVolume(a.sets);
+        const groups = [...new Set(done.map((s) => exById(gy, s.exId).muscle))];
+        /* PRs de esta sesión: los récords fijados hoy en ejercicios que acabas de entrenar */
+        const prs = [...new Set(done.filter((s) => { const p = (gy.prs || {})[s.exId]; return p && p.d === t; }).map((s) => s.exId))];
+        const prevSame = [...gy.sessions].reverse().find((s) => s.routineId && s.routineId === a.routineId);
+        const gymProgress = prs.length > 0 || (prevSame ? volume > prevSame.volume : false);
+        const sesion = { id: Date.now(), d: t, routineId: a.routineId, name: a.name, durSec, volume,
+          sets: done.map((s) => ({ exId: s.exId, w: s.w || 0, reps: s.reps, done: true })), groups, prs };
+        const log = { ...(g.logs[t] || EMPTY_LOG()) };
+        /* la sesión marca el día como entrenado; la forma sigue calculándose solo al cerrar el día */
+        log.gym = true;
+        log.gymProgress = log.gymProgress || gymProgress;
+        log.gymGroups = [...new Set([...(log.gymGroups || []), ...groups])];
+        log.gymMin = (log.gymMin || 0) + Math.round(durSec / 60);
+        log.gymPR = log.gymPR || prs.length > 0;
+        res = { durSec, n: done.length, volume, nPR: prs.length };
+        return { ...g, logs: { ...g.logs, [t]: log },
+          gym: { ...gy, active: null, sessions: [...gy.sessions, sesion] } };
+      });
+      setTimeout(() => {
+        if (!res) return;
+        if (res.vacio) { pushToast("Sesión descartada: no marcaste ninguna serie"); return; }
+        buzz([30, 50, 30]);
+        pushToast(`💪 ${fmtDur(res.durSec)} · ${res.n} series · ${Math.round(res.volume)} kg` + (res.nPR ? ` · ${res.nPR} PR 🌟` : ""));
+      }, 0);
+    },
+    cancel: () => setGym((gy) => ({ ...gy, active: null })),
+    saveRoutine: (r) => setGym((gy) => ({ ...gy,
+      routines: gy.routines.some((x) => x.id === r.id) ? gy.routines.map((x) => (x.id === r.id ? r : x)) : [...gy.routines, r] })),
+    delRoutine: (id) => setGym((gy) => ({ ...gy, routines: gy.routines.filter((x) => x.id !== id) })),
+    createEx: (name, muscle) => {
+      const id = "c-" + Date.now();
+      setGym((gy) => ({ ...gy, custom: [...(gy.custom || []), { id, name, muscle, type: "w", custom: true }] }));
+      return id;
+    },
+  };
+
   const setGoals = (goals) => setGame((g) => {
     const old = g.player.goals;
     let out = { ...g, player: { ...g.player, goals } };
@@ -2221,7 +2781,9 @@ export default function App() {
             {tab === "home" && <HomeTab game={game} photo={photo} crest={crest} crestScale={crestScale}
               log={(game.logs && game.logs[todayStr()]) || EMPTY_LOG()} />}
             {tab === "log" && <LogTab game={game} log={activeLog} onLog={setActiveLog} logDate={logDate} onDate={setLogDate}
-              onCloseDay={closePendingDay} savedMeals={game.savedMeals || []} onSaveMeal={saveMeal} onUseSaved={useSavedMeal} notify={pushToast} />}
+              onCloseDay={closePendingDay} savedMeals={game.savedMeals || []} onSaveMeal={saveMeal} onUseSaved={useSavedMeal}
+              notify={pushToast} onGoGym={() => setTab("gym")} />}
+            {tab === "gym" && <GymTab game={game} api={gymApi} notify={pushToast} />}
             {tab === "league" && <LeagueTab game={game} onPlayMatch={playMatch} crest={crest} crestScale={crestScale} />}
             {tab === "chat" && <ChatTab game={game} onOfferAction={offerAction} onRead={markChatRead} onAsk={answerAsk} notify={pushToast} />}
             {tab === "me" && <ProfileTab game={game} photo={photo} onWeight={addWeight} onPhoto={savePhoto} onRemovePhoto={removePhoto}
@@ -2229,12 +2791,13 @@ export default function App() {
               onGoals={setGoals} getBackup={getBackup} onRestore={restoreBackup} haptics={haptics} onHaptics={setHapticsPref} />}
           </div>
           <nav className="tabbar">
-            {[["home", "🏠", "Inicio"], ["log", "📝", "Registro"], ["league", "🏆", "Liga"], ["chat", "💬", "Chat"], ["me", "👤", "Yo"]].map(([id, ic, lb]) => (
+            {[["home", "🏠", "Inicio"], ["log", "📝", "Registro"], ["gym", "🏋️", "Gym"], ["league", "🏆", "Liga"], ["chat", "💬", "Chat"], ["me", "👤", "Yo"]].map(([id, ic, lb]) => (
               <button key={id} className={"tabbtn" + (tab === id ? " on" : "")}
                 onClick={() => setTab(id)}>
-                <span style={{ fontSize: 18, position: "relative" }}>{ic}
-                  {id === "chat" && unreadTotal > 0 && <span className="dot">{unreadTotal}</span>}</span>
-                <span style={{ fontSize: 10 }}>{lb}</span>
+                <span style={{ fontSize: 17, position: "relative" }}>{ic}
+                  {id === "chat" && unreadTotal > 0 && <span className="dot">{unreadTotal}</span>}
+                  {id === "gym" && game.gym && game.gym.active && <span className="dot" style={{ background: "#CDF546", padding: "3px 4px" }} />}</span>
+                <span style={{ fontSize: 9 }}>{lb}</span>
               </button>))}
           </nav>
         </>
@@ -2366,8 +2929,30 @@ function StyleTag() {
       .tabbar { position:fixed; bottom:10px; left:50%; transform:translateX(-50%); width:calc(100% - 20px); max-width:460px;
         display:flex; background:#16190F; border-radius:22px; padding:5px 6px; z-index:40;
         box-shadow:0 8px 24px rgba(20,23,14,.35); }
-      .tabbtn { flex:1; background:none; border:none; color:#8d9279; padding:8px 0 9px; display:flex; flex-direction:column;
+      .tabbtn { flex:1; min-width:0; background:none; border:none; color:#8d9279; padding:8px 0 9px; display:flex; flex-direction:column;
         align-items:center; gap:2px; cursor:pointer; font-family:'Barlow',sans-serif; border-radius:16px; }
+      /* --- gym --- */
+      .sheet { width:100%; max-width:480px; background:#EFEEE3; border-radius:22px 22px 0 0; padding:16px 14px 22px;
+        box-sizing:border-box; box-shadow:0 -8px 30px rgba(20,23,14,.35); animation:sheetup .28s cubic-bezier(.2,1,.3,1) both; }
+      @keyframes sheetup { from { transform:translateY(60px); opacity:0; } to { transform:none; opacity:1; } }
+      .ex-row { display:flex; align-items:center; gap:8px; padding:11px 10px; border-radius:12px; cursor:pointer;
+        font-size:13.5px; color:#26291D; border-bottom:1px solid rgba(20,23,14,.07); }
+      .ex-row:active { background:#E4E3D5; }
+      .set-row { display:flex; align-items:center; gap:6px; padding:5px 0; }
+      .set-n { width:18px; font-family:'Oswald',sans-serif; font-size:12px; color:#9a9e8e; flex-shrink:0; }
+      .setinp { width:100%; min-width:0; flex:1; box-sizing:border-box; background:#FFFFFF; border:1.5px solid rgba(20,23,14,.14);
+        color:#16190F; border-radius:10px; padding:8px 6px; font-size:14px; text-align:center; font-family:'Oswald',sans-serif; }
+      .setinp:focus { outline:2px solid #16190F; outline-offset:1px; }
+      .set-u { font-size:10px; color:#9a9e8e; flex-shrink:0; margin-right:2px; }
+      .set-ok { width:34px; height:34px; flex-shrink:0; border-radius:11px; border:1.5px solid rgba(20,23,14,.25);
+        background:#FFFFFF; color:#16190F; font-size:15px; cursor:pointer; font-weight:700; }
+      .set-ok.on { background:#CDF546; border-color:#16190F; animation:chippop .25s cubic-bezier(.2,1.4,.4,1); }
+      .rest-bar { position:sticky; top:6px; z-index:25; margin:12px 0; background:#16190F; border-radius:14px;
+        overflow:hidden; padding:10px 12px; color:#EFEEE3; }
+      .rest-fill { position:absolute; inset:0; background:rgba(205,245,70,.22); transition:width 1s linear; }
+      .rest-txt { position:relative; display:flex; align-items:center; justify-content:space-between; gap:8px;
+        font-family:'Oswald',sans-serif; font-size:14px; letter-spacing:.5px; }
+      .rest-txt .chip { background:transparent; border-color:rgba(239,238,227,.4); color:#EFEEE3; font-size:11px; }
       .tabbtn.on { color:#16190F; background:#CDF546; font-weight:600; }
       .dot { position:absolute; top:-4px; right:-10px; background:#CDF546; color:#16190F; font-size:9px; border-radius:8px;
         border:1px solid #16190F; padding:1px 5px; font-weight:700; }

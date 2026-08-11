@@ -1291,48 +1291,183 @@ function ChatTab({ game, onOfferAction, onRead, onAsk, notify }) {
   );
 }
 
-/* ---------- REGISTRO DIARIO ---------- */
-/* Calendario mensual: verde=al alza/buen ritmo, amarillo=estancado, rojo=caída, gris=sin datos */
-function MonthCal({ game, logDate, onPick }) {
+/* ---------- CALENDARIO ---------- */
+const MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+const DIAS_LARGO = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+const NOTE_EMOJIS = ["📌", "🏥", "💊", "✈️", "🚗", "🎂", "🎉", "🍽️", "☕", "💼", "📚", "📝",
+  "⚽", "🏋️", "🏃", "😴", "❤️", "👨‍👩‍👧", "🎬", "🎸", "🛒", "💰", "⚠️", "⭐"];
+const notesOf = (game, d) => ((game.notes || {})[d] || []);
+
+/* Calendario mensual: fondo = cómo fue el día, emoji = lo que anotaste.
+   Las notas son una capa aparte: no afectan al %, ni a la forma, ni a la XP. */
+function CalendarView({ game, photo, onClose, onAddNote, onDelNote, onEditDay }) {
   const today = todayStr(), yesterday = addDays(today, -1);
-  const [y, m] = today.split("-").map(Number);
-  const first = new Date(y, m - 1, 1);
-  const startDow = (first.getDay() + 6) % 7; /* lunes=0 */
+  const [offset, setOffset] = useState(0);
+  const [sel, setSel] = useState(today);
+  const [txt, setTxt] = useState("");
+  const [emo, setEmo] = useState("📌");
+
+  const base = new Date();
+  const shown = new Date(base.getFullYear(), base.getMonth() + offset, 1);
+  const y = shown.getFullYear(), m = shown.getMonth() + 1;
+  const startDow = (shown.getDay() + 6) % 7; /* lunes = 0 */
   const nDays = new Date(y, m, 0).getDate();
   const cells = [];
   for (let i = 0; i < startDow; i++) cells.push(null);
   for (let d = 1; d <= nDays; d++) cells.push(`${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`);
+
   const colorOf = (ds) => {
     const l = game.logs[ds];
     if (!l) return "transparent";
     if (!l.closed) return ds <= today ? "rgba(205,245,70,.6)" : "transparent";
-    return l.form === "alza" || l.form === "buen" ? "rgba(46,158,68,.35)" : l.form === "est" ? "rgba(176,137,0,.3)" : "rgba(217,72,59,.35)";
+    return l.form === "alza" || l.form === "buen" ? "rgba(46,158,68,.35)"
+      : l.form === "est" ? "rgba(176,137,0,.3)" : "rgba(217,72,59,.35)";
   };
+
+  /* --- datos del día abierto (todo de solo lectura salvo las notas) --- */
+  const log = game.logs[sel];
+  const notas = notesOf(game, sel);
+  const g = game.player.goals;
+  const sesiones = ((game.gym && game.gym.sessions) || []).filter((s) => s.d === sel);
+  const pesaje = (game.player.weightLog || []).find((w) => w.d === sel);
+  const partido = (game.matchHistory || []).find((x) => x.d === sel);
+  const futuro = sel > today;
+  const editable = sel === today || (sel === yesterday && log && !log.closed);
+  const dow = new Date(sel + "T12:00").getDay();
+
+  const Fila = ({ k, v }) => (
+    <div style={{ display: "flex", gap: 8, fontSize: 12.5, padding: "4px 0", color: "#4A4E3F" }}>
+      <span style={{ flex: 1 }}>{k}</span>
+      <span style={{ color: "#16190F", fontFamily: "'Oswald',sans-serif" }}>{v}</span>
+    </div>);
+
   return (
-    <div className="panel" style={{ marginTop: 10 }}>
-      <div className="ptitle">📅 {["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"][m - 1]} {y}</div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4, fontSize: 10, color: "#9a9e8e", textAlign: "center", marginBottom: 4 }}>
-        {["L","M","X","J","V","S","D"].map((d, i) => <div key={i}>{d}</div>)}
+    <div style={{ paddingBottom: 96 }}>
+      <div className="chat-head">
+        <button className="chat-back" onClick={onClose}>←</button>
+        <div style={{ flex: 1 }}>
+          <div className="chat-name">Calendario</div>
+          <div className="chat-sub">Tu temporada, día a día</div>
+        </div>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4 }}>
-        {cells.map((ds, i) => ds === null ? <div key={i} /> : (
-          <div key={i} onClick={() => onPick(ds)} style={{
-            aspectRatio: "1", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 12, fontFamily: "'Oswald',sans-serif", background: colorOf(ds),
-            color: ds > today ? "#c6c9b8" : "#16190F",
-            border: ds === logDate ? "1.5px solid #16190F" : ds === today ? "1px solid rgba(20,23,14,.35)" : "1px solid transparent",
-            cursor: (ds === today || (ds === yesterday && game.logs[yesterday] && !game.logs[yesterday].closed)) ? "pointer" : "default",
-            opacity: ds > today ? 0.4 : 1 }}>
-            {+ds.slice(8)}
-          </div>))}
-      </div>
-      <div style={{ fontSize: 10.5, color: "#6F7563", marginTop: 8, lineHeight: 1.6 }}>
-        🟢 Buen día · 🟡 Estancado · 🔴 En caída · Solo hoy y ayer (si está abierto) son editables
+
+      <div style={{ padding: "14px 14px 0" }}>
+        <div className="panel" style={{ marginTop: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+            {/* forma funcional: dos toques seguidos avanzan dos meses, no uno */}
+            <button className="chip" onClick={() => setOffset((o) => o - 1)}>←</button>
+            <div className="ptitle" style={{ flex: 1, textAlign: "center", margin: 0 }}>{MESES[m - 1]} {y}</div>
+            <button className="chip" onClick={() => setOffset((o) => o + 1)}>→</button>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4, fontSize: 10,
+            color: "#9a9e8e", textAlign: "center", marginBottom: 4 }}>
+            {["L", "M", "X", "J", "V", "S", "D"].map((d, i) => <div key={i}>{d}</div>)}
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4 }}>
+            {cells.map((ds, i) => {
+              if (ds === null) return <div key={i} />;
+              const n = notesOf(game, ds);
+              return (
+                <div key={i} className="cal-cell" onClick={() => setSel(ds)} style={{
+                  background: colorOf(ds),
+                  border: ds === sel ? "2px solid #16190F" : ds === today ? "1.5px solid rgba(20,23,14,.4)" : "1px solid transparent",
+                  opacity: ds > today && n.length === 0 ? 0.45 : 1 }}>
+                  <span className={"cal-num" + (n.length ? " esq" : "")}>{+ds.slice(8)}</span>
+                  {n.length > 0 && <span className="cal-emo">{n[0].emoji}</span>}
+                  {n.length > 1 && <span className="cal-dot" />}
+                </div>);
+            })}
+          </div>
+          <div style={{ fontSize: 10.5, color: "#6F7563", marginTop: 8, lineHeight: 1.6 }}>
+            🟢 Buen día · 🟡 Estancado · 🔴 En caída · Toca cualquier día para ver o anotar
+          </div>
+        </div>
+
+        {/* --- día seleccionado --- */}
+        <div className="panel">
+          <div className="ptitle">
+            {DIAS_LARGO[dow]} {+sel.slice(8)} de {MESES[m - 1].toLowerCase()}
+            {sel === today && <span style={{ color: "#5C7010" }}> · hoy</span>}
+          </div>
+
+          {notas.length > 0 && (
+            <div style={{ marginBottom: 10 }}>
+              {notas.map((n) => (
+                <div key={n.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0",
+                  borderTop: "1px solid rgba(20,23,14,.07)" }}>
+                  <span style={{ fontSize: 17 }}>{n.emoji}</span>
+                  <span style={{ flex: 1, fontSize: 13, color: "#26291D" }}>{n.texto}</span>
+                  <button className="linky" style={{ margin: 0, color: "#C0463A" }}
+                    onClick={() => onDelNote(sel, n.id)}>✕</button>
+                </div>))}
+            </div>)}
+
+          <div className="chips" style={{ marginBottom: 6 }}>
+            {NOTE_EMOJIS.map((e) => (
+              <button key={e} className={"chip" + (emo === e ? " on" : "")} style={{ padding: "5px 8px", fontSize: 15 }}
+                onClick={() => setEmo(e)}>{e}</button>))}
+          </div>
+          <div style={{ display: "flex", gap: 6 }}>
+            <input className="inp" style={{ flex: 1, marginBottom: 0 }} value={txt} placeholder="Anota algo para este día…"
+              onChange={(e) => setTxt(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && txt.trim()) { onAddNote(sel, emo, txt.trim()); setTxt(""); } }} />
+            <button className="btn-gold sm" onClick={() => { if (txt.trim()) { onAddNote(sel, emo, txt.trim()); setTxt(""); } }}>＋</button>
+          </div>
+        </div>
+
+        {/* --- resumen: solo días pasados o de hoy --- */}
+        {!futuro && (
+          <div className="panel">
+            <div className="ptitle">📊 Ese día</div>
+            {!log ? (
+              <div className="empty" style={{ padding: 16 }}>Sin registro de este día.</div>
+            ) : (
+              <>
+                {log.closed
+                  ? <Fila k="Resultado" v={<FormBadge form={log.form} size={12} />} />
+                  : <div style={{ fontSize: 11.5, color: "#5C7010", fontWeight: 600, paddingBottom: 4 }}>Día aún sin cerrar</div>}
+                {log.closed && <Fila k="Cumplimiento" v={log.pct + "%"} />}
+                <Fila k="Calorías" v={`${Math.round(log.kcal || 0)} / ${g.kcal}`} />
+                <Fila k="Proteína" v={`${Math.round(log.prot || 0)} / ${g.protein} g`} />
+                <Fila k="Sueño" v={log.sleep != null ? log.sleep + " h" : "—"} />
+                <Fila k="Gym" v={log.gym ? (log.gymProgress ? "✓ con progreso" : "✓") : "—"} />
+                {g.habits.length > 0 && (
+                  <Fila k="Hábitos" v={`${(log.habitsDone || []).length} / ${g.habits.length}`} />)}
+                {(log.habitsDone || []).length > 0 && (
+                  <div style={{ fontSize: 11.5, color: "#6F7563", paddingBottom: 4 }}>
+                    {log.habitsDone.join(" · ")}</div>)}
+                {(log.meals || []).length > 0 && (
+                  <div style={{ marginTop: 6, borderTop: "1px solid rgba(20,23,14,.08)", paddingTop: 6 }}>
+                    {log.meals.map((mm, i) => (
+                      <div key={i} style={{ display: "flex", gap: 8, fontSize: 12, color: "#4A4E3F", padding: "2px 0" }}>
+                        <span style={{ flex: 1 }}>🍽️ {mm.name}</span>
+                        <span>{mm.kcal} kcal · {mm.prot}g</span>
+                      </div>))}
+                  </div>)}
+              </>)}
+            {sesiones.map((s) => (
+              <div key={s.id} style={{ marginTop: 8, borderTop: "1px solid rgba(20,23,14,.08)", paddingTop: 6 }}>
+                <Fila k={`🏋️ ${s.name}`} v={`${fmtDur(s.durSec)} · ${Math.round(s.volume)} kg`} />
+                {s.prs && s.prs.length > 0 && (
+                  <div style={{ fontSize: 11.5, color: "#2E9E44", fontWeight: 600 }}>{s.prs.length} récord(s) 🌟</div>)}
+              </div>))}
+            {pesaje && <Fila k="⚖️ Pesaje" v={pesaje.kg + " kg"} />}
+            {partido && (
+              <Fila k={`⚽ J${partido.jornada} vs ${partido.rival}`}
+                v={`${partido.gf}-${partido.ga}${partido.rating != null ? " · " + partido.rating : ""}`} />)}
+            {editable && (
+              <button className="btn-ghost sm" style={{ width: "100%", marginTop: 10 }}
+                onClick={() => onEditDay(sel)}>✏️ Editar este día</button>)}
+          </div>)}
       </div>
     </div>);
 }
 
-function LogTab({ game, log, onLog, logDate, onDate, onCloseDay, savedMeals, onSaveMeal, onUseSaved, notify, onGoGym }) {
+/* ---------- REGISTRO DIARIO ---------- */
+
+function LogTab({ game, log, onLog, logDate, onDate, onCloseDay, savedMeals, onSaveMeal, onUseSaved,
+  notify, onGoGym, onAddNote, onDelNote }) {
   const sesionesHoy = ((game.gym && game.gym.sessions) || []).filter((s) => s.d === logDate);
   const [meal, setMeal] = useState("");
   const [loading, setLoading] = useState(false);
@@ -1408,6 +1543,13 @@ function LogTab({ game, log, onLog, logDate, onDate, onCloseDay, savedMeals, onS
     const p = l ? (l.closed ? l.pct : (d === today ? dayPct(l, game.player, d) : null)) : null;
     week.push({ d, p, hoy: d === today });
   }
+
+  /* el calendario ocupa toda la pantalla: se abre con 📅 y vuelve con ← */
+  if (showCal) return (
+    <CalendarView game={game} onClose={() => setShowCal(false)}
+      onAddNote={onAddNote} onDelNote={onDelNote}
+      onEditDay={(d) => { onDate(d); setShowCal(false); }} />);
+
   return (
     <div style={{ padding: "16px 16px 96px" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -1423,9 +1565,6 @@ function LogTab({ game, log, onLog, logDate, onDate, onCloseDay, savedMeals, onS
           <button className="btn-ghost sm" style={{ flex: 1 }} onClick={() => onDate(today)}>← Volver a hoy</button>
           <button className="btn-gold sm" style={{ flex: 1 }} onClick={() => { onCloseDay(logDate); onDate(today); }}>✔ Cerrar este día</button>
         </div>)}
-      {showCal && <MonthCal game={game} logDate={logDate} onPick={(d) => {
-        if (d === today || (d === yesterday && yPending)) { onDate(d); setShowCal(false); }
-      }} />}
       <div className="panel" style={{ marginTop: 10 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
           <span style={{ fontFamily: "'Oswald',sans-serif", fontSize: 15 }}>Progreso del día · {pct}%</span>
@@ -1973,6 +2112,8 @@ function HomeTab({ game, photo, log, crest, crestScale }) {
   const kgNow = p.weightLog.length ? p.weightLog[p.weightLog.length - 1].kg : kg0;
   const mv = marketValue(ovr, kgNow - kg0);
   const pct = dayPct(log, p, todayStr());
+  const notasHoy = notesOf(game, todayStr());
+  const notasManana = notesOf(game, addDays(todayStr(), 1));
   return (
     <div style={{ padding: "18px 16px 96px" }}>
       <div style={{ display: "flex", justifyContent: "center", marginTop: 6 }}>
@@ -1995,6 +2136,20 @@ function HomeTab({ game, photo, log, crest, crestScale }) {
         <div style={{ fontSize: 11.5, color: "#6F7563", textAlign: "center", marginTop: 4 }}>
           Al cerrar el día, tu forma decide cuánta XP ganas y si juegas el próximo partido.</div>
       </div>
+      {(notasHoy.length > 0 || notasManana.length > 0) && (
+        <div className="panel">
+          <div className="ptitle">📅 En tu calendario</div>
+          {notasHoy.map((n) => (
+            <div key={n.id} style={{ display: "flex", gap: 8, fontSize: 13, padding: "3px 0", color: "#26291D" }}>
+              <span>{n.emoji}</span><span style={{ flex: 1 }}>{n.texto}</span>
+              <span style={{ fontSize: 10, color: "#5C7010", fontWeight: 700, letterSpacing: .5 }}>HOY</span>
+            </div>))}
+          {notasManana.map((n) => (
+            <div key={n.id} style={{ display: "flex", gap: 8, fontSize: 13, padding: "3px 0", color: "#4A4E3F" }}>
+              <span>{n.emoji}</span><span style={{ flex: 1 }}>{n.texto}</span>
+              <span style={{ fontSize: 10, color: "#9a9e8e" }}>mañana</span>
+            </div>))}
+        </div>)}
       <div className="panel">
         <div className="ptitle">Progreso hacia el siguiente punto</div>
         {STAT_KEYS.map((k) => (
@@ -2227,6 +2382,18 @@ export default function App() {
   const setHapticsPref = (v) => { setHaptics(v); HAPTICS = v; stSet("haptics", v); };
   const useSavedMeal = (name) => setGame((g) => ({ ...g, savedMeals: (g.savedMeals || []).map((m) =>
     m.name === name ? { ...m, uses: (m.uses || 0) + 1, hours: [...(m.hours || []), new Date().getHours()].slice(-6) } : m) }));
+
+  /* Notas del calendario: capa de anotación pura. No dan XP, no tocan el %, la forma
+     ni el cierre del día, así que se pueden escribir en cualquier fecha sin recalcular nada. */
+  const addNote = (d, emoji, texto) => setGame((g) => ({ ...g,
+    notes: { ...(g.notes || {}), [d]: [...((g.notes || {})[d] || []),
+      { id: Date.now() + Math.random(), emoji, texto }] } }));
+  const delNote = (d, id) => setGame((g) => {
+    const lista = ((g.notes || {})[d] || []).filter((n) => n.id !== id);
+    const notes = { ...(g.notes || {}) };
+    if (lista.length) notes[d] = lista; else delete notes[d]; /* sin notas, fuera la fecha */
+    return { ...g, notes };
+  });
   const [signing, setSigning] = useState(null); // club en animación de fichaje
   const [liveMatch, setLiveMatch] = useState(null);
   const [tab, setTab] = useState("home");
@@ -2451,6 +2618,7 @@ export default function App() {
     const rival = s.rivals[s.matchday % s.rivals.length];
     const m = simulateMatch(game.player, rival, s.matchday + 1);
     m.derbi = s.matchday + 1 === derbiJornadaOf(s);
+    m.d = todayStr(); /* fecha, para poder situarlo en el calendario */
     setLiveMatch(m);
   };
 
@@ -2781,7 +2949,7 @@ export default function App() {
               log={(game.logs && game.logs[todayStr()]) || EMPTY_LOG()} />}
             {tab === "log" && <LogTab game={game} log={activeLog} onLog={setActiveLog} logDate={logDate} onDate={setLogDate}
               onCloseDay={closePendingDay} savedMeals={game.savedMeals || []} onSaveMeal={saveMeal} onUseSaved={useSavedMeal}
-              notify={pushToast} onGoGym={() => setTab("gym")} />}
+              notify={pushToast} onGoGym={() => setTab("gym")} onAddNote={addNote} onDelNote={delNote} />}
             {tab === "gym" && <GymTab game={game} api={gymApi} notify={pushToast} />}
             {tab === "league" && <LeagueTab game={game} onPlayMatch={playMatch} crest={crest} crestScale={crestScale} />}
             {tab === "chat" && <ChatTab game={game} onOfferAction={offerAction} onRead={markChatRead} onAsk={answerAsk} notify={pushToast} />}
@@ -2930,6 +3098,15 @@ function StyleTag() {
         box-shadow:0 8px 24px rgba(20,23,14,.35); }
       .tabbtn { flex:1; min-width:0; background:none; border:none; color:#8d9279; padding:8px 0 9px; display:flex; flex-direction:column;
         align-items:center; gap:2px; cursor:pointer; font-family:'Barlow',sans-serif; border-radius:16px; }
+      /* --- calendario --- */
+      .cal-cell { position:relative; aspect-ratio:1; border-radius:8px; box-sizing:border-box;
+        display:flex; align-items:center; justify-content:center; cursor:pointer; }
+      .cal-num { font-family:'Oswald',sans-serif; font-size:12px; color:#16190F; }
+      /* con nota, el número se aparta a la esquina y manda el emoji */
+      .cal-num.esq { position:absolute; top:1px; left:4px; font-size:9px; opacity:.7; }
+      .cal-emo { font-size:15px; line-height:1; }
+      .cal-dot { position:absolute; bottom:3px; right:3px; width:4px; height:4px;
+        border-radius:50%; background:#16190F; opacity:.55; }
       /* --- gym --- */
       .sheet { width:100%; max-width:480px; background:#EFEEE3; border-radius:22px 22px 0 0; padding:16px 14px 22px;
         box-sizing:border-box; box-shadow:0 -8px 30px rgba(20,23,14,.35); animation:sheetup .28s cubic-bezier(.2,1,.3,1) both; }

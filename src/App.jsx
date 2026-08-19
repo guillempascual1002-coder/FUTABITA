@@ -283,14 +283,17 @@ function sanitizeGame(g) {
   if (out.savedMeals) out.savedMeals = out.savedMeals.filter((m) => m && Number.isFinite(m.kcal) && Number.isFinite(m.prot));
   /* gym: crear estructura en partidas anteriores al módulo y compactar sesiones antiguas */
   out.gym = pruneGym({ ...emptyGym(), ...(out.gym || {}) });
-  /* partidas de versiones viejas: sin plantel de vestuario ni su chat. Se reparan una sola vez
-     (si ya existe algún mensaje "· Vestuario", no se inyecta nada) */
-  if (out.phase === "main" && out.player && Array.isArray(out.messages)) {
+  /* migración al sistema de personajes: la primera vez se crea la cola de diálogos
+     y las ofertas que quedaran pendientes en el chat antiguo pasan a Elisa */
+  if (out.phase === "main" && out.player) {
     if (!out.squad || !out.squad.length) out.squad = makeSquad();
-    if (!out.messages.some((m) => m && typeof m.from === "string" && m.from.includes("· Vestuario"))) {
-      out.messages = [...out.messages, { id: Date.now() + Math.random(), from: out.squad[0].name + " · Vestuario",
-        text: pick(SQUAD_WELCOMES(out.player.name, out.squad[0])), time: nowTime(), d: todayStr() }];
-      out.unreadBy = { ...(out.unreadBy || {}), squad: ((out.unreadBy || {}).squad || 0) + 1 };
+    if (!out.npcQueue) {
+      out.npcQueue = [];
+      out.captain = "López";
+      (out.messages || []).forEach((m) => {
+        if (m && m.kind === "offer" && m.status === "pending" && m.offer)
+          out.npcQueue.push({ id: m.id, npc: "elisa", mood: "idle", text: m.text, kind: "offer", offer: m.offer });
+      });
     }
   }
   return out;
@@ -461,12 +464,6 @@ const SQUAD_POOL = [
   { name: "Lucho Ibarra", tag: "el filósofo", bio: "Cita a entrenadores muertos y a su abuelo a partes iguales. Acierta más que el VAR." },
 ];
 const makeSquad = () => pickN(SQUAD_POOL, 4);
-/* bienvenidas al grupo del vestuario: se usan al fichar y al reparar partidas antiguas sin este chat */
-const SQUAD_WELCOMES = (playerName, m) => [
-  `Te acabamos de meter al grupo del vestuario 📲 Aquí se habla de todo menos de táctica. Bienvenido, ${playerName}.`,
-  `¡El nuevo ya está en el grupo! Norma número uno: lo que se dice en el vestuario, se queda en el vestuario. Norma dos: los memes son sagrados.`,
-  `Bienvenido al grupo, ${playerName} 🙌 Yo soy ${m.name}, ${m.tag}. Ya irás conociendo al resto de la banda.`,
-];
 const COND = {
   good: (c) => c.good, hot: (c) => c.hot, bad: (c) => c.bad,
   starter: (c) => c.starter, benched: (c) => c.benched,
@@ -717,7 +714,7 @@ function flavorCtx(g) {
 }
 
 function senderFor(cat, g) {
-  if (cat === "coach") return "Entrenador";
+  if (cat === "coach") return "Elisa"; /* Elisa hace también de entrenadora */
   if (cat === "cap") return (g.captain || "El capitán") + " · Capitán";
   if (cat === "agent") return "Tu agente";
   if (cat === "squad") return pick(g.squad && g.squad.length ? g.squad : SQUAD_POOL).name + " · Vestuario";
@@ -731,10 +728,11 @@ function senderFor(cat, g) {
 /* elige n frases distintas y ponderadas que tengan sentido hoy.
    - no repite templates usados recientemente (g.recentTpl)
    - amortigua la categoría ya elegida en esta tanda para que salga variado */
-function pickFlavor(g, n) {
+function pickFlavor(g, n, cats) {
   const c = flavorCtx(g);
   const recent = g.recentTpl || [];
-  const pool = FLAVOR.filter((f) => (!f.w || (COND[f.w] && COND[f.w](c))) && !recent.includes(f.t));
+  const pool = FLAVOR.filter((f) => (!cats || cats.includes(f.c)) &&
+    (!f.w || (COND[f.w] && COND[f.w](c))) && !recent.includes(f.t));
   const out = [];
   const used = new Set();
   const catN = {};
@@ -814,29 +812,275 @@ function pickEvent(g) {
 }
 
 /* ============================================================
-   BUZONES DE CHAT · cada remitente pertenece a una conversación
+   PERSONAJES (NPC) · retratos, voces y enrutado de mensajes
+   Los mensajes en 2ª persona (entrenador, vestuario, mánager, Yuna) se
+   convierten en diálogos con retrato y voz; los de 3ª persona (prensa,
+   afición, redes, club) pasan a ser artículos del periódico diario.
    ============================================================ */
-const CHAT_META = {
-  coach: { icon: "📋", color: "#1F8A3B", title: () => "Entrenador", sub: "Cuerpo técnico" },
-  cap: { icon: "🎖️", color: "#D65A2E", title: (g) => g.captain || "Capitán", sub: "Capitán del equipo" },
-  agent: { icon: "🕴️", color: "#2E6ED6", title: () => "Tu agente", sub: "Representante" },
-  squad: { icon: "👥", color: "#7A3FD1", title: () => "Vestuario", sub: "Grupo del equipo", group: true },
-  press: { icon: "📰", color: "#A87900", title: () => "Prensa", sub: "Medios y radios", group: true },
-  fan: { icon: "📣", color: "#D0342C", title: () => "Afición", sub: "La grada" },
-  social: { icon: "📱", color: "#0F87B8", title: () => "Redes", sub: "Lo que se comenta" },
-  club: { icon: "🛡️", color: "#7E8F1B", title: (g) => g.club.name, sub: "Comunicación oficial" },
+/* Elisa absorbe al antiguo Entrenador: es mánager Y entrenadora a la vez.
+   Ya no existe un personaje "coach" aparte. */
+const NPCS = {
+  lopez: { name: "López", color: "#D65A2E", voice: "/audio/vozchico02.mp3",
+    arts: { idle: "/images/Lopez_idle.webp", happy: "/images/Lopez_happy.webp" }, def: "idle" },
+  /* en Yuna, "angry" es en realidad SONROJADA: es su cara de tsundere pillada en falta */
+  yuna: { name: "Yuna", color: "#D4537E", voice: "/audio/vozchica01.mp3",
+    arts: { idle: "/images/Yuna_Idle.webp", happy: "/images/Yuna_happy.webp", angry: "/images/Yuna_angry.webp" }, def: "idle" },
+  /* en Elisa, "angry" es su cara de decepción contenida: para semanas flojas o cuando habla de entrenadora estricta */
+  elisa: { name: "Elisa", color: "#2E6ED6", voice: "/audio/vozchica02.mp3",
+    arts: { idle: "/images/Elisa_idle.webp", happy: "/images/Elisa_happy.webp", angry: "/images/Elisa_angry.webp" }, def: "idle" },
 };
-const CHAT_ORDER = ["coach", "cap", "agent", "squad", "press", "fan", "social", "club"];
+const senderToNpc = (from) => {
+  if (from === "Entrenador" || from === "Tu agente" || from === "Elisa") return "elisa";
+  if (from === "Yuna") return "yuna";
+  if (from === "López" || from.includes("Capitán") || from.includes("· Vestuario")) return "lopez";
+  return null; /* prensa/afición/redes/club -> periódico */
+};
+const paperSec = (from) =>
+  from === "📣 La Grada" ? "LA GRADA"
+  : from === "📱 Redes" || from === "🐦 Timeline" || from === "📲 Peña digital" ? "REDES"
+  : from.startsWith("📢") ? "EL CLUB" : "ACTUALIDAD";
+/* estado de ánimo del retrato cuando la plantilla no lo trae explícito */
+const moodOf = (npc, text) => {
+  if (/😂|😄|🙌|🎉|😎|JAJA|jaja|❤️/.test(text)) return "happy";
+  return "idle";
+};
 
-function chatOf(from) {
-  if (from === "Entrenador") return "coach";
-  if (from.includes("Capitán")) return "cap";
-  if (from === "Tu agente") return "agent";
-  if (from.includes("· Vestuario")) return "squad";
-  if (from.startsWith("📢")) return "club";
-  if (from === "📣 La Grada") return "fan";
-  if (from === "📱 Redes" || from === "🐦 Timeline" || from === "📲 Peña digital") return "social";
-  return "press"; /* 📰/📻 y cualquier remitente antiguo sin buzón propio */
+/* --- voces: se trocea el clip del personaje en sílabas al azar mientras escribe --- */
+let VOICES_ON = true;
+const AUDIO = { ctx: null, buf: {}, live: new Set(), last: 0 };
+async function loadVoice(url) {
+  if (url in AUDIO.buf) return;
+  AUDIO.buf[url] = null;
+  try {
+    if (!AUDIO.ctx) AUDIO.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const r = await fetch(url);
+    AUDIO.buf[url] = await AUDIO.ctx.decodeAudioData(await r.arrayBuffer());
+  } catch (e) { /* sin audio no pasa nada: el diálogo funciona en silencio */ }
+}
+/* Un "blip" de voz. Tres cuidados para que no petardee:
+   - throttle: como mucho uno cada 110 ms, aunque se escriban más letras
+   - envolvente de volumen: cortar la onda en seco produce chasquidos
+   - se registran las fuentes vivas para poder callarlas al cerrar el diálogo */
+function babble(url) {
+  const b = AUDIO.buf[url];
+  if (!VOICES_ON || !AUDIO.ctx || !b) return;
+  if (performance.now() - AUDIO.last < 110) return;
+  AUDIO.last = performance.now();
+  try {
+    if (AUDIO.ctx.state === "suspended") AUDIO.ctx.resume();
+    const t = AUDIO.ctx.currentTime, dur = 0.08;
+    const s = AUDIO.ctx.createBufferSource();
+    s.buffer = b;
+    s.playbackRate.value = 0.96 + Math.random() * 0.12;
+    const g = AUDIO.ctx.createGain();
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.5, t + 0.014);
+    g.gain.setValueAtTime(0.5, t + dur - 0.03);
+    g.gain.linearRampToValueAtTime(0, t + dur);
+    s.connect(g); g.connect(AUDIO.ctx.destination);
+    s.start(t, Math.random() * Math.max(0, b.duration - dur - 0.05), dur);
+    s.stop(t + dur);
+    AUDIO.live.add(s);
+    s.onended = () => AUDIO.live.delete(s);
+  } catch (e) {}
+}
+/* Crujido de papel al desplegar el periódico. Sintetizado (ruido blanco pasado por
+   filtros y con dos golpes de crujido), así no hay que cargar ningún archivo. */
+function paperRustle() {
+  if (!VOICES_ON) return;
+  try {
+    if (!AUDIO.ctx) AUDIO.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (AUDIO.ctx.state === "suspended") AUDIO.ctx.resume();
+    const ctx = AUDIO.ctx, t = ctx.currentTime, dur = 0.46;
+    const n = Math.floor(ctx.sampleRate * dur);
+    const buf = ctx.createBuffer(1, n, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 2800; bp.Q.value = 0.6;
+    const hp = ctx.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 1100;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.17, t + 0.035);   /* primer tirón */
+    g.gain.exponentialRampToValueAtTime(0.045, t + 0.15);
+    g.gain.exponentialRampToValueAtTime(0.12, t + 0.22);    /* segundo crujido */
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(bp); bp.connect(hp); hp.connect(g); g.connect(ctx.destination);
+    src.start(t); src.stop(t + dur);
+    AUDIO.live.add(src);
+    src.onended = () => AUDIO.live.delete(src);
+  } catch (e) {}
+}
+
+/* corta cualquier voz en curso: al cerrar el diálogo no debe seguir sonando nada */
+function hushVoices() {
+  AUDIO.live.forEach((s) => { try { s.stop(); } catch (e) {} });
+  AUDIO.live.clear();
+}
+
+/* --- YUNA · fan tsundere del Barça; conoce tus números "por sus fuentes" --- */
+const YUNA_INTRO = "¿Tú eres el nuevo del {club}, no? ...Yo pasaba por aquí. Soy Yuna. Fan del Barça, para que lo sepas: MI equipo juega en el Camp Nou. El tuyo es... aceptable. P-pero habéis ganado, así que... bien. Supongo.";
+const YUNA_POOL = [
+  /* --- sonrojada (angry): pillada en falta, cumplidos que se le escapan --- */
+  { m: "angry", w: "win", t: "V-vi el partido entero. Y grité. En mi habitación. Sola. ...¡No te hagas ilusiones! Grité por el ESPECTÁCULO. El deporte rey. Eso." },
+  { m: "angry", w: "benched", t: "¡¿BANQUILLO?! ¿Tu míster está ciego o qué le pasa? ...N-no es que fuera a verte a TI. Fui a ver el partido. El fútbol. ¡EL DEPORTE!" },
+  { m: "angry", w: "scorer", t: "{goals} goles. Los tengo apuntados. Con la fecha. Y el minuto. ¡P-porque soy periodista amateur! Es documentación. DOCUMENTACIÓN." },
+  { m: "angry", w: "kgUp", t: "Estás más... fuerte. FÍSICAMENTE, digo. Para el fútbol. Es un análisis técnico totalmente objetivo. ¿P-por qué me miras así?" },
+  { m: "angry", w: "hot", t: "{streak} días seguidos cuidándote como un profesional... N-no es que te vigile, ¿eh? Tengo mis fuentes. Una fan seria hace su trabajo y punto." },
+  { m: "angry", t: "Te hice una bufanda del {club}. ¡No pongas esa cara! Sobraba lana del Barça, ¿vale? No la hice pensando en ti. ...Es tu talla, por cierto." },
+  { m: "angry", t: "Alguien del insti dijo que 'te sigo demasiado' y le contesté que soy analista. ...Luego me pasé la tarde roja. ¡Por el enfado! Solo por eso." },
+  { m: "angry", t: "S-si algún día fichas por el Barça y te olvidas de mí, te juro que voy al Camp Nou solo para abuchearte. ...No lo haría. Pero podría. Tenlo presente." },
+  /* --- feliz --- */
+  { m: "happy", w: "good", t: "Media de {ovr}... El Barça ficha gente de 89 para arriba, ¿sabes? Te queda camino. Pero llegarás. Lo sé desde... d-desde un punto de vista puramente estadístico." },
+  { m: "happy", t: "Cuando juegues en el Camp Nou —que pasará— más te vale conseguirme una entrada. Primera fila. Es lo MÍNIMO después de todo mi apoyo incondicional. Digo... ocasional." },
+  { m: "happy", w: "win", t: "¿Sabes qué? Hoy te lo voy a decir sin rodeos: has jugado bien. ...Ya está. No lo repito. Disfrútalo, que no pasa a menudo." },
+  /* --- normal --- */
+  { m: "idle", w: "loss", t: "Perdisteis. Bueno. El Barça también pierde y sigo aquí, así que no te voy a soltar el discurso. ...Mañana entrenas más y ya está." },
+  { m: "idle", w: "good", t: "Pasé por la ciudad deportiva. Por casualidad. Vivo a cuarenta minutos, pero fue casualidad. ...Entrenas más fuerte que antes. Se nota." },
+  { m: "idle", t: "Mi abuela dice que hablo mucho de 'ese chico del {club}'. ¡Hablo de FÚTBOL! Del deporte. En general. ...Cállate." },
+  { m: "idle", t: "El Barça empató ayer y estoy de luto, así que hoy no tengo energía para fingir que tu equipo no me interesa. Mañana volvemos a la normalidad." },
+  /* --- conversaciones más largas, con respuestas --- */
+  { m: "idle", t: "Oye... tengo una duda. PURAMENTE táctica, para mi análisis, nada personal. ¿Prefieres jugar en casa, con tu gente, o fuera, sin presión?", replies: [
+    { t: "En casa, con mi gente", r: ["Ah. Lógico. La grada empuja distinto cuando es la tuya... aunque la del Barça sigue siendo mejor, que conste.",
+      "Buena respuesta. Anotado en mi cuaderno de... análisis táctico. Nada más que eso."] },
+    { t: "Fuera, sin presión", r: ["Interesante. Poca gente admite eso en voz alta. ...Me gusta que no finjas ser quien no eres.",
+      "Mentalidad fría, ¿eh? El Barça también rinde mejor fuera a veces. No es que os compare. Es un dato objetivo."] }] },
+  { m: "angry", t: "M-mi amiga me vio el móvil con tu perfil abierto otra vez y ahora cree que 'somos algo'. ¡No somos NADA! Hago seguimiento profesional, como una periodista deportiva seria. ¿Tú qué le dirías a alguien que piensa eso?", replies: [
+    { t: "Que tiene razón", r: ["¡¿QUÉ?! ...¡c-cállate! Eso no ha sido gracioso. Nada gracioso. Me voy. ME VOY YA.",
+      "N-no digas eso ni en broma, mi corazón no está preparado para tus bromas a estas horas."] },
+    { t: "Que solo somos amigos", r: ["...Sí. Eso. Amigos. Claro que sí. *silencio raro durante tres segundos* Bueno, me voy, que tengo cosas de fan. De fan del Barça. Adiós."] }] },
+  { m: "idle", t: "Hoy en clase de historia hablamos de grandes rivalidades y, sin que nadie preguntara, me puse a explicar el Clásico durante diez minutos seguidos. El profesor ha tenido que pararme. No me arrepiento. La cultura es importante." },
+  { m: "happy", w: "good", t: "He estado pensando... si algún día llegas de verdad a lo más alto, ¿te acordarás de la fan pesada que te seguía desde una grada de provincias? Es una pregunta hipotética. Totalmente hipotética, que conste.", replies: [
+    { t: "Siempre me acordaré de ti", r: ["...n-no digas eso así, tan tranquilo. Casi me haces creer que lo dices en serio. Idiota."] },
+    { t: "Depende de si dejas de ser pesada", r: ["¡OYE! ...vale, me lo merecía un poco. Pero solo un poco, ¿eh? Que quede claro."] }] },
+  { m: "idle", w: "loss", t: "El otro día perdisteis y vi a un grupo en el bus hablando mal de ti. Les dije, cito textualmente, 'no tenéis ni idea de fútbol'. Y me bajé dos paradas antes de la mía porque no quería seguir la conversación. No fue por vergüenza. Fue por principios." },
+  { m: "angry", t: "Te he traído esto. Es una bufanda del {club}. ¡No pongas esa cara de sorpresa! Sobraba lana de una del Barça, ¿vale? No la hice pensando en ti especialmente. ...Es tu talla, por si te lo preguntas.", replies: [
+    { t: "Gracias, Yuna, de verdad", r: ["N-no hace falta que lo digas así de sincero, quedamos en que era un favor sin importancia. Pero... de nada.",
+      "¡No te acostumbres! Fue un acto puntual de generosidad excepcional. Único e irrepetible."] },
+    { t: "¿Seguro que no la hiciste para mí?", r: ["¡P-por supuesto que no! Yo... e-en fin, da igual. Úsala o no la uses, allá tú. Grosero."] }] },
+];
+
+/* --- ELISA · tu mánager: ánimo, despachos y fichajes.
+   "angry" = decepción contenida, para cuando aflojas --- */
+const ELISA_POOL = [
+  { m: "happy", t: "¡Buenas! Nada urgente, solo decirte que se habla bien de ti en los despachos. Tú a lo tuyo, que de mover los hilos me encargo yo. 💼" },
+  { m: "happy", w: "good", t: "He colado tu nombre en dos conversaciones esta semana. En ninguna eras el protagonista... todavía. Sigue así y la tercera será la buena." },
+  { m: "happy", w: "hot", t: "¡{streak} días de racha! ¿Sabes lo fácil que es vender a un jugador constante? Me estás haciendo el trabajo regalado y no me voy a quejar." },
+  { m: "happy", w: "scorer", t: "{goals} goles esta temporada. Cada uno de esos vale dinero en la mesa de negociación, que lo sepas. Sigue firmando así." },
+  { m: "idle", t: "Recordatorio de mánager: los contratos se firman con la cabeza fría y los partidos se juegan con la sangre caliente. No mezclar, que te conozco." },
+  { m: "idle", t: "Hoy sin novedades del mercado. A veces no pasa nada, y eso también es buena señal: significa que nadie duda de dónde tienes que estar ahora mismo." },
+  { m: "angry", w: "bad", t: "Vamos a hablar claro, que para eso estoy. Esta semana no has estado. Yo puedo abrirte puertas, pero cruzarlas es cosa tuya... y hoy no las has cruzado." },
+  { m: "angry", w: "benched", t: "Me ha llamado gente preguntando por qué no jugaste. ¿Y sabes qué? No tenía respuesta. No me gusta no tener respuesta. Arréglalo en el campo." },
+  { m: "angry", w: "loss", t: "He visto el partido. No por el resultado, esas cosas pasan... pero te he visto conformarte. Y eso no te lo había visto nunca. No me acostumbres." },
+  /* --- conversaciones más largas, con respuestas: entrenadora + mánager en una sola persona --- */
+  { m: "idle", t: "Vamos a hacer un repaso serio, estilo entrenadora-mánager: ¿cómo te sientes físicamente esta semana? Lo necesito para planificar tanto tu carga de entrenamiento como tu futuro fuera del campo.", replies: [
+    { t: "Al cien por cien", r: ["Eso quiero oír. Entonces esta semana subimos el nivel de exigencia, que para eso estoy yo aquí.",
+      "Perfecto. Apunto 'listo para todo' en tu ficha. Literal, lo escribo ahora mismo."] },
+    { t: "Un poco cansado, la verdad", r: ["Gracias por decírmelo con sinceridad, eso también es profesionalidad. Ajustamos la carga y seguimos, sin dramas.",
+      "Ok, anotado. El cuerpo manda, no el orgullo. Descansa lo que necesites, que luego te lo reclamo con intereses."] }] },
+  { m: "happy", t: "Tengo una pregunta con segundas intenciones, de mánager: si mañana te llamara un grande de {league} con una oferta seria sobre la mesa, ¿qué me dirías?", replies: [
+    { t: "Que lo estudiamos juntas", r: ["Esa es la respuesta que quería oír. Trabajo en equipo, así se llega lejos y sin sustos.",
+      "Me gusta esa cabeza fría. Así es exactamente como se negocian los buenos contratos."] },
+    { t: "Que dijeras que sí sin dudarlo", r: ["JAJA directo al grano, me gusta la ambición. Pero deja que negocie yo, que para eso cobro comisión.",
+      "Con esas ganas vamos a hacer carrera los dos, ya lo verás, crack."] }] },
+  { m: "angry", w: "bad", t: "Necesito preguntarte algo y quiero una respuesta honesta, no la que crees que quiero oír: ¿estás dando el máximo esta semana, o solo lo suficiente para que yo no te diga nada?", replies: [
+    { t: "Lo máximo, te lo prometo", r: ["Te tomo la palabra. Pero las palabras se demuestran en el campo, no aquí conmigo. Vamos a verlo.",
+      "Bien. Porque el potencial sin esfuerzo no le interesa a nadie, ni siquiera a mí."] },
+    { t: "La verdad, no del todo", r: ["Al menos eres sincero, y eso lo respeto más que una excusa bonita. Mañana empezamos de cero. Pero de cero de verdad.",
+      "Gracias por no mentirme. Ahora la pregunta importante es qué vas a hacer al respecto."] }] },
+  { m: "happy", t: "Sabes qué me gusta de ti como jugador? Que no necesito motivarte cada día. La mayoría de mi cartera sí, y créeme que lo intento con paciencia de santa. Tú simplemente vienes y curras. Eso no se enseña, eso se trae de casa." },
+  { m: "happy", w: "hot", t: "Llevo {streak} días seguidos viéndote entrenar como si cada sesión fuera una final. Como entrenadora te exijo esto siempre; como mánager, te digo que eso vale más que cualquier golazo suelto: es lo que hace que un contrato dure años y no meses." },
+  { m: "idle", t: "A veces me preguntan cómo puedo ser entrenadora y mánager a la vez sin volverme loca. Fácil: en el campo exijo, fuera del campo negocio, y en los dos sitios cuido de los míos. Tú entras en esa categoría, para que lo sepas." },
+];
+
+/* --- LÓPEZ · capitán y colega de siempre; animado, gracioso, anécdotas de vestuario.
+   Solo tiene idle/happy, nunca angry: no es su papel en el grupo. --- */
+const LOPEZ_POOL = [
+  { m: "idle", t: "Oye, pregunta seria de vestuario: ¿tú antes de un partido prefieres música a tope o silencio total? Llevamos meses discutiéndolo y necesito un voto de calidad.", replies: [
+    { t: "Música a tope", r: ["¡ESO ES! Por fin alguien con criterio. Se lo digo al Chino, que lleva semanas votando silencio como un monje.",
+      "Sabía que podía contar contigo. Nos vemos con los cascos puestos antes del próximo partido."] },
+    { t: "Silencio, para concentrarme", r: ["Jo, tío, otro del bando del silencio. Bueno, respeto tu proceso, aunque no lo entienda 😂",
+      "Vale, vale. Cada uno con su ritual. El mío es cantar mal, por si te lo preguntabas."] }] },
+  { m: "happy", t: "Te cuento una del vestuario de ayer: el utillero juraba que había visto un fantasma en la sala de masajes. Resultó ser el segundo entrenador dormido con la manta puesta encima. Casi le da un infarto al pobre hombre. Oye, ¿tú has visto algo raro alguna vez en la ciudad deportiva?", replies: [
+    { t: "Una vez sí, fue rarísimo", r: ["¡LO SABÍA! Cuéntamelo todo mañana en el vestuario, necesito los detalles para la próxima leyenda urbana del club 😂"] },
+    { t: "Nunca, soy muy racional", r: ["Aburrido. Pero respetable. Yo en cambio me creo cualquier cosa, por eso vivo mejor 😄"] }] },
+  { m: "happy", t: "Hoy el nuevo del filial ha preguntado si el míster también entrena físico con nosotros. Le hemos dejado creer que sí durante media hora. La cara que se le ha quedado cuando lo ha descubierto no tiene precio. Bienvenido al vestuario, chaval." },
+  { m: "idle", w: "loss", t: "Sé que hoy no salió como queríamos. Pero te voy a decir una cosa que me dijo un veterano cuando yo era el novato del equipo: un mal partido no te define, lo que haces al día siguiente sí. Y tú siempre vuelves más fuerte, lo llevo viendo desde que llegaste." },
+  { m: "happy", w: "good", t: "Llevas una racha que ya empieza a dar que hablar en el vestuario, ¿eh? Hasta el más callado del grupo ha comentado algo esta semana, y eso aquí es historia. ¿Tienes algún ritual o truco que te esté funcionando?", replies: [
+    { t: "Solo trabajo y constancia", r: ["Respuesta de veterano en cuerpo de joven. Me gusta. Sigue así y te vamos a tener que subir el sueldo del respeto en el vestuario.",
+      "Ojalá se me hubiera pegado algo de esa disciplina a mí a tu edad 😂"] },
+    { t: "Un poco de suerte también", r: ["JAJA la suerte hay que currársela, pero vale, te la concedo. Sigue así de todas formas.",
+      "Modesto encima. Este vestuario no te merece, en serio."] }] },
+  { m: "idle", t: "Confesión de capitán: cuando llegué a este club tenía más miedo que tú el primer día. Me escondía en el baño para no hablar en las charlas tácticas. Ahora mírame, no me calla ni el míster. Todo se aprende, hasta lo de abrir la boca." },
+  { m: "happy", t: "El presi ha vuelto a confundir mi nombre con el del utillero delante de un patrocinador. Tercera vez este mes. Ya ni me molesto en corregirle, directamente respondo a los dos nombres como si fuera normal." },
+  { m: "idle", w: "benched", t: "Te vi en el banquillo con esa cara que ponemos todos alguna vez. Yo pasé dos meses ahí mi segunda temporada aquí y pensé que se acababa el mundo. No se acaba. Se entrena, se espera, y un día vuelves con más hambre que nunca." },
+];
+
+/* --- EL PERIÓDICO · plantillas con titular y cuerpo, por secciones --- */
+const NEWS = [
+  { sec: "PORTADA", w: "hot", h: "{player}, el nombre de la temporada", b: "Con {streak} días de trabajo impecable a sus espaldas, el {position} del {club} atraviesa el mejor momento de su joven carrera. En la ciudad deportiva ya no se habla de otra cosa: la pregunta no es si dará el salto, sino cuándo." },
+  { sec: "PORTADA", w: "good", h: "El {club} se encomienda a su {position}", b: "La media de {ovr} de {player} empieza a pesar en cada alineación. El cuerpo técnico lo sabe, el vestuario lo sabe y la grada lo corea: el futuro pasa por sus botas." },
+  { sec: "PORTADA", w: "derbiSoon", h: "Semana de PARTIDAZO en {league}", b: "El {club} se mide al {derbiRival} y la ciudad ya huele a día grande. Entradas volando, peñas organizando la previa y un {player} que llega afinado al partido que nadie quiere perderse." },
+  { sec: "PORTADA", w: "seasonStart", h: "Arranca la temporada {season}", b: "Nueva campaña en {league} y las quinielas ya circulan. En el {club} evitan hablar de objetivos, pero la plantilla llega con hambre y {player} apunta a pieza clave." },
+  { sec: "PORTADA", w: "bad", h: "¿Qué le pasa a {player}?", b: "El bajón de las últimas sesiones no ha pasado desapercibido. En el club piden calma y recuerdan que las temporadas son largas, pero la afición contiene la respiración." },
+  { sec: "PORTADA", h: "La regularidad, la otra estrella del {club}", b: "Sin hacer ruido, el {club} ha construido su temporada sobre el trabajo diario de jugadores como {player}. La prensa nacional empieza a fijarse en el fenómeno." },
+  { sec: "RUMORES", w: "good", h: "Ojeadores en la grada", b: "Al menos dos clubes de categoría superior habrían pedido informes sobre {player} en las últimas jornadas. En el {club} se hacen los sordos, pero el mercado nunca duerme." },
+  { sec: "RUMORES", w: "hot", h: "¿Cláusula al alza?", b: "El entorno de {player} guarda silencio, pero su valor no: la progresión del {position} obligaría al {club} a replantearse su ficha antes de lo previsto." },
+  { sec: "RUMORES", h: "La paella de la directiva 'va muy en serio'", b: "Fuentes del vestuario aseguran que la paella prometida si el equipo acaba arriba está garantizada. El utillero ya habría preguntado por el tamaño del recipiente." },
+  { sec: "RUMORES", h: "Un grande de {league} estudia el modelo del {club}", b: "El trabajo silencioso de la preparación física del {club} empieza a tener imitadores. 'Que copien, nosotros seguimos', responden desde el club." },
+  { sec: "VESTUARIO", w: "win", h: "La playlist de la victoria", b: "Tras el último triunfo, el vestuario del {club} sonó a reggaeton clásico durante cuarenta minutos. Los vecinos no han presentado quejas: 'se les oía felices'." },
+  { sec: "VESTUARIO", w: "loss", h: "Silencio y doble sesión", b: "Tras la última derrota, el vestuario del {club} eligió la vía clásica: poca palabra y trabajo extra. 'Aquí no se esconde nadie', se escuchó desde dentro." },
+  { sec: "VESTUARIO", h: "La lavadora 'La Bestia' cumple años", b: "El electrodoméstico más querido de la ciudad deportiva suma otro año de servicio. El utillero prepara una celebración 'íntima, solo para ropa de confianza'." },
+  { sec: "VESTUARIO", h: "El arroz de los martes, patrimonio del club", b: "El táper más famoso del vestuario ya tiene fama en toda la categoría. Rivales han llegado a pedir la receta tras los partidos. La respuesta: 'secreto de vestuario'." },
+  { sec: "LA LIGA", w: "hasGoals", h: "{player}, en la pelea por el pichichi", b: "Con {goals} tantos, el {position} del {club} se cuela entre los nombres propios de la categoría. Los defensas rivales ya le dedican marcajes especiales." },
+  { sec: "LA LIGA", h: "El calendario no da tregua", b: "Jornada tras jornada, {league} sigue apretando la tabla. Los técnicos coinciden: 'esto lo decidirán los detalles y las plantillas que mejor se cuiden'." },
+  { sec: "LA LIGA", h: "Los porteros piden piedad", b: "Tres goleadas en la última jornada han reabierto el debate: ¿es {league} la liga más ofensiva del país? Los guardametas reclaman 'un poco de compasión' para el fin de semana." },
+  { sec: "HUMOR", h: "El VAR del bar", b: "El videoarbitraje oficial del Bar Manolo dictaminó ayer que 'aquello era penalti en 1997 y lo sigue siendo hoy'. La sentencia es inapelable y va acompañada de bravas." },
+  { sec: "HUMOR", h: "Horóscopo deportivo", b: "Los astros predicen para hoy: entrenamiento fuerte, alguna agujeta traicionera y un rondo en el que alguien hará el ridículo. Los astros nunca fallan." },
+  { sec: "HUMOR", h: "Se busca", b: "Balón visto por última vez en la grada norte tras un despeje del central rival. Responde al nombre de 'Pelota'. Se ruega devolución: es el bueno, el de los partidos." },
+  { sec: "HUMOR", h: "Encuesta exprés", b: "El 94% de los aficionados encuestados asegura que 'este año sí'. El 6% restante es del equipo rival y también dice que este año sí. Alguien se equivoca." },
+  { sec: "HUMOR", h: "Meteorología aplicada", b: "Previsión para el fin de semana: lluvia de ocasiones, rachas de contraataque y un 90% de probabilidad de que el míster diga 'partido trampa'." },
+];
+
+/* Monta la edición del día (portada, secciones y contra) sobre el estado dado.
+   Se usa al abrir la app y también justo al fichar, para que el primer día
+   no te encuentres un periódico en blanco. */
+function buildPaper(out) {
+  const today = todayStr();
+  if (!out.paper || out.paper.d !== today)
+    out.paper = { d: today, num: dayDiff(out.signedAt || today, today) + 1, articles: [], built: false };
+  if (out.paper.built) return out;
+  const c = flavorCtx(out);
+  const ok = NEWS.filter((n) => !n.w || (COND[n.w] && COND[n.w](c)));
+  const arts = [];
+  const grab = (sec) => {
+    const p = ok.filter((n) => n.sec === sec && arts.indexOf(n) < 0);
+    const e = p[Math.floor(Math.random() * p.length)];
+    if (e) arts.push(e);
+  };
+  grab("PORTADA"); grab(pick(["RUMORES", "VESTUARIO"])); grab("LA LIGA"); grab("HUMOR");
+  out.paper = { ...out.paper, built: true, articles: [
+    ...arts.map((n) => ({ id: Math.random(), sec: n.sec, h: fillTpl(n.h, c), b: fillTpl(n.b, c) })),
+    ...out.paper.articles] };
+  return out;
+}
+
+/* crónica del partido recién jugado: abre la edición del día siguiente */
+function cronicaDe(g, m) {
+  const c = g.club.name;
+  const h = m.res === "V"
+    ? pick([`El ${c} se lleva el partido (${m.gf}-${m.ga})`, `Victoria de peso ante ${m.rival}`, `${m.gf}-${m.ga}: el ${c} sigue a lo suyo`])
+    : m.res === "E"
+    ? pick([`Reparto de puntos ante ${m.rival} (${m.gf}-${m.ga})`, `Empate con sabor a poco (${m.gf}-${m.ga})`])
+    : pick([`Tropiezo del ${c} ante ${m.rival} (${m.gf}-${m.ga})`, `Día para olvidar: ${m.gf}-${m.ga}`]);
+  const tuyo = m.benched ? `${g.player.name} lo vio todo desde el banquillo.`
+    : m.rating >= 8.5 ? `${g.player.name} firmó una actuación de ${m.rating} que la grada tardará en olvidar${m.myGoals ? `, con ${m.myGoals} gol${m.myGoals > 1 ? "es" : ""} incluido${m.myGoals > 1 ? "s" : ""}` : ""}.`
+    : m.rating >= 7 ? `${g.player.name} cumplió con nota (${m.rating}).`
+    : `A ${g.player.name} le tocó remar (${m.rating}).`;
+  const b = (m.res === "V" ? `Buen golpe del ${c} en la jornada ${m.jornada}. `
+    : m.res === "E" ? `Partido espeso en la jornada ${m.jornada}. `
+    : `La jornada ${m.jornada} se torció pronto. `) + tuyo;
+  return { h, b };
 }
 
 const dayLabel = (d) => {
@@ -1108,57 +1352,285 @@ function SigningOverlay({ club, player, photo, crest, crestScale, onDone }) {
 }
 
 /* ---------- SIMULACIÓN DE PARTIDO EN VIVO ---------- */
+/* ============================================================
+   MOTOR 2D DEL PARTIDO
+   Coreografía sobre el resultado que YA decidió simulateMatch: los 22 puntos se
+   mueven y se pasan el balón, y las jugadas de gol se disparan en el minuto que
+   marca el guion de eventos. No altera marcador, nota ni XP.
+   El bucle escribe transforms directamente sobre refs: React no re-renderiza por fotograma.
+   ============================================================ */
+const FORM_US = [[50, 93], [18, 77], [39, 80], [61, 80], [82, 77],
+  [16, 58], [38, 61], [62, 61], [84, 58], [41, 38], [59, 38]];
+const ROLES = ["portero", "lateral", "central", "central", "lateral",
+  "extremo", "mediocentro", "mediocentro", "extremo", "delantero", "delantero"];
+const MY_SLOT = 6; /* tu punto dentro de la formación */
+const SQUAD22 = [
+  ...FORM_US.map((p, i) => ({ bx: p[0], by: p[1], team: 0, idx: i })),
+  ...FORM_US.map((p, i) => ({ bx: 100 - p[0], by: 100 - p[1], team: 1, idx: i })),
+];
+const TRAIL = 6;
+
+const esGol = (e) => e.text.includes("⚽") || e.text.includes("🥅");
+
+function PitchEngine({ match, minute, ended, onGoal, onSeq }) {
+  const boxRef = useRef(null), ballRef = useRef(null), flashRef = useRef(null), lineRef = useRef(null);
+  const dots = useRef([]), trail = useRef([]);
+  const minRef = useRef(0), finRef = useRef(false), cbRef = useRef({});
+  useEffect(() => { minRef.current = minute; }, [minute]);
+  useEffect(() => { finRef.current = ended; }, [ended]);
+  cbRef.current = { onGoal, onSeq };
+
+  useEffect(() => {
+    const box = boxRef.current;
+    if (!box) return;
+    const quieto = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    let W = 0, H = 0;
+    const medir = () => { const r = box.getBoundingClientRect(); W = r.width; H = r.height; };
+    medir();
+    window.addEventListener("resize", medir);
+
+    const pl = SQUAD22.map((p) => ({ ...p, x: p.bx, y: p.by, ph: Math.random() * 6.28, sp: 0.45 + Math.random() * 0.5 }));
+    const pinta = (p, i) => {
+      const el = dots.current[i];
+      if (el) el.style.transform = `translate3d(${p.x / 100 * W - 6.5}px,${p.y / 100 * H - 6.5}px,0)`;
+    };
+    pl.forEach(pinta);
+
+    if (quieto) { window.removeEventListener("resize", medir); return; }
+
+    /* guion: solo los eventos de gol mueven el balón a portería */
+    const guion = (match.events || []).filter(esGol)
+      .map((e) => ({ ev: e, min: e.min, team: e.good ? 0 : 1, hecho: false }));
+
+    const ball = { x: 50, y: 50, fx: 50, fy: 50, tx: 50, ty: 50, t: 1, dur: 1 };
+    let poss = 0, holder = pl[MY_SLOT], acc = 0, seq = null, raf = 0;
+    const tr = [];
+
+    const compis = (t) => pl.filter((p) => p.team === t && p.idx > 0);
+    /* seleccionar por línea (no por índice del array) evita salirse del rango */
+    const linea = (t, lo, hi) => pl.filter((p) => p.team === t && p.idx >= lo && p.idx <= hi);
+    const alAzar = (arr) => arr[Math.floor(Math.random() * arr.length)];
+    const pase = (dest, dur) => {
+      if (!dest) return;
+      ball.fx = ball.x; ball.fy = ball.y; ball.tx = dest.x; ball.ty = dest.y; ball.t = 0; ball.dur = dur;
+      const l = lineRef.current;
+      if (l) {
+        l.setAttribute("x1", ball.fx / 100 * W); l.setAttribute("y1", ball.fy / 100 * H);
+        l.setAttribute("x2", dest.x / 100 * W); l.setAttribute("y2", dest.y / 100 * H);
+        l.setAttribute("stroke", poss === 0 ? "#CDF546" : "#D85A30");
+        l.style.opacity = ".65";
+      }
+      holder = dest;
+    };
+    const siguiente = () => {
+      const m = compis(poss);
+      const adel = m.filter((p) => (poss === 0 ? p.y < holder.y - 4 : p.y > holder.y + 4));
+      const pool = adel.length && Math.random() < 0.65 ? adel : m;
+      const c = pool.filter((p) => p !== holder);
+      return c[Math.floor(Math.random() * c.length)] || m[0];
+    };
+    const saque = (t) => {
+      poss = t; holder = alAzar(linea(t, 5, 8)) || compis(t)[0];
+      ball.x = 50; ball.y = 50; ball.fx = 50; ball.fy = 50; ball.tx = 50; ball.ty = 50; ball.t = 1;
+    };
+
+    let last = performance.now(), tAcc = 0, finT = 0;
+    const loop = (now) => {
+      /* el paso se acota por arriba (volver de segundo plano) y por abajo: nunca negativo */
+      const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now; tAcc += dt;
+
+      /* disparar la jugada de gol cuando el reloj alcanza su minuto.
+         Mientras dura, el modal congela el reloj (onSeq) para que no se coma minutos. */
+      if (!seq && !finRef.current) {
+        const g = guion.find((x) => !x.hecho && minRef.current >= x.min);
+        if (g) {
+          g.hecho = true; seq = { g: g, fase: 0, t: 0 }; poss = g.team;
+          if (cbRef.current.onSeq) cbRef.current.onSeq(true);
+          pase(alAzar(linea(g.team, 5, 8)), 0.22); /* la jugada arranca en el centro del campo */
+        }
+      }
+      if (seq) {
+        const eq = seq.g.team;
+        seq.t += dt;
+        if (seq.fase === 0 && seq.t > 0.24) {
+          seq.fase = 1; pase(alAzar(linea(eq, 9, 10)), 0.22); /* y busca a un delantero */
+        } else if (seq.fase === 1 && seq.t > 0.48) {
+          seq.fase = 2; holder = null;
+          ball.fx = ball.x; ball.fy = ball.y; ball.tx = 50; ball.ty = eq === 0 ? 3 : 97; ball.t = 0; ball.dur = 0.2;
+          if (lineRef.current) lineRef.current.style.opacity = "0";
+        } else if (seq.fase === 2 && seq.t > 0.7) {
+          /* el balón entra: AHORA se canta el gol, se suma al marcador y sale la tarjeta */
+          seq.fase = 3;
+          const f = flashRef.current;
+          if (f) {
+            f.textContent = eq === 0 ? "GOL" : "GOL RIVAL";
+            f.style.color = eq === 0 ? "#CDF546" : "#D85A30";
+            f.style.opacity = "1";
+          }
+          if (cbRef.current.onGoal) cbRef.current.onGoal(seq.g.ev);
+        } else if (seq.fase === 3 && seq.t > 1.35) {
+          if (flashRef.current) flashRef.current.style.opacity = "0";
+          saque(1 - eq); seq = null;
+          if (cbRef.current.onSeq) cbRef.current.onSeq(false);
+        }
+      }
+
+      /* circulación normal del balón (se detiene al pitar el final) */
+      if (!seq && !finRef.current) {
+        acc += dt;
+        if (acc > 0.5 && ball.t >= 1) {
+          acc = 0;
+          if (Math.random() < 0.13) { poss = 1 - poss; const s = compis(poss); pase(s[Math.floor(Math.random() * s.length)], 0.3); }
+          else pase(siguiente(), 0.32 + Math.random() * 0.24);
+        }
+      }
+      if (ball.t < 1) {
+        ball.t = Math.min(1, ball.t + dt / ball.dur);
+        const e = 1 - Math.pow(1 - ball.t, 3);
+        ball.x = ball.fx + (ball.tx - ball.fx) * e;
+        ball.y = ball.fy + (ball.ty - ball.fy) * e;
+      } else if (holder) { ball.x += (holder.x - ball.x) * 0.16; ball.y += (holder.y - ball.y) * 0.16; }
+      if (lineRef.current) {
+        const o = parseFloat(lineRef.current.style.opacity || 0);
+        if (o > 0) lineRef.current.style.opacity = Math.max(0, o - dt * 1.6);
+      }
+
+      /* al acabar: el balón vuelve al centro y el equipo se deshace del bloque */
+      if (finRef.current) {
+        holder = null;
+        ball.x += (50 - ball.x) * 0.05; ball.y += (50 - ball.y) * 0.05;
+        finT += dt;
+      }
+
+      /* bloque táctico: adelantar/retrasar líneas y bascular hacia el balón */
+      for (let i = 0; i < pl.length; i++) {
+        const p = pl[i];
+        const atacando = !finRef.current && p.team === poss;
+        const empuje = p.idx === 0 ? 1 : p.idx < 5 ? 5 : p.idx < 9 ? 9 : 12;
+        const dir = p.team === 0 ? -1 : 1;
+        const lento = p.idx === 0;
+        let ty = p.by + (atacando ? empuje * dir : -empuje * dir * 0.5);
+        let tx = p.bx + (ball.x - 50) * (lento ? 0.05 : 0.18);
+        tx += Math.sin(tAcc * p.sp + p.ph) * 1.1;
+        ty += Math.cos(tAcc * p.sp * 0.8 + p.ph) * 1.1;
+        p.x += (tx - p.x) * (lento ? 0.022 : 0.036);
+        p.y += (ty - p.y) * (lento ? 0.022 : 0.036);
+        pinta(p, i);
+      }
+
+      /* estela del balón */
+      tr.unshift([ball.x, ball.y]);
+      if (tr.length > TRAIL) tr.pop();
+      for (let i = 0; i < TRAIL; i++) {
+        const el = trail.current[i], q = tr[i];
+        if (el && q) {
+          el.style.transform = `translate3d(${q[0] / 100 * W - 2.5}px,${q[1] / 100 * H - 2.5}px,0)`;
+          el.style.opacity = String(0.3 * (1 - i / TRAIL));
+        }
+      }
+      if (ballRef.current) ballRef.current.style.transform =
+        `translate3d(${ball.x / 100 * W - 4}px,${ball.y / 100 * H - 4}px,0)`;
+
+      /* tras asentarse el final, el bucle se apaga: nada sigue jugando de fondo */
+      if (finT > 1.6) return;
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => { cancelAnimationFrame(raf); window.removeEventListener("resize", medir); };
+  }, [match]);
+
+  return (
+    <div style={{ width: "100%", maxWidth: 360, margin: "0 auto" }}>
+      <div className="pitch" ref={boxRef}>
+        <div className="pl-line" style={{ left: 0, right: 0, top: "50%", height: 1 }} />
+        <div className="pl-ring" />
+        <div className="pl-box" style={{ top: 0, borderTop: "none" }} />
+        <div className="pl-box" style={{ bottom: 0, borderBottom: "none" }} />
+        <svg className="pl-svg"><line ref={lineRef} strokeWidth="1" style={{ opacity: 0 }} /></svg>
+        {[...Array(TRAIL)].map((_, i) => (
+          <div key={"t" + i} className="pl-trail" ref={(el) => (trail.current[i] = el)} />))}
+        {SQUAD22.map((p, i) => {
+          const yo = p.team === 0 && p.idx === MY_SLOT && !match.benched;
+          return (
+            <div key={i} ref={(el) => (dots.current[i] = el)}
+              className={"pl-dot" + (yo ? " yo" : "")}
+              style={{ background: p.team === 0 ? (yo ? "#CDF546" : "#EFEEE3") : "#D85A30" }}
+              title={(p.team === 0 ? (yo ? "Tú" : "Tu equipo") : "Rival") + " · " + ROLES[p.idx]} />);
+        })}
+        <div className="pl-ball" ref={ballRef} />
+        <div className="pl-flash" ref={flashRef}>GOL</div>
+      </div>
+    </div>);
+}
+
 function MatchModal({ match, club, onFinish, crest, crestScale }) {
   const [minute, setMinute] = useState(0);
   const [shown, setShown] = useState([]);
+  const [gf, setGf] = useState(0), [ga, setGa] = useState(0);
   const [ended, setEnded] = useState(false);
+  const holdRef = useRef(false);
+
   useEffect(() => {
+    /* 3 min de juego por tick: el partido dura ~8 s de reloj más lo que sumen
+       las jugadas de gol. El reloj se congela mientras el motor juega una de ellas,
+       así el marcador nunca se adelanta a lo que se ve en el campo. */
     const int = setInterval(() => {
+      if (holdRef.current) return;
       setMinute((m) => {
         const nm = m + 3;
-        if (nm >= 92) { clearInterval(int); setEnded(true); return 90; }
+        if (nm >= 93) { clearInterval(int); setEnded(true); return 90; }
         return nm;
       });
-    }, 260);
+    }, 280);
     return () => clearInterval(int);
   }, []);
-  /* revelar eventos con ritmo: vibración sutil cuando entra un gol nuestro */
-  const seenRef = useRef(0);
+
+  /* los eventos que no son gol se revelan por minuto; los goles los canta el motor */
   useEffect(() => {
-    const list = match.events.filter((e) => e.min <= minute);
-    if (list.length > seenRef.current) {
-      list.slice(seenRef.current).forEach((e) => {
-        if (e.good && e.text.includes("⚽")) buzz(e.text.includes("GOOOL") ? [30, 40, 30] : 20);
-      });
-      seenRef.current = list.length;
-    }
-    setShown(list);
+    setShown((f) => {
+      const nuevos = match.events.filter((e) => !esGol(e) && e.min <= minute && f.indexOf(e) < 0);
+      return nuevos.length ? [...f, ...nuevos] : f;
+    });
   }, [minute, match]);
-  const gf = shown.filter((e) => e.good && e.text.includes("⚽")).length;
-  const ga = shown.filter((e) => !e.good && e.text.includes("🥅")).length;
+
+  const cantarGol = useCallback((ev) => {
+    setShown((f) => (f.indexOf(ev) < 0 ? [...f, ev] : f));
+    if (ev.good) { setGf((g) => g + 1); buzz(ev.text.includes("GOOOL") ? [30, 40, 30] : 20); }
+    else setGa((g) => g + 1);
+  }, []);
+  const congelarReloj = useCallback((activo) => { holdRef.current = activo; }, []);
+
   return (
-    <div className="overlay" style={{ background: "radial-gradient(ellipse at 50% 0%, #0E3320, #05070d 75%)", justifyContent: "flex-start", paddingTop: 60 }}>
+    <div className="overlay match-ov">
       <div className="eyebrow" style={{ textAlign: "center", color: "#CDF546" }}>
         {match.derbi ? "🔥 PARTIDAZO · " : ""}JORNADA {match.jornada} · EN VIVO</div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 18, margin: "14px 0" }}>
-        <Crest c1={club.c1} c2={club.c2} name={club.name} size={44} img={crest} imgScale={crestScale} />
-        <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 44, color: "#F5EFDF" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 14, margin: "10px 0 6px" }}>
+        <Crest c1={club.c1} c2={club.c2} name={club.name} size={38} img={crest} imgScale={crestScale} />
+        <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 40, color: "#F5EFDF", lineHeight: 1 }}>
           {ended ? match.gf : gf} - {ended ? match.ga : ga}</div>
-        <div style={{ width: 44, textAlign: "center", fontSize: 11, color: "#8b95a3" }}>{match.rival}</div>
+        <div style={{ width: 44, textAlign: "center", fontSize: 11, color: "#8b95a3", lineHeight: 1.2 }}>{match.rival}</div>
       </div>
-      <div style={{ fontFamily: "'Oswald',sans-serif", color: "#CDF546", textAlign: "center", fontSize: 18 }}>
+      <div style={{ fontFamily: "'Oswald',sans-serif", color: "#CDF546", textAlign: "center", fontSize: 18, marginBottom: 10 }}>
         {ended ? "FINAL" : minute + "'"}</div>
-      <div style={{ maxWidth: 340, margin: "18px auto 0", width: "100%", flex: 1, overflowY: "auto" }}>
-        {shown.map((e, i) => (
-          <div key={i} className={"event-in" + (i === shown.length - 1 && !ended ? " event-new" : "")}
-            style={{ padding: "8px 12px", marginBottom: 6, borderLeft: `3px solid ${e.good ? "#3DDC84" : "#E14B4B"}`,
-            background: "rgba(255,255,255,.04)", fontSize: 13.5, color: "#DDE3EA" }}>
+
+      <PitchEngine match={match} minute={minute} ended={ended} onGoal={cantarGol} onSeq={congelarReloj} />
+
+      {match.benched && (
+        <div style={{ textAlign: "center", fontSize: 11.5, color: "#8A8E7C", marginTop: 6 }}>
+          🪑 Sigues el partido desde el banquillo</div>)}
+
+      <div className="m-tick">
+        {shown.slice(-3).map((e, i, arr) => (
+          <div key={e.min + e.text} className={"event-in" + (i === arr.length - 1 && !ended ? " event-new" : "")}
+            style={{ padding: "7px 11px", marginBottom: 5, borderLeft: `3px solid ${e.good ? "#3DDC84" : "#E14B4B"}`,
+            background: "rgba(255,255,255,.04)", fontSize: 13, color: "#DDE3EA" }}>
             <b style={{ fontFamily: "'Oswald',sans-serif", marginRight: 8 }}>{e.min}'</b>{e.text}
           </div>))}
-        {shown.length === 0 && <div style={{ textAlign: "center", color: "#8A8E7C", fontSize: 13, marginTop: 30 }}>El balón ya rueda…</div>}
+        {shown.length === 0 && <div style={{ textAlign: "center", color: "#8A8E7C", fontSize: 12.5, paddingTop: 12 }}>El balón ya rueda…</div>}
       </div>
       {ended && (
-        <div className="pop-in" style={{ textAlign: "center", padding: "14px 0 40px" }}>
+        <div className="pop-in" style={{ textAlign: "center", padding: "10px 0 8px" }}>
           <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 22, color: match.res === "V" ? "#3DDC84" : match.res === "E" ? "#CDF546" : "#E14B4B" }}>
             {match.res === "V" ? "¡VICTORIA!" : match.res === "E" ? "EMPATE" : "DERROTA"}</div>
           {match.rating != null
@@ -1172,124 +1644,162 @@ function MatchModal({ match, club, onFinish, crest, crestScale }) {
   );
 }
 
-/* ---------- CHAT · buzones estilo mensajería ---------- */
-function ChatAvatar({ meta, size = 46 }) {
-  return (
-    <div className="chat-ava" style={{ width: size, height: size, fontSize: size * 0.45,
-      background: meta.color + "1e", border: `1.5px solid ${meta.color}55` }}>{meta.icon}</div>
-  );
-}
-
-function OfferBlock({ m, onOfferAction }) {
-  if (m.kind !== "offer" || !m.offer) return null;
-  return (
-    <>
-      <div style={{ display: "flex", gap: 10, alignItems: "center", margin: "8px 0" }}>
-        <Crest c1={m.offer.club.c1} c2={m.offer.club.c2} name={m.offer.club.name} size={36} />
-        <div>
-          <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 15 }}>{m.offer.club.name} {m.offer.club.country || ""}</div>
-          <div style={{ fontSize: 11, color: "#6F7563" }}>{m.offer.league} · Ficha: {fmtEUR(m.offer.salary)}/año</div>
-        </div>
-      </div>
-      {m.status === "pending" && (
-        <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-          <button className="btn-gold sm" style={{ flex: 1 }} onClick={() => onOfferAction(m.id, true)}>ACEPTAR ✍️</button>
-          <button className="btn-ghost sm" style={{ flex: 1 }} onClick={() => onOfferAction(m.id, false)}>Rechazar</button>
-        </div>)}
-      {m.status === "accepted" && <div style={{ marginTop: 8, color: "#2E9E44", fontSize: 12, fontWeight: 600 }}>✓ Oferta aceptada</div>}
-      {m.status === "rejected" && <div style={{ marginTop: 8, color: "#6F7563", fontSize: 12 }}>✕ Oferta rechazada — lealtad al club</div>}
-    </>
-  );
-}
-
-function ChatTab({ game, onOfferAction, onRead, onAsk, notify }) {
-  /* tocar el nombre de un compañero muestra su mini-bio */
-  const showBio = (from) => {
-    const name = from.replace(" · Vestuario", "");
-    const m = (game.squad || []).find((s) => s.name === name);
-    const p = m || SQUAD_POOL.find((s) => s.name === name);
-    if (p && p.bio) notify(`${p.name} · ${p.tag}. ${p.bio}`);
+/* ---------- DIÁLOGO NPC · estilo visual novel ---------- */
+function NpcDialogue({ entry, queueLeft, onAdvance, onChoice, onOffer }) {
+  const npc = NPCS[entry.npc] || NPCS.coach;
+  const [n, setN] = useState(0);
+  const nRef = useRef(0);
+  const done = n >= entry.text.length;
+  useEffect(() => {
+    setN(0); nRef.current = 0;
+    loadVoice(npc.voice);
+    /* máquina de escribir. El sonido va AQUÍ, en el cuerpo del intervalo:
+       meterlo en el actualizador de setN lo convertía en impuro y React lo
+       ejecutaba dos veces en desarrollo, duplicando cada blip. */
+    const int = setInterval(() => {
+      if (nRef.current >= entry.text.length) { clearInterval(int); return; }
+      nRef.current += 1;
+      const ch = entry.text[nRef.current - 1];
+      if (ch && /\S/.test(ch)) babble(npc.voice); /* nada de sonido en los espacios */
+      setN(nRef.current);
+    }, 28);
+    return () => { clearInterval(int); hushVoices(); };
+  }, [entry.id]);
+  const art = npc.arts[entry.mood] || npc.arts[npc.def];
+  const tap = () => {
+    if (AUDIO.ctx && AUDIO.ctx.state === "suspended") AUDIO.ctx.resume();
+    /* primer toque: texto completo al instante y voz cortada */
+    if (!done) { nRef.current = entry.text.length; setN(entry.text.length); hushVoices(); return; }
+    if (entry.kind === "offer" || entry.replies) return; /* estos se cierran con sus botones */
+    onAdvance(entry.id);
   };
-  const [open, setOpen] = useState(null);
-  const endRef = useRef();
-  const messages = game.messages;
-  /* agrupar mensajes por buzón conservando el orden cronológico */
-  const byChat = {};
-  messages.forEach((m, idx) => { const cid = chatOf(m.from); (byChat[cid] = byChat[cid] || []).push({ ...m, idx }); });
-  const unread = game.unreadBy || {};
-  useEffect(() => { if (open) onRead(open); }, [open, messages.length]);
-  useEffect(() => { if (open && endRef.current) endRef.current.scrollIntoView({ behavior: "auto" }); }, [open, messages.length]);
-
-  /* --- bandeja de conversaciones --- */
-  if (!open) {
-    const rows = CHAT_ORDER.filter((c) => byChat[c] && byChat[c].length)
-      .sort((a, b) => byChat[b][byChat[b].length - 1].idx - byChat[a][byChat[a].length - 1].idx);
-    return (
-      <div style={{ padding: "16px 12px 90px" }}>
-        <div className="eyebrow" style={{ padding: "0 4px" }}>MENSAJES</div>
-        {rows.length === 0 && <div className="empty"><span className="em-ico">📭</span>
-          Aún no hay mensajes.<br />Juega partidos y progresa: el mundo empezará a hablar de ti.</div>}
-        {rows.map((cid) => {
-          const meta = CHAT_META[cid], list = byChat[cid], last = list[list.length - 1];
-          const preview = ((last.mine ? "Tú: " : "") +
-            (last.kind === "offer" ? "📄 Oferta de contrato · " + last.offer.club.name : last.text)).replace(/\n/g, " ");
-          const n = unread[cid] || 0;
-          return (
-            <div key={cid} className="chat-row" onClick={() => setOpen(cid)}>
-              <ChatAvatar meta={meta} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                  <span className="chat-name">{meta.title(game)}</span>
-                  <span className="chat-time" style={n > 0 ? { color: "#16190F", fontWeight: 700 } : {}}>{last.d ? dayLabel(last.d) + " · " : ""}{last.time}</span>
-                </div>
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <span className="chat-prev" style={n > 0 ? { color: "#16190F", fontWeight: 600 } : {}}>{preview}</span>
-                  {n > 0 && <span className="chat-badge">{n}</span>}
+  return (
+    <div className="npc-ov" onClick={tap}>
+      {queueLeft > 1 && <div className="npc-count">+{queueLeft - 1} en espera</div>}
+      {art
+        ? <img key={entry.id + entry.mood} src={art} alt={npc.name} className="npc-art" />
+        : <div key={entry.id} className="npc-art npc-fallback" style={{ background: npc.color }}>{npc.name[0]}</div>}
+      <div className="npc-panel">
+        <div className="npc-name" style={{ background: npc.color }}>{npc.name}</div>
+        <div className="npc-box">
+          <span>{entry.text.slice(0, n)}</span>
+          {done && !entry.kind && !entry.replies && <span className="npc-caret">▼</span>}
+          {done && entry.kind === "offer" && entry.offer && (
+            <div onClick={(e) => e.stopPropagation()} style={{ marginTop: 12 }}>
+              <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10 }}>
+                <Crest c1={entry.offer.club.c1} c2={entry.offer.club.c2} name={entry.offer.club.name} size={34} />
+                <div>
+                  <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 15, color: "#EFEEE3" }}>
+                    {entry.offer.club.name} {entry.offer.club.country || ""}</div>
+                  <div style={{ fontSize: 11, color: "#9a9e8e" }}>
+                    {entry.offer.league} · Ficha: {fmtEUR(entry.offer.salary)}/año</div>
                 </div>
               </div>
-            </div>);
-        })}
-      </div>
-    );
-  }
-
-  /* --- conversación abierta --- */
-  const meta = CHAT_META[open], list = byChat[open] || [];
-  return (
-    <div style={{ paddingBottom: 90 }}>
-      <div className="chat-head">
-        <button className="chat-back" onClick={() => setOpen(null)}>←</button>
-        <ChatAvatar meta={meta} size={36} />
-        <div style={{ minWidth: 0 }}>
-          <div className="chat-name">{meta.title(game)}</div>
-          <div className="chat-sub">{meta.sub}</div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button className="btn-gold sm" style={{ flex: 1 }} onClick={() => onOffer(entry.id, true)}>ACEPTAR ✍️</button>
+                <button className="btn-ghost sm npc-ghost" style={{ flex: 1 }} onClick={() => onOffer(entry.id, false)}>Rechazar</button>
+              </div>
+            </div>)}
+          {done && entry.replies && (
+            <div onClick={(e) => e.stopPropagation()} style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 12 }}>
+              {entry.replies.map((o, i) => (
+                <button key={i} className="btn-ghost sm npc-ghost" style={{ textAlign: "left" }}
+                  onClick={() => onChoice(entry.id, i)}>💬 {o.t}</button>))}
+            </div>)}
         </div>
+        <div className="npc-hint">{done ? (entry.kind || entry.replies ? "elige una opción" : "toca para continuar") : "toca para saltar"}</div>
       </div>
-      <div style={{ padding: "14px 14px 4px" }}>
-        {list.map((m, i) => (
-          <div key={m.id}>
-            {m.d && (i === 0 || list[i - 1].d !== m.d) && (
-              <div className="day-sep"><span>{dayLabel(m.d)}</span></div>)}
-            <div className={"wbubble" + (m.mine ? " mine" : "")} style={m.mine ? {} : { borderLeft: `3px solid ${meta.color}` }}>
-              {meta.group && !m.mine && <div className="wfrom" style={{ color: meta.color, cursor: "pointer" }}
-                onClick={() => showBio(m.from)}>{m.from.replace(" · Vestuario", "")}</div>}
-              <OfferBlock m={m} onOfferAction={onOfferAction} />
-              <div style={{ whiteSpace: "pre-wrap" }}>{m.text}</div>
-              {m.kind === "ask" && m.askStatus !== "answered" && m.replies && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 10 }}>
-                  {m.replies.map((o, j) => (
-                    <button key={j} className="btn-ghost sm" style={{ textAlign: "left" }}
-                      onClick={() => onAsk(m.id, j)}>💬 {o.t}</button>))}
-                </div>)}
-              <div className="wtime">{m.time}</div>
-            </div>
-          </div>))}
-        {list.length === 0 && <div style={{ color: "#6F7563", fontSize: 13, marginTop: 20 }}>Sin mensajes todavía.</div>}
-        <div ref={endRef} />
-      </div>
-    </div>
-  );
+    </div>);
 }
+
+/* ---------- EL PERIÓDICO ---------- */
+function Newspaper({ game, onRead }) {
+  const today = todayStr();
+  const paper = game.paper;
+  /* siempre cerrado al entrar: al salir de la pestaña el componente se desmonta
+     y hay que volver a abrirlo. paperRead solo sirve ya para el aviso de la pestaña. */
+  const [open, setOpen] = useState(false);
+  const [anim, setAnim] = useState(false);
+  if (!paper) return (
+    <div className="empty" style={{ marginTop: 80 }}><span className="em-ico">🗞️</span>
+      La rotativa está en marcha.<br />Vuelve en un momento.</div>);
+  const fecha = new Date(paper.d + "T12:00").toLocaleDateString("es-ES",
+    { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+
+  if (!open) return (
+    <div style={{ padding: "48px 24px" }}>
+      <div className={"np-cover" + (anim ? " np-opening" : "")}
+        onClick={() => { if (anim) return; setAnim(true); buzz(15); paperRustle();
+          /* el cambio ocurre justo antes de que la portada acabe de girar: se solapan */
+          setTimeout(() => { setOpen(true); onRead(); }, 380); }}>
+        <div className="np-mast">LA JORNADA</div>
+        <div className="np-rule" />
+        <div className="np-date">{fecha}</div>
+        <div className="np-date">Edición Nº {paper.num} · 0,50 € (invita el club)</div>
+        <div className="np-fold">🗞️</div>
+        <div className="np-tap">TOCA PARA LEER LA EDICIÓN DE HOY</div>
+      </div>
+    </div>);
+
+  const arts = paper.articles;
+  const main = [...arts].reverse().find((a) => a.main) || arts.find((a) => a.sec === "PORTADA") || arts.find((a) => a.h);
+  const rest = arts.filter((a) => a !== main && a.h && a.sec !== "HUMOR");
+  const briefs = arts.filter((a) => !a.h);
+  const humor = arts.find((a) => a.sec === "HUMOR" && a !== main);
+  const tabla = [...game.season.table].sort((x, y) => y.pts - x.pts);
+  const yoFuera = !tabla.slice(0, 4).some((t) => t.me);
+  const miPos = tabla.findIndex((t) => t.me);
+  return (
+    <div className="np-page np-open2">
+      <div className="np-mast" style={{ fontSize: 30 }}>LA JORNADA</div>
+      <div className="np-rule" />
+      <div className="np-date">{fecha} · Nº {paper.num} · {game.tier.league}</div>
+      <div className="np-rule np-rule2" />
+      {main && (
+        <div className="np-main">
+          <span className="np-kicker">{main.sec || "PORTADA"}</span>
+          <h2 className="np-h1">{main.h || main.b}</h2>
+          {main.h && <p className="np-body np-drop">{main.b}</p>}
+        </div>)}
+      {rest.slice(0, 4).map((a) => (
+        <div key={a.id} className="np-art">
+          <span className="np-kicker">{a.sec}</span>
+          <h3 className="np-h2">{a.h}</h3>
+          <p className="np-body">{a.b}</p>
+        </div>))}
+      <div className="np-cols">
+        <div className="np-box">
+          <div className="np-boxtitle">CLASIFICACIÓN</div>
+          {tabla.slice(0, 4).map((t, i) => (
+            <div key={t.name} className="np-row" style={t.me ? { fontWeight: 700 } : {}}>
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{i + 1}. {t.name}</span>
+              <span>{t.pts}</span>
+            </div>))}
+          {yoFuera && miPos >= 0 && (
+            <div className="np-row" style={{ fontWeight: 700, borderTop: "1px dotted rgba(20,23,14,.4)", marginTop: 3, paddingTop: 3 }}>
+              <span>{miPos + 1}. {game.club.name}</span><span>{tabla[miPos].pts}</span>
+            </div>)}
+        </div>
+        {briefs.length > 0 && (
+          <div className="np-box">
+            <div className="np-boxtitle">BREVES</div>
+            {briefs.slice(-4).map((a) => <p key={a.id} className="np-brief">▪ {a.b}</p>)}
+          </div>)}
+      </div>
+      {humor && (
+        <div className="np-humor">
+          <span className="np-kicker">LA CONTRA</span>
+          <h3 className="np-h2">{humor.h}</h3>
+          <p className="np-body" style={{ fontStyle: "italic" }}>{humor.b}</p>
+        </div>)}
+      <div className="np-rule" style={{ marginTop: 14 }} />
+      <div className="np-date" style={{ paddingBottom: 4 }}>LA JORNADA · se imprime donde se gana</div>
+    </div>);
+}
+
+/* Nota: el diálogo NO se dibuja aquí dentro. Va al nivel de App, junto al resto de
+   overlays, porque el contenedor de pestañas anima un transform y eso lo convierte
+   en bloque contenedor de los hijos position:fixed (los dejaría con altura 0). */
 
 /* ---------- CALENDARIO ---------- */
 const MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -2204,7 +2714,7 @@ function BackupPanel({ getBackup, onRestore }) {
 
 /* ---------- PERFIL / OBJETIVOS ---------- */
 function ProfileTab({ game, photo, onWeight, onPhoto, onRemovePhoto, crest, onCrest, onRemoveCrest,
-  crestScale, onCrestScale, onGoals, getBackup, onRestore, haptics, onHaptics }) {
+  crestScale, onCrestScale, onGoals, getBackup, onRestore, haptics, onHaptics, voices, onVoices }) {
   const p = game.player;
   const [kg, setKg] = useState("");
   const [edit, setEdit] = useState(false);
@@ -2363,6 +2873,8 @@ function ProfileTab({ game, photo, onWeight, onPhoto, onRemovePhoto, crest, onCr
         <div className="ptitle">⚙️ Ajustes</div>
         <button className={"chip big" + (haptics ? " on" : "")} onClick={() => onHaptics(!haptics)}>
           📳 Vibración en hitos {haptics ? "· activada" : "· desactivada"}</button>
+        <button className={"chip big" + (voices ? " on" : "")} style={{ marginTop: 8 }} onClick={() => onVoices(!voices)}>
+          🔊 Sonido {voices ? "· activado" : "· desactivado"}</button>
       </div>
     </div>
   );
@@ -2377,6 +2889,8 @@ export default function App() {
   const [crest, setCrest] = useState(null);
   const [crestScale, setCrestScale] = useState(1);
   const [haptics, setHaptics] = useState(true);
+  const [voicesOn, setVoicesOn] = useState(true);
+  const setVoicesPref = (v) => { setVoicesOn(v); VOICES_ON = v; stSet("voices", v); };
   const [tierUp, setTierUp] = useState(null);
   const [loaded, setLoaded] = useState(false);
   const setHapticsPref = (v) => { setHaptics(v); HAPTICS = v; stSet("haptics", v); };
@@ -2402,30 +2916,45 @@ export default function App() {
 
   const pushToast = (t) => { setToast(t); setTimeout(() => setToast(null), 3200); };
 
+  /* mensajes en 2ª persona -> cola de diálogos NPC; 3ª persona -> artículo del periódico.
+     Mantiene la firma histórica: los ~20 puntos que llaman addMsg no cambian. */
   const addMsg = (g, from, text, extra = {}) => {
-    const cid = chatOf(from);
-    return { ...g,
-      unreadBy: { ...(g.unreadBy || {}), [cid]: ((g.unreadBy || {})[cid] || 0) + 1 },
-      messages: [...g.messages, { id: Date.now() + Math.random(), from, text, time: nowTime(), d: todayStr(), ...extra }] };
+    const npc = senderToNpc(from);
+    if (npc) {
+      const q = [...(g.npcQueue || [])];
+      /* tope de cola: si el jugador estuvo días sin abrir, no se apilan 10 diálogos.
+         Las ofertas nunca se descartan. */
+      if (q.length >= 6) { const i = q.findIndex((e) => e.kind !== "offer"); if (i >= 0) q.splice(i, 1); }
+      q.push({ id: Date.now() + Math.random(), npc, mood: extra.mood || moodOf(npc, text), text,
+        kind: extra.kind, offer: extra.offer, replies: extra.replies });
+      return { ...g, npcQueue: q };
+    }
+    const today = todayStr();
+    const paper = g.paper && g.paper.d === today ? g.paper
+      : { d: today, num: dayDiff(g.signedAt || today, today) + 1, articles: [], built: false };
+    return { ...g, paper: { ...paper, articles: [...paper.articles,
+      { id: Date.now() + Math.random(), sec: extra.sec || paperSec(from), src: from, h: extra.h, b: text, main: extra.main }] } };
   };
-  const markChatRead = (cid) => setGame((g) => ({ ...g, unreadBy: { ...(g.unreadBy || {}), [cid]: 0 } }));
 
-  /* responder a una pregunta del vestuario: tu mensaje entra al hilo y el compañero replica.
-     Sin efecto en stats: solo ambiente (y un toast de buen rollo) */
-  const answerAsk = (msgId, idx) => {
-    setGame((g) => {
-      const msg = g.messages.find((m) => m.id === msgId);
-      if (!msg || msg.askStatus === "answered" || !msg.replies || !msg.replies[idx]) return g;
-      const opt = msg.replies[idx];
-      let out = { ...g, messages: g.messages.map((m) => (m.id === msgId ? { ...m, askStatus: "answered" } : m)) };
-      /* tu respuesta: sin pasar por addMsg para no marcarte tu propio mensaje como no leído */
-      out.messages = [...out.messages, { id: Date.now() + Math.random(), from: "Tú · Vestuario",
-        text: opt.t, time: nowTime(), d: todayStr(), mine: true }];
-      out = addMsg(out, msg.from, pick(opt.r));
-      return out;
-    });
-    pushToast(pick(["😄 Buen rollo en el vestuario", "🤝 El grupo hace piña", "😂 Risas en el grupo"]));
+  /* cola de diálogos: avanzar, elegir respuesta, resolver oferta */
+  const advanceNpc = (id) => setGame((g) => ({ ...g, npcQueue: (g.npcQueue || []).filter((e) => e.id !== id) }));
+  const answerChoice = (id, idx) => setGame((g) => {
+    const q = g.npcQueue || [];
+    const e = q.find((x) => x.id === id);
+    if (!e || !e.replies || !e.replies[idx]) return g;
+    /* la réplica del personaje entra al frente de la cola: responde al momento */
+    const resp = { id: Date.now() + Math.random(), npc: e.npc, mood: "happy", text: pick(e.replies[idx].r) };
+    return { ...g, npcQueue: [resp, ...q.filter((x) => x.id !== id)] };
+  });
+  const answerOffer = (id, accept) => {
+    const e = (game.npcQueue || []).find((x) => x.id === id);
+    if (!e || !e.offer) return;
+    setGame((g) => ({ ...g, npcQueue: (g.npcQueue || []).filter((x) => x.id !== id) }));
+    if (accept) signClub(e.offer.club, e.offer.tierId, true);
+    else setTimeout(() => setGame((g) => addMsg(g, "Elisa",
+      `Me han contado que rechazaste al ${e.offer.club.name}. Esa lealtad no se olvida. La afición te va a hacer un cántico. ❤️`, { mood: "happy" })), 400);
   };
+  const markPaperRead = () => setGame((g) => ({ ...g, paperRead: todayStr() }));
 
   /* carga inicial */
   useEffect(() => {
@@ -2435,6 +2964,8 @@ export default function App() {
       const cr = await stGet("crest");
       const cs = await stGet("crestScale");
       const hp = await stGet("haptics");
+      const vo = await stGet("voices");
+      if (vo === false) { setVoicesOn(false); VOICES_ON = false; }
       if (ph) setPhoto(ph);
       if (cr) setCrest(cr);
       if (cs) setCrestScale(cs);
@@ -2489,7 +3020,7 @@ export default function App() {
         out.player = r.player;
         out.logs[d] = { ...log, closed: true, pct: r.pct, form: r.form };
         anyUp = anyUp.concat(r.ups);
-        if (r.decayed) out = addMsg(out, "Entrenador", "Te veo apagado en los entrenamientos. Dos días flojos seguidos y tu físico lo nota: has perdido puntos. Reacciona. 📉");
+        if (r.decayed) out = addMsg(out, "Elisa", "Te veo apagado en los entrenamientos. Dos días flojos seguidos y tu físico lo nota: has perdido puntos. Reacciona. 📉", { mood: "angry" });
         if (pressCount < 3 && Math.random() < 0.65) {
           const pn = pressNote(out, r.form);
           if (pn) { out = addMsg(out, pn.from, pn.text); pressCount++; }
@@ -2504,7 +3035,7 @@ export default function App() {
       const counts = {};
       anyUp.forEach((k) => (counts[k] = (counts[k] || 0) + 1));
       const txt = Object.entries(counts).map(([k, n]) => `${STAT_LABELS[k]} +${n}`).join(", ");
-      out = addMsg(out, "Entrenador", `Informe de entrenamiento: ${txt}. El staff está impresionado con tu trabajo. 💪`);
+      out = addMsg(out, "Elisa", `Informe de entrenamiento: ${txt}. El staff está impresionado con tu trabajo. 💪`, { mood: "happy" });
     }
     /* partidas antiguas sin vestuario: se genera uno al vuelo */
     if (!out.squad || !out.squad.length) out.squad = makeSquad();
@@ -2514,7 +3045,7 @@ export default function App() {
     else {
       const dd = dayDiff(out.signedAt, today);
       const ms = [...(out.milestonesSeen || [])];
-      [[30, "Entrenador", "Hoy hace 30 días que llegaste. Un mes de trabajo serio — el vestuario ya no se imagina esto sin ti. 💪"],
+      [[30, "Elisa", "Hoy hace 30 días que llegaste. Un mes de trabajo serio — el vestuario ya no se imagina esto sin ti. 💪"],
        [60, null, "¡60 días juntos ya, crack! 🤝 De 'el nuevo' a uno más de la familia. Lo que hemos crecido, ¿eh?"],
        [100, "📰 La Grada Digital", "Se cumplen 100 días desde la llegada del fichaje que cambió el vestuario: de apuesta a realidad."]]
         .forEach(([n, from, txt]) => {
@@ -2525,26 +3056,37 @@ export default function App() {
         });
       out.milestonesSeen = ms;
     }
-    /* ambiente diario: cupo por fecha con recargas al reabrir la app.
-       - primera tanda del día: 3-4 mensajes sin partido, 1-2 con partido
-       - reaperturas: +1-2 hasta el cupo, con mínimo 2h entre tandas para no saturar
-       - los eventos (2 mensajes coordinados) cuentan contra el cupo */
-    const amb = out.ambient && out.ambient.d === today ? { ...out.ambient } : { d: today, count: 0, at: 0 };
-    const matchDueToday = isMatchDue(out.season, today);
-    const quota = matchDueToday ? 2 : 4;
-    let want = 0;
-    if (amb.count === 0) want = matchDueToday ? 1 + Math.round(Math.random()) : 3 + Math.round(Math.random());
-    else if (amb.count < quota && Date.now() - amb.at > 2 * 3600 * 1000)
-      want = Math.min(quota - amb.count, 1 + Math.round(Math.random()));
-    if (want > 0) {
-      let made = [];
-      if (want >= 2 && Math.random() < 0.25) { const ev = pickEvent(out); if (ev) made = ev; }
-      if (made.length < want) made = made.concat(pickFlavor(out, want - made.length));
-      made.forEach((m) => {
-        out = addMsg(out, m.from, m.text, m.replies ? { kind: "ask", replies: m.replies, askStatus: "pending" } : {});
-      });
-      out.recentTpl = [...(out.recentTpl || []), ...made.map((m) => m.t).filter(Boolean)].slice(-10);
-      out.ambient = { d: today, count: amb.count + made.length, at: Date.now() };
+    /* edición diaria del periódico: se monta UNA vez por fecha */
+    const yaEstaba = out.paper && out.paper.d === today && out.paper.built;
+    out = buildPaper(out);
+    if (!yaEstaba) {
+      const c = flavorCtx(out);
+      /* breves del día: 2-3 líneas cortas de prensa/afición/redes/club */
+      const brevs = pickFlavor(out, 2 + Math.round(Math.random()), ["press", "fan", "social", "club"]);
+      brevs.forEach((fv) => { out = addMsg(out, fv.from, fv.text); });
+      out.recentTpl = [...(out.recentTpl || []), ...brevs.map((m) => m.t).filter(Boolean)].slice(-12);
+      /* y a veces, un personaje se pasa a verte al abrir la pestaña */
+      if (Math.random() < 0.6) {
+        const roll = Math.random();
+        if (roll < 0.3) {
+          const p = LOPEZ_POOL.filter((y) => !y.w || (COND[y.w] && COND[y.w](c)));
+          const y = p[Math.floor(Math.random() * p.length)];
+          if (y) out = addMsg(out, "López", fillTpl(y.t, c), { mood: y.m, replies: y.replies });
+        } else if (roll < 0.4) {
+          const fv = pickFlavor(out, 1, ["squad", "cap", "coach", "agent"])[0];
+          if (fv) out = addMsg(out, fv.from, fv.text, { replies: fv.replies });
+        } else if (roll < 0.7) {
+          if (out.yunaMet) {
+            const p = YUNA_POOL.filter((y) => !y.w || (COND[y.w] && COND[y.w](c)));
+            const y = p[Math.floor(Math.random() * p.length)];
+            if (y) out = addMsg(out, "Yuna", fillTpl(y.t, c), { mood: y.m, replies: y.replies });
+          }
+        } else {
+          const p = ELISA_POOL.filter((y) => !y.w || (COND[y.w] && COND[y.w](c)));
+          const y = p[Math.floor(Math.random() * p.length)];
+          if (y) out = addMsg(out, "Elisa", fillTpl(y.t, c), { mood: y.m, replies: y.replies });
+        }
+      }
     }
     return out;
   }
@@ -2585,21 +3127,20 @@ export default function App() {
           midOfferDone: false },
         midSeasonKeepPts: false,
       };
-      out = addMsg(out, "Entrenador",
-        `Bienvenido al ${club.name}, ${g.player.name}. Aquí las cosas son simples: el que trabaja y se deja la piel como un profesional, juega. Aquí se juega cada día. Demuéstramelo. ⚽`);
-      const captain = pick(CAPTAINS);
-      out.captain = captain;
-      out = addMsg(out, `${captain} · Capitán`, pick([
-        `¡Bienvenido al vestuario, crack! 🙌 Soy ${captain}, el capi. Aquí somos pocos pero somos familia. Un consejo: al míster gánatelo entre semana, no los domingos. Cualquier cosa que necesites, me escribes.`,
-        `¡Eh, el nuevo! 😄 Soy ${captain}, capitán de este equipo. Ya me han hablado de tu hambre. Aquí el que se lo curra, juega — así de fácil. Bienvenido a casa, hermano.`,
-        `Bienvenido, ${g.player.name} 🤝 Soy ${captain}. Te lo digo el primero: esta camiseta pesa más de lo que parece. Déjate la piel entre semana y el vestuario te llevará en volandas.`]));
+      out = addMsg(out, "Elisa",
+        `Bienvenido al ${club.name}, ${g.player.name}. Soy Elisa, tu entrenadora y mánager a la vez, así que vas a verme mucho por aquí. Aquí las cosas son simples: el que trabaja y se deja la piel como un profesional, juega. Cada día. Demuéstramelo. ⚽`, { mood: "happy" });
+      out.captain = "López";
+      out = addMsg(out, "López · Capitán", pick([
+        `¡Bienvenido al vestuario, crack! 🙌 Soy López, el capi. Aquí somos pocos pero somos familia. Un consejo: a Elisa gánatela entre semana, no los domingos. Cualquier cosa que necesites, aquí me tienes.`,
+        `¡Eh, el nuevo! 😄 Soy López, capitán de este equipo. Ya me han hablado de tu hambre. Aquí el que se lo curra, juega — así de fácil. Bienvenido a casa, hermano.`,
+        `Bienvenido, ${g.player.name} 🤝 Soy López. Te lo digo el primero: esta camiseta pesa más de lo que parece. Déjate la piel entre semana y el vestuario te llevará en volandas.`]), { mood: "happy" });
       out = addMsg(out, pick(PRESS),
         `OFICIAL ✍️ | El ${club.name} anuncia el fichaje de ${g.player.name} (${g.player.position}). ${viaTransfer ? "Movimiento sonado en el mercado que ilusiona a la afición." : "El club apuesta por una joven promesa con hambre de fútbol."}`);
-      /* club nuevo, vestuario nuevo */
+      /* club nuevo, vestuario nuevo (López viaja contigo: es tu colega de siempre) */
       out.squad = makeSquad();
-      out = addMsg(out, out.squad[0].name + " · Vestuario", pick(SQUAD_WELCOMES(g.player.name, out.squad[0])));
       /* fecha de inicio de carrera (para aniversarios) y primer ascenso de categoría */
       out.signedAt = out.signedAt || todayStr();
+      out = buildPaper(out); /* el día del fichaje ya tiene su edición, no un periódico vacío */
       if (viaTransfer && tierId > g.tier.id) buzz([30, 40, 60]);
       if (viaTransfer && tierId > g.tier.id && !g.firstRiseDone) {
         out.firstRiseDone = true;
@@ -2643,7 +3184,21 @@ export default function App() {
         out = addMsg(out, (g.captain || "Capitán") + " · Capitán",
           "¡TU PRIMER GOL! ⚽ Guarda ese balón donde puedas verlo. El primero no se olvida nunca, crack.");
       }
-      out = addMsg(out, "Entrenador", coachMessage(m, g.player));
+      out = addMsg(out, "Elisa", coachMessage(m, g.player),
+        { mood: m.benched || m.res === "D" ? "angry" : m.res === "V" || (m.rating != null && m.rating >= 7.5) ? "happy" : "idle" });
+      /* la crónica abre el periódico del día */
+      const cr = cronicaDe(g, m);
+      out = addMsg(out, pick(PRESS), cr.b, { h: cr.h, main: true, sec: "CRÓNICA" });
+      /* Yuna: aparece por primera vez tras tu primera victoria; después reacciona a veces */
+      if (!g.yunaMet && m.res === "V" && !m.benched) {
+        out.yunaMet = true;
+        out = addMsg(out, "Yuna", fillTpl(YUNA_INTRO, flavorCtx(out)), { mood: "angry" });
+      } else if (g.yunaMet && Math.random() < 0.45) {
+        const cy = flavorCtx(out);
+        const p = YUNA_POOL.filter((y) => ["win", "loss", "benched"].includes(y.w) && COND[y.w](cy));
+        const y = p[Math.floor(Math.random() * p.length)];
+        if (y) out = addMsg(out, "Yuna", fillTpl(y.t, cy), { mood: y.m });
+      }
       const cap = (g.captain || "Capitán") + " · Capitán";
       if (!m.benched && m.rating >= 8.5 && Math.random() < 0.6) {
         out = addMsg(out, cap, pick([
@@ -2679,8 +3234,9 @@ export default function App() {
         const goals = seasonMatches.reduce((a, x) => a + (x.myGoals || 0), 0);
         const ratings = seasonMatches.filter((x) => x.rating != null);
         const avgR = ratings.length ? (ratings.reduce((a, x) => a + x.rating, 0) / ratings.length).toFixed(1) : "—";
-        out = addMsg(out, "Entrenador",
-          `🏁 FIN DE TEMPORADA ${s.num}.\nPosición final: ${pos}º de 10.\nTus goles: ${goals} · Nota media: ${avgR}.\n${pos <= 3 ? "Temporada histórica. Eres el nombre del vestuario." : pos <= 6 ? "Temporada digna. El año que viene, más." : "Temporada dura. Que sirva de gasolina."}`);
+        out = addMsg(out, "Elisa",
+          `🏁 FIN DE TEMPORADA ${s.num}.\nPosición final: ${pos}º de 10.\nTus goles: ${goals} · Nota media: ${avgR}.\n${pos <= 3 ? "Temporada histórica. Eres el nombre del vestuario." : pos <= 6 ? "Temporada digna. El año que viene, más." : "Temporada dura. Que sirva de gasolina."}`,
+          { mood: pos <= 3 ? "happy" : pos <= 6 ? "idle" : "angry" });
         out.careerLog = [...out.careerLog, { season: s.num, text: `${pos}º con ${g.club.name} · ${goals} goles · media ${avgR}` }];
         /* memoria del año: resumen sobre datos ya guardados (partidos, logs, pesos) */
         const assists = seasonMatches.reduce((a, x) => a + (x.myAssists || 0), 0);
@@ -2710,24 +3266,11 @@ export default function App() {
         out.season = { num: s.num + 1, startDate: todayStr(), matchday: 0,
           table: buildTable(g.club.name, g.tier.id),
           rivals: pickN(RIVALS_BY_TIER[Math.min(g.tier.id, RIVALS_BY_TIER.length - 1)], SEASON_LENGTH), midOfferDone: false };
-        out = addMsg(out, "Entrenador", `La temporada ${s.num + 1} arranca ya. Pretemporada exprés: mañana se juega. 🏃`);
+        out = addMsg(out, "Elisa", `La temporada ${s.num + 1} arranca ya. Pretemporada exprés: mañana se juega. 🏃`);
       }
       return out;
     });
     setLiveMatch(null);
-  };
-
-  /* aceptar / rechazar oferta */
-  const offerAction = (msgId, accept) => {
-    const msg = game.messages.find((m) => m.id === msgId);
-    if (!msg) return;
-    setGame((g) => ({ ...g, messages: g.messages.map((m) => m.id === msgId ? { ...m, status: accept ? "accepted" : "rejected" } : m) }));
-    if (accept) {
-      signClub(msg.offer.club, msg.offer.tierId, true);
-    } else {
-      setTimeout(() => setGame((g) => addMsg(g, "Entrenador",
-        `Me han contado que rechazaste al ${msg.offer.club.name}. Esa lealtad no se olvida. La afición te va a hacer un cántico. ❤️`)), 600);
-    }
   };
 
   /* registro del día */
@@ -2872,11 +3415,12 @@ export default function App() {
     let out = { ...g, player: { ...g.player, goals } };
     if (goals.kcal !== old.kcal || goals.protein !== old.protein) {
       const up = goals.kcal > old.kcal || goals.protein > old.protein;
-      out = addMsg(out, pick(["Entrenador", (g.captain || "Capitán") + " · Capitán"]),
+      out = addMsg(out, pick(["Elisa", (g.captain || "Capitán") + " · Capitán"]),
         up ? pick(["Me ha llegado que has subido el listón de tu preparación. Esa ambición es justo lo que quiero ver. 💪",
                    "¿Apretando más todavía? Así se hace. El techo lo pones tú."])
            : pick(["He visto que has ajustado tu plan. Escuchar al cuerpo también es de profesionales.",
-                   "Plan nuevo, ¿eh? Lo importante no es el número, es no fallar un día. Sigue."]));
+                   "Plan nuevo, ¿eh? Lo importante no es el número, es no fallar un día. Sigue."]),
+        { mood: up ? "happy" : "idle" });
     }
     return out;
   });
@@ -2887,12 +3431,12 @@ export default function App() {
     if (!log || log.closed) return g;
     const r = applyDayClose(g.player, log, dateStr);
     let out = { ...g, player: r.player, logs: { ...g.logs, [dateStr]: { ...log, closed: true, pct: r.pct, form: r.form } } };
-    if (r.decayed) out = addMsg(out, "Entrenador", "Te veo apagado en los entrenamientos. Dos días flojos seguidos y tu físico lo nota: has perdido puntos. Reacciona. 📉");
+    if (r.decayed) out = addMsg(out, "Elisa", "Te veo apagado en los entrenamientos. Dos días flojos seguidos y tu físico lo nota: has perdido puntos. Reacciona. 📉", { mood: "angry" });
     if (r.ups.length) {
       const counts = {};
       r.ups.forEach((k) => (counts[k] = (counts[k] || 0) + 1));
       const txt = Object.entries(counts).map(([k, n]) => `${STAT_LABELS[k]} +${n}`).join(", ");
-      out = addMsg(out, "Entrenador", `Informe de entrenamiento: ${txt}. El staff está impresionado con tu trabajo. 💪`);
+      out = addMsg(out, "Elisa", `Informe de entrenamiento: ${txt}. El staff está impresionado con tu trabajo. 💪`, { mood: "happy" });
     }
     if (r.form === "alza") buzz([20, 30, 20]);
     if (r.ups.length) buzz(30);
@@ -2925,7 +3469,9 @@ export default function App() {
       <div style={{ color: "#16190F", fontFamily: "'Oswald',sans-serif", letterSpacing: 4, fontSize: 15 }}>FUTABITA 3.1</div>
     </div>);
 
-  const unreadTotal = Object.values(game.unreadBy || {}).reduce((a, b) => a + (b || 0), 0);
+  /* aviso en la pestaña Diario: diálogos en cola + la edición de hoy sin leer */
+  const unreadTotal = (game.npcQueue || []).length +
+    (game.phase === "main" && game.paper && game.paperRead !== todayStr() ? 1 : 0);
 
   return (
     <div className="app-root">
@@ -2952,13 +3498,14 @@ export default function App() {
               notify={pushToast} onGoGym={() => setTab("gym")} onAddNote={addNote} onDelNote={delNote} />}
             {tab === "gym" && <GymTab game={game} api={gymApi} notify={pushToast} />}
             {tab === "league" && <LeagueTab game={game} onPlayMatch={playMatch} crest={crest} crestScale={crestScale} />}
-            {tab === "chat" && <ChatTab game={game} onOfferAction={offerAction} onRead={markChatRead} onAsk={answerAsk} notify={pushToast} />}
+            {tab === "chat" && <Newspaper game={game} onRead={markPaperRead} />}
             {tab === "me" && <ProfileTab game={game} photo={photo} onWeight={addWeight} onPhoto={savePhoto} onRemovePhoto={removePhoto}
               crest={crest} onCrest={saveCrest} onRemoveCrest={removeCrest} crestScale={crestScale} onCrestScale={saveCrestScale}
-              onGoals={setGoals} getBackup={getBackup} onRestore={restoreBackup} haptics={haptics} onHaptics={setHapticsPref} />}
+              onGoals={setGoals} getBackup={getBackup} onRestore={restoreBackup} haptics={haptics} onHaptics={setHapticsPref}
+              voices={voicesOn} onVoices={setVoicesPref} />}
           </div>
           <nav className="tabbar">
-            {[["home", "🏠", "Inicio"], ["log", "📝", "Registro"], ["gym", "🏋️", "Gym"], ["league", "🏆", "Liga"], ["chat", "💬", "Chat"], ["me", "👤", "Yo"]].map(([id, ic, lb]) => (
+            {[["home", "🏠", "Inicio"], ["log", "📝", "Registro"], ["gym", "🏋️", "Gym"], ["league", "🏆", "Liga"], ["chat", "🗞️", "Diario"], ["me", "👤", "Yo"]].map(([id, ic, lb]) => (
               <button key={id} className={"tabbtn" + (tab === id ? " on" : "")}
                 onClick={() => setTab(id)}>
                 <span style={{ fontSize: 17, position: "relative" }}>{ic}
@@ -2969,6 +3516,10 @@ export default function App() {
           </nav>
         </>
       )}
+      {/* diálogo de personaje: overlay a nivel de App (fuera de .tab-in), visible en el Diario */}
+      {tab === "chat" && (game.npcQueue || []).length > 0 && (
+        <NpcDialogue entry={game.npcQueue[0]} queueLeft={game.npcQueue.length}
+          onAdvance={advanceNpc} onChoice={answerChoice} onOffer={answerOffer} />)}
       {game.pendingSummary && !liveMatch && (
         <div className="overlay" style={{ background: "radial-gradient(ellipse at 50% 0%, #0E3320, #05070d 75%)", overflowY: "auto" }}>
           <div className="pop-in" style={{ width: "100%", maxWidth: 340, padding: "30px 0" }}>
@@ -3098,6 +3649,93 @@ function StyleTag() {
         box-shadow:0 8px 24px rgba(20,23,14,.35); }
       .tabbtn { flex:1; min-width:0; background:none; border:none; color:#8d9279; padding:8px 0 9px; display:flex; flex-direction:column;
         align-items:center; gap:2px; cursor:pointer; font-family:'Barlow',sans-serif; border-radius:16px; }
+      /* --- periódico --- */
+      .np-cover { background:#F7F4E9; border:1.5px solid #16190F; border-radius:6px; padding:26px 18px 20px;
+        text-align:center; cursor:pointer; box-shadow:6px 6px 0 rgba(20,23,14,.18); transform-style:preserve-3d; }
+      /* Sin fotograma intermedio: CSS suaviza ENTRE cada par de fotogramas, así que
+         uno en medio frenaba casi del todo y volvía a arrancar. Curva de entrada
+         (acelera al salir) y bisagra en el lomo izquierdo, como un periódico real. */
+      .np-opening { animation:npopen .42s cubic-bezier(.55,0,.85,.4) both;
+        transform-origin:left center; will-change:transform, opacity; }
+      @keyframes npopen {
+        from { transform:perspective(1100px) rotateY(0deg); opacity:1; }
+        to { transform:perspective(1100px) rotateY(-86deg); opacity:0; } }
+      /* la página entra girando desde el mismo lomo: una sola secuencia continua */
+      .np-open2 { animation:nppage .34s cubic-bezier(.2,.8,.3,1) both; transform-origin:left center; }
+      @keyframes nppage {
+        from { opacity:0; transform:perspective(1100px) rotateY(26deg); }
+        to { opacity:1; transform:none; } }
+      .np-page { background:#F7F4E9; border:1.5px solid rgba(20,23,14,.25); border-radius:6px;
+        margin:10px 10px 96px; padding:16px 14px 8px; }
+      .np-mast { font-family:'Oswald',sans-serif; font-weight:700; font-size:34px; letter-spacing:6px;
+        text-align:center; color:#16190F; }
+      .np-rule { height:3px; background:#16190F; margin:6px 0 4px; }
+      .np-rule2 { height:1px; margin-top:2px; }
+      .np-date { font-size:10px; color:#5c5f52; text-transform:uppercase; letter-spacing:1px; text-align:center; }
+      .np-fold { font-size:44px; margin:18px 0 4px; }
+      .np-tap { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:2px; color:#16190F;
+        margin-top:10px; animation:nppulse 1.6s ease-in-out infinite; }
+      @keyframes nppulse { 0%,100% { opacity:.4; } 50% { opacity:1; } }
+      .np-kicker { display:inline-block; background:#16190F; color:#F7F4E9; font-family:'Oswald',sans-serif;
+        font-size:9.5px; letter-spacing:2px; padding:2px 8px; margin-bottom:6px; }
+      .np-h1 { font-family:'Oswald',sans-serif; font-size:23px; line-height:1.12; color:#16190F;
+        margin:2px 0 8px; text-transform:uppercase; }
+      .np-h2 { font-family:'Oswald',sans-serif; font-size:16px; line-height:1.2; color:#16190F; margin:2px 0 5px; }
+      .np-body { font-size:12.8px; line-height:1.55; color:#33362B; margin:0; }
+      .np-drop::first-letter { font-family:'Oswald',sans-serif; font-size:34px; float:left; line-height:.85;
+        padding:3px 6px 0 0; color:#16190F; }
+      .np-main { margin:12px 0 4px; padding-bottom:10px; border-bottom:1px solid rgba(20,23,14,.3); }
+      .np-art { margin:10px 0; padding-bottom:10px; border-bottom:1px dotted rgba(20,23,14,.35); }
+      .np-cols { display:flex; gap:10px; margin:12px 0 4px; }
+      .np-box { flex:1; border:1.5px solid #16190F; padding:8px; min-width:0; }
+      .np-boxtitle { font-family:'Oswald',sans-serif; font-size:10.5px; letter-spacing:2px;
+        border-bottom:2px solid #16190F; padding-bottom:4px; margin-bottom:6px; color:#16190F; }
+      .np-row { display:flex; justify-content:space-between; gap:6px; font-size:11px; padding:2px 0; color:#33362B; }
+      .np-brief { font-size:10.8px; line-height:1.45; color:#33362B; margin:0 0 6px; }
+      .np-humor { background:#EFEADA; border:1px solid rgba(20,23,14,.3); padding:10px 12px; margin-top:8px; }
+      /* --- diálogo NPC --- */
+      .npc-ov { position:fixed; inset:0; z-index:30; display:flex; flex-direction:column; justify-content:flex-end;
+        background:linear-gradient(to top, rgba(5,7,13,.97) 30%, rgba(5,7,13,.55)); cursor:pointer; }
+      .npc-count { position:absolute; top:14px; right:14px; background:#CDF546; color:#16190F;
+        font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:1px; padding:3px 10px; border-radius:10px; }
+      .npc-art { position:absolute; left:50%; bottom:190px; transform:translateX(-50%); max-height:54vh;
+        max-width:92vw; object-fit:contain; animation:npcin .3s cubic-bezier(.2,1.2,.4,1) both;
+        pointer-events:none; filter:drop-shadow(0 12px 28px rgba(0,0,0,.55)); }
+      @keyframes npcin { from { opacity:0; transform:translateX(-50%) translateY(24px) scale(.96); }
+        to { opacity:1; transform:translateX(-50%) translateY(0) scale(1); } }
+      .npc-fallback { width:150px; height:150px; border-radius:50%; display:flex; align-items:center;
+        justify-content:center; font-family:'Oswald',sans-serif; font-size:64px; color:#fff; }
+      .npc-panel { position:relative; z-index:2; padding:0 12px 92px; }
+      .npc-name { display:inline-block; color:#fff; font-family:'Oswald',sans-serif; font-size:13px;
+        letter-spacing:2px; padding:4px 14px; border-radius:8px 8px 0 0; text-transform:uppercase; }
+      .npc-box { background:#101208; border:1.5px solid #CDF546; border-radius:0 12px 12px 12px;
+        padding:14px; min-height:92px; color:#EFEEE3; font-size:15px; line-height:1.55; }
+      .npc-caret { display:inline-block; margin-left:6px; color:#CDF546; animation:npccaret 1s ease-in-out infinite; }
+      @keyframes npccaret { 0%,100% { transform:translateY(0); } 50% { transform:translateY(4px); } }
+      .npc-hint { font-size:10px; color:#8A8E7C; text-align:right; margin-top:5px; letter-spacing:.5px; }
+      .npc-ghost { background:rgba(255,255,255,.07); color:#EFEEE3; border-color:rgba(239,238,227,.35); }
+      /* --- motor 2D del partido --- */
+      .match-ov { background:radial-gradient(ellipse at 50% -10%, #14300F, #05070d 72%);
+        justify-content:flex-start; padding:26px 14px 16px; overflow-y:auto; }
+      .pitch { position:relative; width:100%; height:min(40vh,320px); background:#0E1109;
+        border-radius:10px; overflow:hidden; border:1px solid rgba(205,245,70,.14); }
+      .pl-line, .pl-ring, .pl-box { position:absolute; }
+      .pl-line { background:rgba(205,245,70,.15); }
+      .pl-ring { left:50%; top:50%; width:62px; height:62px; border-radius:50%;
+        border:1px solid rgba(205,245,70,.15); transform:translate(-50%,-50%); }
+      .pl-box { left:24%; right:24%; height:9%; border:1px solid rgba(205,245,70,.15); }
+      .pl-svg { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:3; }
+      .pl-dot { position:absolute; left:0; top:0; width:13px; height:13px; border-radius:50%;
+        z-index:4; will-change:transform; }
+      .pl-dot.yo { width:17px; height:17px; box-shadow:0 0 0 2px #16190F; z-index:5; }
+      .pl-trail { position:absolute; left:0; top:0; width:5px; height:5px; border-radius:50%;
+        background:#fff; opacity:0; z-index:5; }
+      #ball, .pl-ball { position:absolute; left:0; top:0; width:8px; height:8px; border-radius:50%;
+        background:#fff; z-index:6; will-change:transform; }
+      .pl-flash { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+        font-family:'Oswald',sans-serif; font-size:34px; letter-spacing:5px; color:#CDF546;
+        opacity:0; transition:opacity .25s ease; pointer-events:none; z-index:7; }
+      .m-tick { width:100%; max-width:360px; margin:10px auto 0; }
       /* --- calendario --- */
       .cal-cell { position:relative; aspect-ratio:1; border-radius:8px; box-sizing:border-box;
         display:flex; align-items:center; justify-content:center; cursor:pointer; }

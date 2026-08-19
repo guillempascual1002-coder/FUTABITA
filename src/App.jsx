@@ -919,26 +919,60 @@ function hushVoices() {
 }
 
 /* --- YUNA · fan tsundere del Barça; conoce tus números "por sus fuentes" --- */
-const YUNA_INTRO = "¿Tú eres el nuevo del {club}, no? ...Yo pasaba por aquí. Soy Yuna. Fan del Barça, para que lo sepas: MI equipo juega en el Camp Nou. El tuyo es... aceptable. P-pero habéis ganado, así que... bien. Supongo.";
+/* escena de dos frases: se presenta tranquila y luego se le escapa el sonrojo */
+const YUNA_INTRO_BEATS = [
+  { m: "idle", t: "¿Tú eres el nuevo del {club}, no? ...Yo pasaba por aquí. Soy Yuna. Fan del Barça, para que lo sepas: MI equipo juega en el Camp Nou. El tuyo es... aceptable." },
+  { m: "angry", t: "P-pero habéis ganado, así que... bien. Supongo. ¡No pienses que he venido a verte a TI! Solo pasaba. Por aquí. Casualmente." },
+];
 const YUNA_POOL = [
   /* --- sonrojada (angry): pillada en falta, cumplidos que se le escapan --- */
-  { m: "angry", w: "win", t: "V-vi el partido entero. Y grité. En mi habitación. Sola. ...¡No te hagas ilusiones! Grité por el ESPECTÁCULO. El deporte rey. Eso." },
-  { m: "angry", w: "benched", t: "¡¿BANQUILLO?! ¿Tu míster está ciego o qué le pasa? ...N-no es que fuera a verte a TI. Fui a ver el partido. El fútbol. ¡EL DEPORTE!" },
-  { m: "angry", w: "scorer", t: "{goals} goles. Los tengo apuntados. Con la fecha. Y el minuto. ¡P-porque soy periodista amateur! Es documentación. DOCUMENTACIÓN." },
-  { m: "angry", w: "kgUp", t: "Estás más... fuerte. FÍSICAMENTE, digo. Para el fútbol. Es un análisis técnico totalmente objetivo. ¿P-por qué me miras así?" },
-  { m: "angry", w: "hot", t: "{streak} días seguidos cuidándote como un profesional... N-no es que te vigile, ¿eh? Tengo mis fuentes. Una fan seria hace su trabajo y punto." },
-  { m: "angry", t: "Te hice una bufanda del {club}. ¡No pongas esa cara! Sobraba lana del Barça, ¿vale? No la hice pensando en ti. ...Es tu talla, por cierto." },
-  { m: "angry", t: "Alguien del insti dijo que 'te sigo demasiado' y le contesté que soy analista. ...Luego me pasé la tarde roja. ¡Por el enfado! Solo por eso." },
-  { m: "angry", t: "S-si algún día fichas por el Barça y te olvidas de mí, te juro que voy al Camp Nou solo para abuchearte. ...No lo haría. Pero podría. Tenlo presente." },
+  { w: "win", beats: [
+    { m: "idle", t: "Vi el partido entero. Ayer, cuando jugasteis." },
+    { m: "angry", t: "Y grité. En mi habitación. Sola. ...¡No te hagas ilusiones! Grité por el ESPECTÁCULO. El deporte rey. Eso es todo." }] },
+  { w: "benched", beats: [
+    { m: "idle", t: "Me he enterado de que te dejaron en el banquillo el otro día." },
+    { m: "angry", t: "¡¿BANQUILLO?! ¿Tu míster está ciego o qué le pasa?! ...N-no es que fuera a verte a TI. Fui a ver el partido. El fútbol. ¡EL DEPORTE!" }] },
+  { w: "scorer", beats: [
+    { m: "idle", t: "He estado revisando las estadísticas de la jornada. Por curiosidad periodística, nada más." },
+    { m: "angry", t: "{goals} goles. Los tengo apuntados. Con la fecha. Y el minuto. ¡P-porque soy periodista amateur! Es documentación. DOCUMENTACIÓN." }] },
+  { w: "kgUp", beats: [
+    { m: "idle", t: "Te he visto entrenar esta semana desde la grada." },
+    { m: "angry", t: "Estás más... fuerte. FÍSICAMENTE, digo. Para el fútbol. Es un análisis técnico totalmente objetivo. ¿P-por qué me miras así?" }] },
+  { w: "hot", beats: [
+    { m: "idle", t: "Llevo la cuenta de tus entrenamientos. Para mi análisis de fan seria, que conste." },
+    { m: "angry", t: "{streak} días seguidos cuidándote como un profesional... N-no es que te vigile, ¿eh? Tengo mis fuentes. Una fan seria hace su trabajo y punto." }] },
+  { beats: [
+    { m: "idle", t: "Oye. Esto es tuyo. Y no me mires así, que es solo lana sobrante." },
+    { m: "angry", t: "Es una bufanda del {club}. Sobraba lana del Barça, ¿vale? No la hice pensando en ti. ...Es tu talla, por cierto." }] },
+  { beats: [
+    { m: "idle", t: "Alguien del insti dijo hoy que 'te sigo demasiado' y le contesté que soy analista deportiva." },
+    { m: "angry", t: "Luego me pasé la tarde roja. ¡Por el enfado! Solo por eso. No por otra cosa." }] },
+  { beats: [
+    { m: "idle", t: "Oye, una pregunta hipotética sobre tu futuro, para ir asentando bases." },
+    { m: "angry", t: "S-si algún día fichas por el Barça y te olvidas de mí, te juro que voy al Camp Nou solo para abuchearte. ...No lo haría. Pero podría. Tenlo presente." }] },
   /* --- feliz --- */
-  { m: "happy", w: "good", t: "Media de {ovr}... El Barça ficha gente de 89 para arriba, ¿sabes? Te queda camino. Pero llegarás. Lo sé desde... d-desde un punto de vista puramente estadístico." },
-  { m: "happy", t: "Cuando juegues en el Camp Nou —que pasará— más te vale conseguirme una entrada. Primera fila. Es lo MÍNIMO después de todo mi apoyo incondicional. Digo... ocasional." },
-  { m: "happy", w: "win", t: "¿Sabes qué? Hoy te lo voy a decir sin rodeos: has jugado bien. ...Ya está. No lo repito. Disfrútalo, que no pasa a menudo." },
+  { w: "good", beats: [
+    { m: "idle", t: "He estado mirando cifras de fichajes del Barça. Simple curiosidad de aficionada." },
+    { m: "happy", t: "Media de {ovr}... el Barça ficha gente de 89 para arriba, ¿sabes? Te queda camino. Pero llegarás. Lo sé desde... d-desde un punto de vista puramente estadístico." }] },
+  { beats: [
+    { m: "idle", t: "Oye, tengo una petición a futuro. Quede constancia desde ya, por si acaso." },
+    { m: "happy", t: "Cuando juegues en el Camp Nou —que pasará— más te vale conseguirme una entrada. Primera fila. Es lo MÍNIMO después de todo mi apoyo incondicional. Digo... ocasional." }] },
+  { w: "win", beats: [
+    { m: "idle", t: "Vengo a decirte algo y solo lo voy a decir una vez, así que escucha bien." },
+    { m: "happy", t: "Has jugado bien. Muy bien. ...Ya está. No lo repito. Disfrútalo, que no pasa a menudo." }] },
   /* --- normal --- */
-  { m: "idle", w: "loss", t: "Perdisteis. Bueno. El Barça también pierde y sigo aquí, así que no te voy a soltar el discurso. ...Mañana entrenas más y ya está." },
-  { m: "idle", w: "good", t: "Pasé por la ciudad deportiva. Por casualidad. Vivo a cuarenta minutos, pero fue casualidad. ...Entrenas más fuerte que antes. Se nota." },
-  { m: "idle", t: "Mi abuela dice que hablo mucho de 'ese chico del {club}'. ¡Hablo de FÚTBOL! Del deporte. En general. ...Cállate." },
-  { m: "idle", t: "El Barça empató ayer y estoy de luto, así que hoy no tengo energía para fingir que tu equipo no me interesa. Mañana volvemos a la normalidad." },
+  { w: "loss", beats: [
+    { m: "idle", t: "Perdisteis ayer. Ya lo sé, no hace falta que me lo repitas." },
+    { m: "happy", t: "El Barça también pierde a veces y yo sigo aquí, así que no te voy a soltar ningún discurso. Mañana entrenas más fuerte y ya está. Confío en ti." }] },
+  { w: "good", beats: [
+    { m: "idle", t: "Pasé por la ciudad deportiva el otro día. Por casualidad. Vivo a cuarenta minutos, pero fue casualidad." },
+    { m: "angry", t: "Entrenas más fuerte que antes. Se nota. Y no, no he ido a verte específicamente. ...Bueno, un poco sí. Ya está, lo he dicho." }] },
+  { beats: [
+    { m: "idle", t: "Mi abuela dice que hablo mucho de 'ese chico del {club}' en casa." },
+    { m: "angry", t: "¡Hablo de FÚTBOL! Del deporte. En general. ...Cállate. No es lo que parece." }] },
+  { beats: [
+    { m: "idle", t: "El Barça empató ayer y estoy oficialmente de luto." },
+    { m: "angry", t: "Así que hoy no tengo energía para fingir que tu equipo no me interesa. Mañana volvemos a la normalidad, no te acostumbres." }] },
   /* --- conversaciones más largas, con respuestas --- */
   { m: "idle", t: "Oye... tengo una duda. PURAMENTE táctica, para mi análisis, nada personal. ¿Prefieres jugar en casa, con tu gente, o fuera, sin presión?", replies: [
     { t: "En casa, con mi gente", r: ["Ah. Lógico. La grada empuja distinto cuando es la tuya... aunque la del Barça sigue siendo mejor, que conste.",
@@ -946,32 +980,52 @@ const YUNA_POOL = [
     { t: "Fuera, sin presión", r: ["Interesante. Poca gente admite eso en voz alta. ...Me gusta que no finjas ser quien no eres.",
       "Mentalidad fría, ¿eh? El Barça también rinde mejor fuera a veces. No es que os compare. Es un dato objetivo."] }] },
   { m: "angry", t: "M-mi amiga me vio el móvil con tu perfil abierto otra vez y ahora cree que 'somos algo'. ¡No somos NADA! Hago seguimiento profesional, como una periodista deportiva seria. ¿Tú qué le dirías a alguien que piensa eso?", replies: [
-    { t: "Que tiene razón", r: ["¡¿QUÉ?! ...¡c-cállate! Eso no ha sido gracioso. Nada gracioso. Me voy. ME VOY YA.",
+    { t: "Que tiene razón", m: "angry", r: ["¡¿QUÉ?! ...¡c-cállate! Eso no ha sido gracioso. Nada gracioso. Me voy. ME VOY YA.",
       "N-no digas eso ni en broma, mi corazón no está preparado para tus bromas a estas horas."] },
-    { t: "Que solo somos amigos", r: ["...Sí. Eso. Amigos. Claro que sí. *silencio raro durante tres segundos* Bueno, me voy, que tengo cosas de fan. De fan del Barça. Adiós."] }] },
+    { t: "Que solo somos amigos", m: "angry", r: ["...Sí. Eso. Amigos. Claro que sí. *silencio raro durante tres segundos* Bueno, me voy, que tengo cosas de fan. De fan del Barça. Adiós."] }] },
   { m: "idle", t: "Hoy en clase de historia hablamos de grandes rivalidades y, sin que nadie preguntara, me puse a explicar el Clásico durante diez minutos seguidos. El profesor ha tenido que pararme. No me arrepiento. La cultura es importante." },
   { m: "happy", w: "good", t: "He estado pensando... si algún día llegas de verdad a lo más alto, ¿te acordarás de la fan pesada que te seguía desde una grada de provincias? Es una pregunta hipotética. Totalmente hipotética, que conste.", replies: [
-    { t: "Siempre me acordaré de ti", r: ["...n-no digas eso así, tan tranquilo. Casi me haces creer que lo dices en serio. Idiota."] },
-    { t: "Depende de si dejas de ser pesada", r: ["¡OYE! ...vale, me lo merecía un poco. Pero solo un poco, ¿eh? Que quede claro."] }] },
-  { m: "idle", w: "loss", t: "El otro día perdisteis y vi a un grupo en el bus hablando mal de ti. Les dije, cito textualmente, 'no tenéis ni idea de fútbol'. Y me bajé dos paradas antes de la mía porque no quería seguir la conversación. No fue por vergüenza. Fue por principios." },
+    { t: "Siempre me acordaré de ti", m: "angry", r: ["...n-no digas eso así, tan tranquilo. Casi me haces creer que lo dices en serio. Idiota."] },
+    { t: "Depende de si dejas de ser pesada", m: "angry", r: ["¡OYE! ...vale, me lo merecía un poco. Pero solo un poco, ¿eh? Que quede claro."] }] },
+  { w: "loss", beats: [
+    { m: "idle", t: "El otro día perdisteis y vi a un grupo en el bus hablando mal de ti." },
+    { m: "angry", t: "Les dije, cito textualmente, 'no tenéis ni idea de fútbol'. Y me bajé dos paradas antes de la mía porque no quería seguir la conversación. No fue por vergüenza. Fue por principios." }] },
   { m: "angry", t: "Te he traído esto. Es una bufanda del {club}. ¡No pongas esa cara de sorpresa! Sobraba lana de una del Barça, ¿vale? No la hice pensando en ti especialmente. ...Es tu talla, por si te lo preguntas.", replies: [
-    { t: "Gracias, Yuna, de verdad", r: ["N-no hace falta que lo digas así de sincero, quedamos en que era un favor sin importancia. Pero... de nada.",
+    { t: "Gracias, Yuna, de verdad", m: "angry", r: ["N-no hace falta que lo digas así de sincero, quedamos en que era un favor sin importancia. Pero... de nada.",
       "¡No te acostumbres! Fue un acto puntual de generosidad excepcional. Único e irrepetible."] },
-    { t: "¿Seguro que no la hiciste para mí?", r: ["¡P-por supuesto que no! Yo... e-en fin, da igual. Úsala o no la uses, allá tú. Grosero."] }] },
+    { t: "¿Seguro que no la hiciste para mí?", m: "angry", r: ["¡P-por supuesto que no! Yo... e-en fin, da igual. Úsala o no la uses, allá tú. Grosero."] }] },
 ];
 
 /* --- ELISA · tu mánager: ánimo, despachos y fichajes.
    "angry" = decepción contenida, para cuando aflojas --- */
 const ELISA_POOL = [
-  { m: "happy", t: "¡Buenas! Nada urgente, solo decirte que se habla bien de ti en los despachos. Tú a lo tuyo, que de mover los hilos me encargo yo. 💼" },
-  { m: "happy", w: "good", t: "He colado tu nombre en dos conversaciones esta semana. En ninguna eras el protagonista... todavía. Sigue así y la tercera será la buena." },
-  { m: "happy", w: "hot", t: "¡{streak} días de racha! ¿Sabes lo fácil que es vender a un jugador constante? Me estás haciendo el trabajo regalado y no me voy a quejar." },
-  { m: "happy", w: "scorer", t: "{goals} goles esta temporada. Cada uno de esos vale dinero en la mesa de negociación, que lo sepas. Sigue firmando así." },
-  { m: "idle", t: "Recordatorio de mánager: los contratos se firman con la cabeza fría y los partidos se juegan con la sangre caliente. No mezclar, que te conozco." },
-  { m: "idle", t: "Hoy sin novedades del mercado. A veces no pasa nada, y eso también es buena señal: significa que nadie duda de dónde tienes que estar ahora mismo." },
-  { m: "angry", w: "bad", t: "Vamos a hablar claro, que para eso estoy. Esta semana no has estado. Yo puedo abrirte puertas, pero cruzarlas es cosa tuya... y hoy no las has cruzado." },
-  { m: "angry", w: "benched", t: "Me ha llamado gente preguntando por qué no jugaste. ¿Y sabes qué? No tenía respuesta. No me gusta no tener respuesta. Arréglalo en el campo." },
-  { m: "angry", w: "loss", t: "He visto el partido. No por el resultado, esas cosas pasan... pero te he visto conformarte. Y eso no te lo había visto nunca. No me acostumbres." },
+  { beats: [
+    { m: "idle", t: "¡Buenas! No es nada urgente." },
+    { m: "happy", t: "Solo decirte que se habla bien de ti en los despachos. Tú a lo tuyo, que de mover los hilos me encargo yo. 💼" }] },
+  { w: "good", beats: [
+    { m: "idle", t: "Esta semana he estado moviendo hilos por ahí, como siempre." },
+    { m: "happy", t: "He colado tu nombre en dos conversaciones. En ninguna eras el protagonista... todavía. Sigue así y la tercera será la buena." }] },
+  { w: "hot", beats: [
+    { m: "idle", t: "Llevo revisando tu ficha toda la mañana, no sé si te lo había dicho." },
+    { m: "happy", t: "¡{streak} días de racha! ¿Sabes lo fácil que es vender a un jugador constante? Me estás haciendo el trabajo regalado y no me voy a quejar." }] },
+  { w: "scorer", beats: [
+    { m: "idle", t: "Un apunte de mánager, con la calculadora en la mano." },
+    { m: "happy", t: "{goals} goles esta temporada. Cada uno de esos vale dinero en la mesa de negociación, que lo sepas. Sigue firmando así." }] },
+  { beats: [
+    { m: "idle", t: "Recordatorio de mánager, apúntatelo si hace falta:" },
+    { m: "idle", t: "los contratos se firman con la cabeza fría y los partidos se juegan con la sangre caliente. No mezclar, que te conozco." }] },
+  { beats: [
+    { m: "idle", t: "Hoy sin novedades del mercado." },
+    { m: "idle", t: "A veces no pasa nada, y eso también es buena señal: significa que nadie duda de dónde tienes que estar ahora mismo." }] },
+  { w: "bad", beats: [
+    { m: "idle", t: "Necesito hablar contigo un momento, y no va a ser una charla cómoda." },
+    { m: "angry", t: "Vamos a hablar claro, que para eso estoy. Esta semana no has estado. Yo puedo abrirte puertas, pero cruzarlas es cosa tuya... y hoy no las has cruzado." }] },
+  { w: "benched", beats: [
+    { m: "idle", t: "Hoy me han llamado un par de veces preguntando por ti." },
+    { m: "angry", t: "Preguntando por qué no jugaste. ¿Y sabes qué? No tenía respuesta. No me gusta no tener respuesta. Arréglalo en el campo." }] },
+  { w: "loss", beats: [
+    { m: "idle", t: "He visto el partido de ayer con calma, sin prisas." },
+    { m: "angry", t: "No por el resultado, esas cosas pasan... pero te he visto conformarte. Y eso no te lo había visto nunca. No me acostumbres." }] },
   /* --- conversaciones más largas, con respuestas: entrenadora + mánager en una sola persona --- */
   { m: "idle", t: "Vamos a hacer un repaso serio, estilo entrenadora-mánager: ¿cómo te sientes físicamente esta semana? Lo necesito para planificar tanto tu carga de entrenamiento como tu futuro fuera del campo.", replies: [
     { t: "Al cien por cien", r: ["Eso quiero oír. Entonces esta semana subimos el nivel de exigencia, que para eso estoy yo aquí.",
@@ -984,13 +1038,19 @@ const ELISA_POOL = [
     { t: "Que dijeras que sí sin dudarlo", r: ["JAJA directo al grano, me gusta la ambición. Pero deja que negocie yo, que para eso cobro comisión.",
       "Con esas ganas vamos a hacer carrera los dos, ya lo verás, crack."] }] },
   { m: "angry", w: "bad", t: "Necesito preguntarte algo y quiero una respuesta honesta, no la que crees que quiero oír: ¿estás dando el máximo esta semana, o solo lo suficiente para que yo no te diga nada?", replies: [
-    { t: "Lo máximo, te lo prometo", r: ["Te tomo la palabra. Pero las palabras se demuestran en el campo, no aquí conmigo. Vamos a verlo.",
+    { t: "Lo máximo, te lo prometo", m: "idle", r: ["Te tomo la palabra. Pero las palabras se demuestran en el campo, no aquí conmigo. Vamos a verlo.",
       "Bien. Porque el potencial sin esfuerzo no le interesa a nadie, ni siquiera a mí."] },
-    { t: "La verdad, no del todo", r: ["Al menos eres sincero, y eso lo respeto más que una excusa bonita. Mañana empezamos de cero. Pero de cero de verdad.",
+    { t: "La verdad, no del todo", m: "idle", r: ["Al menos eres sincero, y eso lo respeto más que una excusa bonita. Mañana empezamos de cero. Pero de cero de verdad.",
       "Gracias por no mentirme. Ahora la pregunta importante es qué vas a hacer al respecto."] }] },
-  { m: "happy", t: "Sabes qué me gusta de ti como jugador? Que no necesito motivarte cada día. La mayoría de mi cartera sí, y créeme que lo intento con paciencia de santa. Tú simplemente vienes y curras. Eso no se enseña, eso se trae de casa." },
-  { m: "happy", w: "hot", t: "Llevo {streak} días seguidos viéndote entrenar como si cada sesión fuera una final. Como entrenadora te exijo esto siempre; como mánager, te digo que eso vale más que cualquier golazo suelto: es lo que hace que un contrato dure años y no meses." },
-  { m: "idle", t: "A veces me preguntan cómo puedo ser entrenadora y mánager a la vez sin volverme loca. Fácil: en el campo exijo, fuera del campo negocio, y en los dos sitios cuido de los míos. Tú entras en esa categoría, para que lo sepas." },
+  { beats: [
+    { m: "idle", t: "Sabes qué me gusta de ti como jugador? Que no necesito motivarte cada día. La mayoría de mi cartera sí, y créeme que lo intento con paciencia de santa." },
+    { m: "happy", t: "Tú simplemente vienes y curras. Eso no se enseña, eso se trae de casa. Y no sabes lo poco frecuente que es eso en este oficio." }] },
+  { w: "hot", beats: [
+    { m: "idle", t: "Llevo {streak} días seguidos viéndote entrenar como si cada sesión fuera una final." },
+    { m: "happy", t: "Como entrenadora te exijo esto siempre; como mánager, te digo que eso vale más que cualquier golazo suelto: es lo que hace que un contrato dure años y no meses." }] },
+  { beats: [
+    { m: "idle", t: "A veces me preguntan cómo puedo ser entrenadora y mánager a la vez sin volverme loca." },
+    { m: "happy", t: "Fácil: en el campo exijo, fuera del campo negocio, y en los dos sitios cuido de los míos. Tú entras en esa categoría, para que lo sepas." }] },
 ];
 
 /* --- LÓPEZ · capitán y colega de siempre; animado, gracioso, anécdotas de vestuario.
@@ -1004,16 +1064,26 @@ const LOPEZ_POOL = [
   { m: "happy", t: "Te cuento una del vestuario de ayer: el utillero juraba que había visto un fantasma en la sala de masajes. Resultó ser el segundo entrenador dormido con la manta puesta encima. Casi le da un infarto al pobre hombre. Oye, ¿tú has visto algo raro alguna vez en la ciudad deportiva?", replies: [
     { t: "Una vez sí, fue rarísimo", r: ["¡LO SABÍA! Cuéntamelo todo mañana en el vestuario, necesito los detalles para la próxima leyenda urbana del club 😂"] },
     { t: "Nunca, soy muy racional", r: ["Aburrido. Pero respetable. Yo en cambio me creo cualquier cosa, por eso vivo mejor 😄"] }] },
-  { m: "happy", t: "Hoy el nuevo del filial ha preguntado si el míster también entrena físico con nosotros. Le hemos dejado creer que sí durante media hora. La cara que se le ha quedado cuando lo ha descubierto no tiene precio. Bienvenido al vestuario, chaval." },
-  { m: "idle", w: "loss", t: "Sé que hoy no salió como queríamos. Pero te voy a decir una cosa que me dijo un veterano cuando yo era el novato del equipo: un mal partido no te define, lo que haces al día siguiente sí. Y tú siempre vuelves más fuerte, lo llevo viendo desde que llegaste." },
+  { beats: [
+    { m: "idle", t: "Hoy el nuevo del filial ha preguntado si el míster también entrena físico con nosotros." },
+    { m: "happy", t: "Le hemos dejado creer que sí durante media hora. La cara que se le ha quedado cuando lo ha descubierto no tiene precio. Bienvenido al vestuario, chaval." }] },
+  { w: "loss", beats: [
+    { m: "idle", t: "Sé que hoy no salió como queríamos." },
+    { m: "happy", t: "Pero te voy a decir una cosa que me dijo un veterano cuando yo era el novato del equipo: un mal partido no te define, lo que haces al día siguiente sí. Y tú siempre vuelves más fuerte, lo llevo viendo desde que llegaste." }] },
   { m: "happy", w: "good", t: "Llevas una racha que ya empieza a dar que hablar en el vestuario, ¿eh? Hasta el más callado del grupo ha comentado algo esta semana, y eso aquí es historia. ¿Tienes algún ritual o truco que te esté funcionando?", replies: [
     { t: "Solo trabajo y constancia", r: ["Respuesta de veterano en cuerpo de joven. Me gusta. Sigue así y te vamos a tener que subir el sueldo del respeto en el vestuario.",
       "Ojalá se me hubiera pegado algo de esa disciplina a mí a tu edad 😂"] },
     { t: "Un poco de suerte también", r: ["JAJA la suerte hay que currársela, pero vale, te la concedo. Sigue así de todas formas.",
       "Modesto encima. Este vestuario no te merece, en serio."] }] },
-  { m: "idle", t: "Confesión de capitán: cuando llegué a este club tenía más miedo que tú el primer día. Me escondía en el baño para no hablar en las charlas tácticas. Ahora mírame, no me calla ni el míster. Todo se aprende, hasta lo de abrir la boca." },
-  { m: "happy", t: "El presi ha vuelto a confundir mi nombre con el del utillero delante de un patrocinador. Tercera vez este mes. Ya ni me molesto en corregirle, directamente respondo a los dos nombres como si fuera normal." },
-  { m: "idle", w: "benched", t: "Te vi en el banquillo con esa cara que ponemos todos alguna vez. Yo pasé dos meses ahí mi segunda temporada aquí y pensé que se acababa el mundo. No se acaba. Se entrena, se espera, y un día vuelves con más hambre que nunca." },
+  { beats: [
+    { m: "idle", t: "Confesión de capitán: cuando llegué a este club tenía más miedo que tú el primer día. Me escondía en el baño para no hablar en las charlas tácticas." },
+    { m: "happy", t: "Ahora mírame, no me calla ni el míster. Todo se aprende, hasta lo de abrir la boca 😄" }] },
+  { beats: [
+    { m: "idle", t: "El presi ha vuelto a confundir mi nombre con el del utillero delante de un patrocinador. Tercera vez este mes." },
+    { m: "happy", t: "Ya ni me molesto en corregirle, directamente respondo a los dos nombres como si fuera normal 😂" }] },
+  { w: "benched", beats: [
+    { m: "idle", t: "Te vi en el banquillo con esa cara que ponemos todos alguna vez." },
+    { m: "happy", t: "Yo pasé dos meses ahí mi segunda temporada aquí y pensé que se acababa el mundo. No se acaba. Se entrena, se espera, y un día vuelves con más hambre que nunca." }] },
 ];
 
 /* --- EL PERIÓDICO · plantillas con titular y cuerpo, por secciones --- */
@@ -2936,14 +3006,34 @@ export default function App() {
       { id: Date.now() + Math.random(), sec: extra.sec || paperSec(from), src: from, h: extra.h, b: text, main: extra.main }] } };
   };
 
+  /* "escena": varias frases seguidas del mismo personaje, cada una con su propia expresión.
+     Se apilan en la cola de diálogos (ya soporta varias entradas con el contador "+N en espera"),
+     así que al tocar para avanzar el retrato cambia de idle a happy/angry entre frase y frase.
+     Solo la ÚLTIMA frase lleva los extras (replies, kind, offer...). */
+  const addScene = (g, from, beats, extra = {}) => {
+    let out = g;
+    beats.forEach((b, i) => {
+      out = addMsg(out, from, b.t, i === beats.length - 1 ? { mood: b.m, ...extra } : { mood: b.m });
+    });
+    return out;
+  };
+  /* toma una entrada de pool (formato clásico {m,t} o de escena {beats:[{m,t},...]}),
+     rellena sus variables de contexto y la encola respetando ambos formatos */
+  const playPoolEntry = (g, from, entry, ctx, extra = {}) => {
+    if (!entry) return g;
+    if (entry.beats) return addScene(g, from, entry.beats.map((b) => ({ m: b.m, t: fillTpl(b.t, ctx) })), { replies: entry.replies, ...extra });
+    return addMsg(g, from, fillTpl(entry.t, ctx), { mood: entry.m, replies: entry.replies, ...extra });
+  };
+
   /* cola de diálogos: avanzar, elegir respuesta, resolver oferta */
   const advanceNpc = (id) => setGame((g) => ({ ...g, npcQueue: (g.npcQueue || []).filter((e) => e.id !== id) }));
   const answerChoice = (id, idx) => setGame((g) => {
     const q = g.npcQueue || [];
     const e = q.find((x) => x.id === id);
     if (!e || !e.replies || !e.replies[idx]) return g;
-    /* la réplica del personaje entra al frente de la cola: responde al momento */
-    const resp = { id: Date.now() + Math.random(), npc: e.npc, mood: "happy", text: pick(e.replies[idx].r) };
+    /* la réplica del personaje entra al frente de la cola: responde al momento,
+       con su propia expresión (por defecto "happy" si la opción no especifica otra) */
+    const resp = { id: Date.now() + Math.random(), npc: e.npc, mood: e.replies[idx].m || "happy", text: pick(e.replies[idx].r) };
     return { ...g, npcQueue: [resp, ...q.filter((x) => x.id !== id)] };
   });
   const answerOffer = (id, accept) => {
@@ -3070,21 +3160,18 @@ export default function App() {
         const roll = Math.random();
         if (roll < 0.3) {
           const p = LOPEZ_POOL.filter((y) => !y.w || (COND[y.w] && COND[y.w](c)));
-          const y = p[Math.floor(Math.random() * p.length)];
-          if (y) out = addMsg(out, "López", fillTpl(y.t, c), { mood: y.m, replies: y.replies });
+          out = playPoolEntry(out, "López", p[Math.floor(Math.random() * p.length)], c);
         } else if (roll < 0.4) {
           const fv = pickFlavor(out, 1, ["squad", "cap", "coach", "agent"])[0];
           if (fv) out = addMsg(out, fv.from, fv.text, { replies: fv.replies });
         } else if (roll < 0.7) {
           if (out.yunaMet) {
             const p = YUNA_POOL.filter((y) => !y.w || (COND[y.w] && COND[y.w](c)));
-            const y = p[Math.floor(Math.random() * p.length)];
-            if (y) out = addMsg(out, "Yuna", fillTpl(y.t, c), { mood: y.m, replies: y.replies });
+            out = playPoolEntry(out, "Yuna", p[Math.floor(Math.random() * p.length)], c);
           }
         } else {
           const p = ELISA_POOL.filter((y) => !y.w || (COND[y.w] && COND[y.w](c)));
-          const y = p[Math.floor(Math.random() * p.length)];
-          if (y) out = addMsg(out, "Elisa", fillTpl(y.t, c), { mood: y.m, replies: y.replies });
+          out = playPoolEntry(out, "Elisa", p[Math.floor(Math.random() * p.length)], c);
         }
       }
     }
@@ -3192,12 +3279,11 @@ export default function App() {
       /* Yuna: aparece por primera vez tras tu primera victoria; después reacciona a veces */
       if (!g.yunaMet && m.res === "V" && !m.benched) {
         out.yunaMet = true;
-        out = addMsg(out, "Yuna", fillTpl(YUNA_INTRO, flavorCtx(out)), { mood: "angry" });
+        out = addScene(out, "Yuna", YUNA_INTRO_BEATS.map((b) => ({ m: b.m, t: fillTpl(b.t, flavorCtx(out)) })));
       } else if (g.yunaMet && Math.random() < 0.45) {
         const cy = flavorCtx(out);
         const p = YUNA_POOL.filter((y) => ["win", "loss", "benched"].includes(y.w) && COND[y.w](cy));
-        const y = p[Math.floor(Math.random() * p.length)];
-        if (y) out = addMsg(out, "Yuna", fillTpl(y.t, cy), { mood: y.m });
+        out = playPoolEntry(out, "Yuna", p[Math.floor(Math.random() * p.length)], cy);
       }
       const cap = (g.captain || "Capitán") + " · Capitán";
       if (!m.benched && m.rating >= 8.5 && Math.random() < 0.6) {

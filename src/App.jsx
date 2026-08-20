@@ -4084,10 +4084,11 @@ export default function App() {
     if (npc) {
       const q = [...(g.npcQueue || [])];
       /* tope de cola: si el jugador estuvo días sin abrir, no se apilan 10 diálogos.
-         Las ofertas nunca se descartan. */
-      if (q.length >= 6) { const i = q.findIndex((e) => e.kind !== "offer"); if (i >= 0) q.splice(i, 1); }
+         Las ofertas y los mensajes que confirman un hito (applyOnRead) nunca se descartan:
+         si se perdieran, el estado avanzaría sin que el jugador hubiera leído la escena. */
+      if (q.length >= 6) { const i = q.findIndex((e) => e.kind !== "offer" && !e.applyOnRead); if (i >= 0) q.splice(i, 1); }
       q.push({ id: Date.now() + Math.random(), npc, mood: extra.mood || moodOf(npc, text), text,
-        kind: extra.kind, offer: extra.offer, replies: extra.replies });
+        kind: extra.kind, offer: extra.offer, replies: extra.replies, applyOnRead: extra.applyOnRead });
       return { ...g, npcQueue: q };
     }
     const today = todayStr();
@@ -4121,25 +4122,35 @@ export default function App() {
   const checkZoneUnlocks = (g) => {
     let out = g;
     [...ZONES, ...EXTRA_NPCS].forEach((z) => {
-      if (!z.metFlag || out[z.metFlag] || !z.unlocked(out)) return;
-      out = { ...out, [z.metFlag]: true };
+      if (!z.metFlag || out[z.metFlag] || (out.introQueued && out.introQueued[z.metFlag]) || !z.unlocked(out)) return;
+      /* el flag "ya lo conoces" no se marca aquí: se marca cuando el jugador lee la escena
+         de verdad (applyOnRead), para no dar por vista una conversación que se perdió */
       const npcKey = Array.isArray(z.npc) ? z.npc[0] : z.npc;
-      out = addScene(out, NPCS[npcKey].name, z.intro.map((b) => ({ m: b.m, t: fillTpl(b.t, flavorCtx(out)) })));
+      out = addScene(out, NPCS[npcKey].name, z.intro.map((b) => ({ m: b.m, t: fillTpl(b.t, flavorCtx(out)) })),
+        { applyOnRead: { flags: [z.metFlag] } });
+      out = { ...out, introQueued: { ...(out.introQueued || {}), [z.metFlag]: true } };
     });
     return out;
   };
   /* motor de misiones: arranca la historia de un personaje cuando toca, avanza de etapa
-     cuando se cumple el objetivo (o se agota el plazo) y encola la escena correspondiente. */
+     cuando se cumple el objetivo (o se agota el plazo) y encola la escena correspondiente.
+     El estado de la misión (etapa, "ya empezada") solo se confirma cuando el jugador LEE
+     la escena (applyOnRead), no en el momento en que se cumple la condición: así nunca
+     aparece una misión "activa" cuya conversación de arranque no ha visto todavía. */
   const checkQuests = (g) => {
     let out = g;
     const quests = { ...(out.quests || {}) };
+    const pending = { ...(out.questPending || {}) };
     Object.entries(QUESTS).forEach(([key, def]) => {
+      if (pending[key]) return; /* ya hay una escena suya esperando a leerse, no dupliques */
       let qs = quests[key];
       if (!qs) {
         if (!def.trigger(out)) return;
         const s0 = def.stages[0];
-        quests[key] = { stage: 0, snap: s0.snap ? s0.snap(out) : {}, startDay: todayStr() };
-        out = addScene(out, NPCS[def.npc].name, s0.intro.map((b) => ({ m: b.m, t: fillTpl(b.t, flavorCtx(out)) })));
+        const state = { stage: 0, snap: s0.snap ? s0.snap(out) : {}, startDay: todayStr() };
+        out = addScene(out, NPCS[def.npc].name, s0.intro.map((b) => ({ m: b.m, t: fillTpl(b.t, flavorCtx(out)) })),
+          { applyOnRead: { quest: { key, state } } });
+        pending[key] = true;
         return;
       }
       if (qs.done) return;
@@ -4149,17 +4160,36 @@ export default function App() {
       const failed = deadlineHit && !stage.check(out, qs.snap);
       const nextIdx = qs.stage + 1;
       const next = def.stages[nextIdx];
-      quests[key] = { stage: nextIdx, snap: next.snap ? next.snap(out) : {}, startDay: todayStr(), done: !!next.final, failed };
+      const state = { stage: nextIdx, snap: next.snap ? next.snap(out) : {}, startDay: todayStr(), done: !!next.final, failed };
       const beats = failed && next.introFail ? next.introFail : next.intro;
-      out = addScene(out, NPCS[def.npc].name, beats.map((b) => ({ m: b.m, t: fillTpl(b.t, flavorCtx(out)) })));
+      out = addScene(out, NPCS[def.npc].name, beats.map((b) => ({ m: b.m, t: fillTpl(b.t, flavorCtx(out)) })),
+        { applyOnRead: { quest: { key, state } } });
+      pending[key] = true;
       if (next.final && next.reward && !failed) out = next.reward(out);
     });
+    out.questPending = pending;
     out.quests = quests;
     return out;
   };
 
+  /* aplica lo que una escena "confirma" solo al leerla de verdad: flags de "ya conoces a X"
+     y/o el arranque o avance de una misión. Así el estado nunca se adelanta a la conversación. */
+  const applyOnRead = (g, patch) => {
+    if (!patch) return g;
+    let out = g;
+    if (patch.flags) { const f = {}; patch.flags.forEach((k) => (f[k] = true)); out = { ...out, ...f }; }
+    if (patch.quest) out = { ...out,
+      quests: { ...(out.quests || {}), [patch.quest.key]: patch.quest.state },
+      /* libera el "esperando lectura": si no, checkQuests se saltaría esta misión para siempre */
+      questPending: { ...(out.questPending || {}), [patch.quest.key]: false } };
+    return out;
+  };
   /* cola de diálogos: avanzar, elegir respuesta, resolver oferta */
-  const advanceNpc = (id) => setGame((g) => ({ ...g, npcQueue: (g.npcQueue || []).filter((e) => e.id !== id) }));
+  const advanceNpc = (id) => setGame((g) => {
+    const e = (g.npcQueue || []).find((x) => x.id === id);
+    const out = applyOnRead(g, e && e.applyOnRead);
+    return { ...out, npcQueue: (out.npcQueue || []).filter((x) => x.id !== id) };
+  });
   const answerChoice = (id, idx) => setGame((g) => {
     const q = g.npcQueue || [];
     const e = q.find((x) => x.id === id);

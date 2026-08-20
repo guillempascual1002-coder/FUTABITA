@@ -2354,6 +2354,7 @@ function CityMap({ game, onOpenNpc, onOpenPaper }) {
   /* centro de cada zona en las coordenadas nativas del SVG (para el texto del candado) */
   const cx = (z) => CITY_MAP_VB.x + (z.x / 100) * CITY_MAP_VB.w;
   const cy = (z) => CITY_MAP_VB.y + (z.y / 100) * CITY_MAP_VB.h;
+  const flashZone = flash ? ZONES.find((z) => z.id === flash) : null;
 
   return (
     <div className="city-wrap">
@@ -2375,17 +2376,13 @@ function CityMap({ game, onOpenNpc, onOpenPaper }) {
         /* el candado y el aviso van dentro del overlay SVG / centrados en el punto;
            los nombres ya están dibujados en el propio mapa, aquí no se repiten */
         if (!unlocked) {
-          return (
-            <div key={z.id} className="city-zone" style={style}>
-              {flash === z.id && <div className="city-req" style={{ top: 14 }}>{z.reqLabel}</div>}
-            </div>);
+          return <div key={z.id} className="city-zone" style={style} />;
         }
         /* la cara del personaje solo se ve si tiene algo pendiente que contar; ya leído,
            queda solo un punto discreto (sigue siendo clicable, p.ej. el kiosco para releer) */
         const pending = z.kind === "paper" ? (paperPending || (z.npc && npcQueue.some((e) => e.npc === z.npc)))
           : z.npc && npcQueue.some((e) => e.npc === z.npc);
         const npc = z.npc ? NPCS[z.npc] : null;
-        const reqTop = pending ? (z.big ? 45 : 34) : (z.big ? 15 : 13);
         return (
           <div key={z.id} className="city-zone" style={style}>
             <button className={"city-bubble" + (pending ? " pend" : " quiet") + (z.big ? " big" : "")}
@@ -2394,9 +2391,14 @@ function CityMap({ game, onOpenNpc, onOpenPaper }) {
                 : <span className="city-ico-emoji">{z.icon}</span>) : null}
               {pending && <span className="dot" style={{ top: -2, right: -2, padding: "3px 4px" }} />}
             </button>
-            {flash === z.id && z.kind === "soon" && <div className="city-req" style={{ top: reqTop + 24 }}>Próximamente</div>}
           </div>);
       })}
+      {/* aviso de requisito: centrado siempre en horizontal (a la altura de la zona tocada),
+          para que nunca se corte aunque el candado esté pegado al borde izquierdo o derecho */
+        flashZone && (
+          <div className="city-req" style={{ top: `calc(${flashZone.y}% + 26px)` }}>
+            {flashZone.kind === "soon" && flashZone.unlocked(game) ? "Próximamente" : flashZone.reqLabel}
+          </div>)}
     </div>);
 }
 
@@ -4493,8 +4495,10 @@ function StyleTag() {
       .city-ico-img { width:100%; height:100%; object-fit:cover; background:#FFFFFF; display:block; }
       .city-ico-emoji { font-size:27px; }
       .city-bubble.big .city-ico-emoji { font-size:36px; }
-      .city-req { position:absolute; left:0; transform:translateX(-50%); background:#16190F; color:#EFEEE3; font-size:10.5px;
-        line-height:1.35; padding:6px 10px; border-radius:10px; width:140px; text-align:center; z-index:5;
+      /* siempre centrado en horizontal respecto al mapa entero (no a la zona tocada),
+         para que nunca se corte si el candado está pegado al borde izquierdo o derecho */
+      .city-req { position:absolute; left:50%; transform:translateX(-50%); background:#16190F; color:#EFEEE3; font-size:10.5px;
+        line-height:1.35; padding:6px 10px; border-radius:10px; width:160px; text-align:center; z-index:6;
         animation:pop .25s ease both; box-shadow:0 6px 16px rgba(20,23,14,.4); }
       @media (prefers-reduced-motion: reduce) { .city-bubble.pend { animation:none !important; } }
       @media (prefers-reduced-motion: reduce) { .fut-shine, .fade-seq, .official-flash, .card-drop, .pop-in, .event-in { animation:none !important; opacity:1 !important; } }

@@ -475,6 +475,11 @@ const COND = {
   hasGoals: (c) => c.hasGoals, scorer: (c) => c.scorer,
   seasonStart: (c) => c.seasonStart, seasonEnd: (c) => c.seasonEnd,
   win: (c) => c.win, loss: (c) => c.loss, kgUp: (c) => c.kgUp, derbiSoon: (c) => c.derbiSoon,
+  /* memoria cruzada entre personajes y callbacks de decisiones */
+  metDino: (c) => c.metDino, metPunky: (c) => c.metPunky, metLisa: (c) => c.metLisa,
+  metYuni: (c) => c.metYuni, metMilly: (c) => c.metMilly, metYuna: (c) => c.metYuna,
+  dinoTip: (c) => c.dinoTip, punkyMote: (c) => c.punkyMote, lisaTilin: (c) => c.lisaTilin,
+  yuniTrain: (c) => c.yuniTrain, millySecret: (c) => c.millySecret,
 };
 const FLAVOR = [
   /* ---- PRENSA (tercera persona) ---- */
@@ -715,6 +720,12 @@ function flavorCtx(g) {
   c.kgUp = gained >= 1;
   c.derbiSoon = !!s && s.matchday < SEASON_LENGTH && s.matchday + 1 === derbiJornadaOf(s);
   c.derbiRival = s ? s.rivals[s.matchday % s.rivals.length] : "";
+  /* memoria cruzada: a quién conoces ya, para que los personajes se mencionen entre ellos
+     y para pequeños "callbacks" a decisiones concretas que tomaste en otras conversaciones */
+  c.metDino = !!g.metDino; c.metPunky = !!g.metPunky; c.metLisa = !!g.metLisa;
+  c.metYuni = !!g.metYuni; c.metMilly = !!g.metMilly; c.metYuna = !!g.yunaMet;
+  c.dinoTip = !!g.dinoTip; c.punkyMote = !!g.punkyMote; c.lisaTilin = !!g.lisaTilin;
+  c.yuniTrain = !!g.yuniTrain; c.millySecret = !!g.millySecret;
   return c;
 }
 
@@ -825,18 +836,38 @@ function pickEvent(g) {
 /* Elisa absorbe al antiguo Entrenador: es mánager Y entrenadora a la vez.
    Ya no existe un personaje "coach" aparte. */
 const NPCS = {
-  lopez: { name: "López", color: "#D65A2E", voice: "/audio/vozchico02.mp3",
+  lopez: { name: "López", color: "#D65A2E", voice: "/audio/vozchico02.mp3", icon: "/images/lopez_icon.webp",
     arts: { idle: "/images/Lopez_idle.webp", happy: "/images/Lopez_happy.webp" }, def: "idle" },
   /* en Yuna, "angry" es en realidad SONROJADA: es su cara de tsundere pillada en falta */
-  yuna: { name: "Yuna", color: "#D4537E", voice: "/audio/vozchica01.mp3",
+  yuna: { name: "Yuna", color: "#D4537E", voice: "/audio/vozchica01.mp3", icon: "/images/yuna_icon.webp",
     arts: { idle: "/images/Yuna_Idle.webp", happy: "/images/Yuna_happy.webp", angry: "/images/Yuna_angry.webp" }, def: "idle" },
   /* en Elisa, "angry" es su cara de decepción contenida: para semanas flojas o cuando habla de entrenadora estricta */
-  elisa: { name: "Elisa", color: "#2E6ED6", voice: "/audio/vozchica02.mp3",
+  elisa: { name: "Elisa", color: "#2E6ED6", voice: "/audio/vozchica02.mp3", icon: "/images/elisa_icon.webp",
     arts: { idle: "/images/Elisa_idle.webp", happy: "/images/Elisa_happy.webp", angry: "/images/Elisa_angry.webp" }, def: "idle" },
+  /* Dino: preparador físico-nutricional del Centro de Alto Rendimiento. Tímido, sin angry. */
+  dino: { name: "Dino", color: "#3F8F5A", voice: "/audio/vozchico01.mp3", icon: "/images/dino_icon.webp",
+    arts: { idle: "/images/dino_idle.webp", happy: "/images/dino_happy.webp" }, def: "idle" },
+  /* Punky: periodista del periódico local, la que trabaja la Sala de prensa. Sin angry. */
+  punky: { name: "Punky", color: "#E23FA0", voice: "/audio/vozchica01.mp3", icon: "/images/punky_icon.webp",
+    arts: { idle: "/images/punky_idle.webp", happy: "/images/punky_happy.webp" }, def: "idle" },
+  /* Lisa: futbolista pro, gestiona patrocinios. Su "angry" es en realidad ENGREÍDA/chulería, no enfado real. */
+  lisa: { name: "Lisa", color: "#9C6BD6", voice: "/audio/vozchica02.mp3", icon: "/images/lisa_icon.webp",
+    arts: { idle: "/images/lisa_idle.webp", happy: "/images/lisa_happy.webp", angry: "/images/lisa_angry.webp" }, def: "idle" },
+  /* Yuni: canterano, fan número 1 del jugador. Sin angry. */
+  yuni: { name: "Yuni", color: "#D6A32E", voice: "/audio/vozchico02.mp3", icon: "/images/yuni_icon.webp",
+    arts: { idle: "/images/yuni_idle.webp", happy: "/images/yuni_happy.webp" }, def: "idle" },
+  /* Milly: la del Kiosco, te trae el periódico en persona cada día. Alegre, cotilla, algo dramática. Sin angry. */
+  milly: { name: "Milly", color: "#C97A2E", voice: "/audio/vozchica01.mp3", icon: "/images/milly_icon.webp",
+    arts: { idle: "/images/milly_idle.webp", happy: "/images/milly_happy.webp" }, def: "idle" },
 };
 const senderToNpc = (from) => {
   if (from === "Entrenador" || from === "Tu agente" || from === "Elisa") return "elisa";
   if (from === "Yuna") return "yuna";
+  if (from === "Dino") return "dino";
+  if (from === "Punky") return "punky";
+  if (from === "Lisa") return "lisa";
+  if (from === "Yuni") return "yuni";
+  if (from === "Milly") return "milly";
   if (from === "López" || from.includes("Capitán") || from.includes("· Vestuario")) return "lopez";
   return null; /* prensa/afición/redes/club -> periódico */
 };
@@ -1089,6 +1120,333 @@ const LOPEZ_POOL = [
   { w: "benched", beats: [
     { m: "idle", t: "Te vi en el banquillo con esa cara que ponemos todos alguna vez." },
     { m: "happy", t: "Yo pasé dos meses ahí mi segunda temporada aquí y pensé que se acababa el mundo. No se acaba. Se entrena, se espera, y un día vuelves con más hambre que nunca." }] },
+  { t: "Oye, pregunta de capitán preocupado: ¿te está tratando bien la ciudad? El vestuario, la prensa, todo eso.", replies: [
+    { t: "Sí, la verdad, muy bien", m: "happy", r: ["Me alegro un montón, en serio. Esta ciudad puede parecer mucho al principio, pero se hace pequeña rápido cuando encajas.",
+      "Eso quería oír. Aquí cuidamos de los nuestros, y tú ya eres de los nuestros, no lo dudes."] },
+    { t: "Un poco abrumado, si te soy sincero", m: "idle", r: ["Normal, novato. A todos nos pasó. Cualquier cosa que necesites, aquí me tienes, para eso está el brazalete.",
+      "Gracias por decirlo claro. Eso también es de valientes. Cuenta conmigo para lo que haga falta."] }] },
+  { w: "metDino", t: "Vi a Dino enseñándote una de sus gráficas el otro día. Yo con esas cosas me pierdo a los cinco segundos, pero se le nota que disfruta muchísimo explicándolas. Buen fichaje humano, ese chico." },
+  { w: "metLisa", beats: [
+    { m: "idle", t: "Me crucé con Lisa el otro día. Esa mujer entra en una sala y automáticamente sube el nivel de exigencia general." },
+    { m: "happy", t: "Un poco intimidante, sí. Pero de las que te hacen mejor solo con estar cerca. Aprovéchala." }] },
+  { w: "metYuni", t: "El chaval de la cantera no para de preguntarme cómo eres tú de verdad, fuera del campo. Le digo la verdad: un cracks currante y sin dramas. Se le cae la baba." },
+  { beats: [
+    { m: "idle", t: "Llevo de capitán aquí más temporadas de las que me gustaría admitir en público." },
+    { m: "happy", t: "Pero cada vez que llega alguien como tú, con hambre de verdad, se me recarga la energía entera. Gracias por eso, en serio." }] },
+  { w: "seasonEnd", t: "Se acaba otra temporada, {season}. No sé tú, pero yo siempre me pongo un poco sentimental estos días. Buen año el nuestro, pase lo que pase en las últimas jornadas." },
+];
+
+/* --- DINO · preparador físico-nutricional del Centro de Alto Rendimiento.
+   Tímido, cerebrito, sin angry: cuando algo le incomoda, se calla, no se enfada. --- */
+const DINO_INTRO_BEATS = [
+  { m: "idle", t: "¿Eres... eh, el nuevo? Perdona. No se me da bien hablar con gente que no conozco de antes. Soy Dino. Preparador físico-nutricional. Bueno, casi: me falta acabar el máster." },
+  { m: "happy", t: "He estado mirando tus datos antes de que llegaras. Sé que suena raro dicho así. Pero si algún día quieres optimizar algo de verdad... aquí estoy. Con gráficas. Me van mucho las gráficas." },
+];
+const DINO_POOL = [
+  { beats: [
+    { m: "idle", t: "He cruzado tus horas de sueño con tus notas de partido de las últimas semanas." },
+    { m: "happy", t: "Y hay un patrón clarísimo: duermes mal, rindes peor. No hace falta ser un genio para verlo, pero me gusta decir que sí lo soy." }] },
+  { t: "Tengo una duda técnica, nada personal: ¿sueles cenar tarde y pesado antes de un entreno fuerte al día siguiente?", replies: [
+    { t: "Sí, bastante seguido", m: "idle", r: ["Es lo que sospechaba por tus datos de recuperación. No te lo digo para regañarte, solo... ya sabes. Los números no mienten.",
+      "Vale. Apunto 'margen de mejora' y ya está. No hace falta que te pongas a la defensiva, solo informo."] },
+    { t: "No, ceno pronto y ligero", m: "happy", r: ["¡Excelente! En serio, deberían darte un diploma. La mayoría de jugadores que veo aquí ni se lo plantean.",
+      "Eso explica bastante de tus buenos datos de recuperación. Sigue así, por favor. Por mi salud mental estadística."] }] },
+  { w: "hot", beats: [
+    { m: "idle", t: "{streak} días de constancia. Lo he metido en una tabla comparativa con el resto de la plantilla." },
+    { m: "happy", t: "Vas primero. Por bastante. No suelo emocionarme con estas cosas, pero... esto sí me ha emocionado un poco." }] },
+  { w: "kgUp", t: "Según mis registros has ganado {kg} kg desde que llegaste, y la composición va en la dirección correcta. Normalmente aquí me pongo muy técnico y aburro a todo el mundo. Hoy no. Hoy solo digo: bien hecho." },
+  { beats: [
+    { m: "idle", t: "Puedo enseñarte una rutina de movilidad de diez minutos que uso yo mismo. Si quieres. No hace falta." },
+    { m: "happy", t: "Vale, sí hace falta, pero no quería sonar mandón. Ven cuando puedas, te la explico sin público, que me pongo nervioso si hay gente mirando." }] },
+  { t: "Última pregunta rara del día, lo prometo: ¿tienes alguna comida de antes de partido que sea más superstición que ciencia?", replies: [
+    { t: "Sí, una un poco rara", m: "happy", r: ["Ja. No te voy a juzgar, el cerebro también necesita sentirse a salvo, aunque no tenga base nutricional ninguna. Sigue con ella.",
+      "Anotado, aunque esta no la voy a poner en ninguna tabla. Esa te la guardas tú."] },
+    { t: "No, como lo mismo siempre por rutina", m: "idle", r: ["Estructura pura. Eso es justo lo que recomendaría, aunque suene menos divertido que una superstición.",
+      "Perfecto, así es más fácil hacerte seguimiento. Gracias por ponérmelo tan fácil, en serio."] }] },
+  { beats: [
+    { m: "idle", t: "Confesión: el primer día que llegaste, ensayé cuatro veces en el espejo cómo presentarme." },
+    { m: "happy", t: "Al final dije justo lo contrario de lo que había ensayado. Bueno. Al menos salió sincero, ¿no? Eso también cuenta como estrategia." }] },
+  { t: "Tengo una duda que llevo días sin atreverme a preguntar. Bueno, ahora sí. ¿Cuántas horas duermes de verdad, no lo que apuntas por quedar bien?", replies: [
+    { t: "Las que apunto, en serio", m: "happy", r: ["Vale, te creo. Y si no fuera cierto, tampoco pasa nada, pero me alivia bastante que lo sea.",
+      "Perfecto. Eso hace que todos mis cálculos posteriores tengan sentido, así que gracias de verdad."] },
+    { t: "Alguna que otra hora de menos, va", m: "idle", r: ["Lo sospechaba. No te voy a montar un sermón, solo... intenta ganarle media hora esta semana. Solo media.",
+      "Gracias por decírmelo. Prefiero mil veces un dato incómodo que un dato bonito y falso."] }] },
+  { w: "metPunky", t: "Punky vino ayer a hacerme preguntas 'para el periódico'. Le enseñé una gráfica y se quedó mirándola quince segundos en silencio. Creo que la asusté un poco." },
+  { w: "metLisa", beats: [
+    { m: "idle", t: "Lisa pasó por aquí el otro día. Me hizo tres preguntas y se fue antes de que terminara la primera respuesta." },
+    { m: "happy", t: "No sé si eso es mala educación o eficiencia extrema. Prefiero pensar que es lo segundo, la verdad." }] },
+  { w: "metYuni", t: "El chaval de la cantera, Yuni, viene cada dos días a preguntarme cosas de nutrición. Al principio me agobiaba un poco. Ahora, no te lo voy a negar, se me hace raro el día que no viene." },
+  { w: "derbiSoon", beats: [
+    { m: "idle", t: "Con lo del {derbiRival} esta semana he revisado tu plan tres veces. Puede que cuatro." },
+    { m: "happy", t: "No es que dude de mi trabajo, es que... bueno, sí, un poco. Pero está todo bien. Está todo perfecto. Respira. Respiro yo, digo." }] },
+  { t: "Leí un estudio anoche sobre periodización de cargas que me voló la cabeza. ¿Te cuento o prefieres que te ahorre el detalle técnico?", replies: [
+    { t: "Cuéntame, me interesa", m: "happy", r: ["¡POR FIN alguien que pregunta! Vale, te resumo solo lo importante, prometo no pasarme de los diez minutos. ...Puede que quince.",
+      "Nadie me pide esto nunca. Gracias, en serio. Te va a encantar, o al menos a mí me encanta contarlo."] },
+    { t: "Mejor el resumen corto", m: "idle", r: ["Justo, sabia decisión. Resumen: descansa cuando toca descansar. Ya está, eso es básicamente todo.",
+      "Vale, versión de treinta segundos: menos no siempre es más, pero más casi nunca es mejor. Ahí lo dejo."] }] },
+  { t: "Intenté hacer un cumplido el otro día y me salió fatal. Lo intento otra vez, dame un segundo.", replies: [
+    { t: "Adelante, te escucho", m: "happy", r: ["Vale, aquí va: eres... de los pocos jugadores que hace caso a lo que le digo sin cuestionarlo. Eso. Eso era el cumplido. ¿Ha sonado raro?",
+      "Bien. Vale. Tu ética de trabajo es... estadísticamente inusual. Positivamente inusual. Perdón, esto se me da fatal."] },
+    { t: "Tranquilo, no hace falta", m: "idle", r: ["Uf, gracias por salvarme. Se me daba mejor cuando lo tenía escrito en una nota."] }] },
+  { w: "loss", t: "He revisado los datos del partido de ayer y no hay ninguna cifra que explique una derrota así. A veces el fútbol no cabe en una tabla, por mucho que a mí me cueste aceptarlo." },
+  { w: "win", beats: [
+    { m: "idle", t: "Buen partido ayer. Lo digo desde la parte analítica, con los números delante." },
+    { m: "happy", t: "Y también lo digo desde la parte no analítica, que hoy he decidido que también existe. Enhorabuena, en serio." }] },
+  { t: "Estoy montando una hoja de cálculo con TODOS tus datos desde que llegaste. Es un poco excesivo, lo sé. ¿Te la enseño algún día?", replies: [
+    { t: "Sí, me encantaría verla", m: "happy", setFlag: "dinoTip", r: ["¡¿EN SERIO?! Perdón, la emoción. Vale, prepárate, tiene pestañas. Muchas pestañas. Vas a alucinar o te vas a aburrir muchísimo, no hay término medio."] },
+    { t: "Prefiero no saber los detalles", m: "idle", r: ["Totalmente entendible. Algunos prefieren no mirar la máquina por dentro. Sigo yo solo con mi hoja, tranquilamente, en la sombra."] }] },
+  { w: "kgUp", t: "{kg} kg desde que llegaste, y no es solo el número: la curva de tendencia es exactamente la que dibujaría en un caso de manual. Perdón, me emociono con estas cosas más de lo socialmente aceptable." },
+  { w: "millySecret", beats: [
+    { m: "idle", t: "Milly me contó algo el otro día en el kiosco. No sé si debería saberlo yo, la verdad." },
+    { m: "happy", t: "Da igual, no voy a decir nada. Aunque, si te soy sincero, me ha caído muy bien enterarme. Eso es todo lo que voy a decir. Lo prometo." }] },
+  { t: "¿Puedo hacerte una pregunta personal? Prometo que es la única del día y luego vuelvo a hablar de gráficas, lo juro.", replies: [
+    { t: "Claro, dispara", m: "happy", r: ["¿Por qué elegiste este deporte y no otro? Llevo tiempo queriendo preguntártelo, no por trabajo, solo... por curiosidad de verdad."] },
+    { t: "Mejor otro día", m: "idle", r: ["Vale, sin problema. Vuelvo a las gráficas, que es donde de verdad me siento cómodo."] }] },
+];
+
+/* --- PUNKY · periodista del periódico local, trabaja la Sala de prensa.
+   Enérgica, estilismo rosa chillón, sin angry. --- */
+const PUNKY_INTRO_BEATS = [
+  { m: "idle", t: "¡Ey! Tú eres el fichaje del que todo el mundo habla, ¿no? Punky, redacción local. Bueno, redacción de dos personas y media, pero eso no lo pongas en la entrevista." },
+  { m: "happy", t: "Llevo semanas queriendo hacerte unas preguntas como Dios manda, nada de las típicas de rueda de prensa aburrida. ¿Me dejas robarte cinco minutos de vez en cuando?" },
+];
+const PUNKY_POOL = [
+  { t: "Pregunta rápida para la sección de curiosidades: ¿ritual de antes de partido o cero superstición?", replies: [
+    { t: "Tengo mi ritual, sí", m: "happy", r: ["¡ESO es titular! 'El {position} con el ritual secreto'. No te preocupes, no voy a sacarlo, pero me lo apunto para el archivo mental.",
+      "Sabía que dirías eso. Se te nota en la cara de concentración antes de salir al campo."] },
+    { t: "Nada, salgo y ya está", m: "idle", r: ["Aburrido pero respetable. Los titulares no se escriben solos, pero bueno, algo sacaré igualmente.",
+      "Frialdad total. Me gusta, contrasta con el resto de la plantilla, que tiene cada manía..."] }] },
+  { w: "win", t: "¡Buen partido! Estoy escribiendo la crónica ahora mismo y necesito una frase tuya con gancho. Dame algo bueno, que lo de 'estoy contento por el equipo' ya lo he usado quinientas veces esta temporada." },
+  { w: "loss", beats: [
+    { m: "idle", t: "Sé que hoy no ha sido el día. No vengo a pedirte declaraciones sobre la derrota, tranquilo." },
+    { m: "happy", t: "Vengo a decirte que estoy escribiendo sobre algo distinto: cómo reacciona un vestuario cuando pierde. Y el vuestro, para lo que va, reacciona bastante bien." }] },
+  { t: "Llevo tiempo dándole vueltas a ponerte un mote para mis crónicas. Nada oficial, cosa mía. ¿Algún veto expreso?", replies: [
+    { t: "Ponme lo que quieras", m: "happy", setFlag: "punkyMote", r: ["¡ASÍ SE HABLA! Dame un par de jornadas y vas a tener un mote que se queda para siempre. Para bien o para mal.",
+      "Carta blanca total, me encanta. Voy a abusar de esta confianza, aviso desde ya."] },
+    { t: "Nada ridículo, por favor", m: "idle", r: ["Vale, vale, respeto el veto... por ahora. Pero como marques un gol de vaselina no respondo de mí.",
+      "Anotado: 'nada ridículo'. Interpretación libre garantizada, eso sí."] }] },
+  { w: "hot", t: "{streak} días de nivelazo y todavía nadie fuera del club se ha enterado bien. Eso va a cambiar pronto, que para algo estoy yo aquí currándomelo." },
+  { t: "Off the record: ¿qué es lo que menos te gusta de que te entrevisten?", replies: [
+    { t: "Las preguntas repetidas", m: "happy", r: ["Auch, directo al hígado. Prometo intentar no repetirme... no prometo conseguirlo.",
+      "Tomo nota profesional. Intentaré innovar, aunque el fútbol da para lo que da."] },
+    { t: "Nada, me da igual", m: "idle", r: ["Un entrevistado fácil. Eres un regalo, en serio, no sabes la cantidad de gente que se pone en modo estatua.",
+      "Perfecto, entonces no me corto con las preguntas raras de la próxima vez."] }] },
+  { w: "punkyMote", beats: [
+    { m: "idle", t: "Llevo tres días probando motes para ti en borrador y ninguno me convence del todo." },
+    { m: "happy", t: "Voy a necesitar otra semana de inspiración. No te relajes, eh, en cualquier momento aparece y ya no hay marcha atrás." }] },
+  { beats: [
+    { m: "idle", t: "Ayer entrevisté a un jugador que respondió TODO con 'vamos partido a partido'. Cinco preguntas. Cinco veces la misma frase." },
+    { m: "happy", t: "Casi tiro la libreta por la ventana. Contigo al menos tengo material de verdad, y eso en este oficio se agradece muchísimo." }] },
+  { w: "metDino", t: "Fui a hablar con Dino para la sección de salud y me enseñó una gráfica que necesitaba un doctorado para entenderla. Le pedí que me la explicara 'como a una periodista' y aun así perdí el hilo a los dos minutos." },
+  { w: "metLisa", beats: [
+    { m: "idle", t: "Entrevisté a Lisa la semana pasada. En serio, esa mujer responde con la seguridad de quien ya ha ganado la pregunta antes de que termines de hacerla." },
+    { m: "happy", t: "Me encantó, para que lo sepas. Da titulares solos, no hace falta ni editar." }] },
+  { w: "metYuni", t: "El chaval de la cantera, Yuni, me paró el otro día para preguntarme cómo se hace 'para salir en el periódico'. Le dije que currándoselo como tú. Se le iluminó la cara entera." },
+  { t: "Pregunta indiscreta de periodista mala: ¿qué es lo primero que miras cuando te despiertas, el móvil o el techo?", replies: [
+    { t: "El móvil, como todo el mundo", m: "happy", r: ["Sincero. Y con eso ya tengo el titular de la sección de curiosidades de esta semana, gracias.",
+      "JA, al menos lo admites. La mitad de mis entrevistados mienten en esta pregunta y se les nota."] },
+    { t: "El techo, necesito un minuto", m: "idle", r: ["Filosófico a primera hora. Me gusta, aunque no sé si te va a servir de mucho contra un central rival a las diez de la mañana.",
+      "Eso es una respuesta de veterano con alma vieja. Anotado, aunque no sé muy bien dónde ponerlo."] }] },
+  { w: "seasonStart", t: "Primera crónica de la temporada {season} recién escrita. Siempre me pongo nerviosa con la primera, ¿sabes? Es un poco como estrenar cuaderno el primer día de clase." },
+  { t: "Voy a confesarte algo de oficio: a veces invento la mitad de la pregunta solo para ver cómo reacciona la gente. Contigo no hace falta, pero por si te lo preguntabas.", replies: [
+    { t: "Menuda tramposa", m: "happy", r: ["¡Es investigación periodística de la buena! Bueno. A veces. Vale, la mayoría de las veces es solo curiosidad disfrazada."] },
+    { t: "Respeto la técnica", m: "idle", r: ["Gracias, no todo el mundo lo entiende así. La mayoría se ofende y yo ya ni sé por qué se lo sigo contando."] }] },
+  { w: "scorer", t: "{goals} goles ya. Estoy pensando en abrir una sección fija solo para ti si sigues a este ritmo. La llamaría 'El {position} que no para', pero seguro que se me ocurre algo peor todavía." },
+  { beats: [
+    { m: "idle", t: "Hoy se me ha estropeado la grabadora en mitad de una entrevista importante y he tenido que apuntar todo a mano, como en el siglo pasado." },
+    { m: "happy", t: "Me ha quedado la letra fatal pero la historia entera. A veces lo analógico también funciona, quién lo iba a decir." }] },
+  { w: "derbiSoon", t: "Con lo del {derbiRival} esta semana no doy abasto: entrevistas, rumores, la peña organizándose... esto es justo el caos que me gusta de este trabajo." },
+];
+
+/* --- LISA · futbolista pro de la liga femenina, gestiona patrocinios.
+   Su "angry" es en realidad ENGREÍDA: superioridad, ego, chulería — nunca enfado real. --- */
+const LISA_INTRO_BEATS = [
+  { m: "idle", t: "Así que tú eres el nombre nuevo del que hablan por aquí. Lisa. Sí, esa Lisa, la de la liga femenina, por si no lo tenías claro." },
+  { m: "angry", t: "No te voy a mentir, he visto partidos peores tuyos que buenos. Pero algo tienes. Voy a mover unos contactos por ti. No te acostumbres, no lo hago con cualquiera." },
+];
+const LISA_POOL = [
+  { m: "angry", t: "¿Sabes cuántos patrocinadores me llaman a mí directamente sin que yo mueva un dedo? Bastantes. A ti todavía no. Pero para eso estoy yo aquí, haciendo de niñera de tu carrera." },
+  { w: "good", beats: [
+    { m: "idle", t: "He estado mirando tu progresión estas últimas semanas. Con más atención de la que admitiría en público." },
+    { m: "happy", t: "No está mal. De verdad. Viniendo de mí, tómatelo como un piropo enorme, porque no reparto muchos." }] },
+  { t: "Te voy a hacer una pregunta y quiero una respuesta rápida, sin pensarlo: ¿tú o yo, quién llega antes a la élite?", replies: [
+    { t: "Tú, obviamente", m: "angry", r: ["Correcto. Buena autocrítica, se valora. Aunque no te creas que te lo voy a poner fácil por decir eso.",
+      "Al menos sabes reconocer a tus superiores. Empezamos con buen pie."] },
+    { t: "Yo, sin duda", m: "angry", r: ["JA. Me gusta el descaro, aunque te falte razón. Vamos a ver si el campo te da la razón algún día.",
+      "Qué mono. Guárdate esa frase, te la voy a recordar el día que te demuestre lo contrario."] }] },
+  { w: "hot", beats: [
+    { m: "idle", t: "{streak} días de regularidad. He hecho como que no me fijaba, pero sí me fijo." },
+    { m: "happy", t: "Está bien. Nada mal. No te acostumbres a que te lo diga tan claro, esto no sale de aquí." }] },
+  { t: "Un patrocinador me ha preguntado por ti esta semana. Le he dicho que sí, que vales la pena. No sé por qué me tomo estas molestias contigo, la verdad.", replies: [
+    { t: "Porque te caigo bien", m: "angry", setFlag: "lisaTilin", r: ["N-no es eso. Es puro cálculo profesional. ...Cállate y no le des más vueltas.",
+      "Qué presuntuoso. Aunque, bueno. Puede que un poco. Un poco solamente."] },
+    { t: "Porque sabes que voy a triunfar", m: "happy", r: ["Esa seguridad me gusta más que la otra respuesta, para que lo sepas. Sigue así.",
+      "Mejor. Al menos entiendes por qué merece la pena invertir en ti."] }] },
+  { w: "lisaTilin", beats: [
+    { m: "angry", t: "Lo del otro día... lo de que te caigo bien. Lo he estado pensando. Demasiado, la verdad." },
+    { m: "angry", t: "No voy a decir nada más al respecto. Olvida que he sacado el tema. OLVÍDALO. Cambiemos de conversación ya mismo." }] },
+  { t: "Te voy a hacer una confesión que no le he hecho a nadie del gremio: al principio de mi carrera también fui suplente varias jornadas seguidas.", replies: [
+    { t: "¿En serio? No me lo imagino", m: "idle", r: ["Nadie se lo imagina, por eso no lo cuento. Lo que ves ahora es la versión pulida después de mucho trabajo, no el punto de partida.",
+      "Créetelo. Todas empezamos calentando banquillo antes de calentar focos. La diferencia está en lo que haces mientras esperas."] },
+    { t: "Por eso entiendes bien mi momento", m: "happy", r: ["Exacto. Por eso te lo cuento a ti y no a cualquiera. No te acostumbres a esta faceta sentimental mía, es limitada.",
+      "Ahí está. Alguien que capta las cosas rápido, por fin. Eso me gusta bastante más que un cumplido barato."] }] },
+  { w: "metDino", t: "Me crucé con tu preparador, Dino, en el pasillo. Me habló de macros durante diez minutos sin que yo preguntara nada. Simpático, a su manera rarita." },
+  { w: "metPunky", beats: [
+    { m: "idle", t: "Esa periodista, Punky, me entrevistó ayer y no paró de moverse en la silla como si tuviera un partido en cinco minutos." },
+    { m: "angry", t: "Le di titulares de sobra, que conste. Sabe reconocer a una profesional cuando la tiene delante." }] },
+  { w: "metYuni", t: "Un canterano vino a pedirme un autógrafo el otro día. Al principio pensé que era para ti. Era para mí. Reconozco que me hizo ilusión, aunque no pienso admitirlo dos veces." },
+  { w: "scorer", t: "{goals} goles esta temporada. Voy a empezar a decir por ahí que te descubrí yo, aunque los dos sepamos que eso no es del todo cierto." },
+  { t: "Pregunta directa, sin rodeos: ¿te motiva más ganar tú o que yo pierda?", replies: [
+    { t: "Ganar yo, sin dudarlo", m: "happy", r: ["Buena respuesta. Competir contra uno mismo es lo único que de verdad funciona a largo plazo. Apúntatelo.",
+      "Madurez inesperada. Me gusta más esta versión tuya que la de hace unas semanas, para que lo sepas."] },
+    { t: "Que tú pierdas, un poco sí", m: "angry", r: ["JA. Al menos eres sincero. Pero vas a tener que esperar sentado, porque yo no pierdo casi nunca.",
+      "Me parece fatal... y también me parece que empiezas a entender cómo funciono yo. Aprendes rápido."] }] },
+  { w: "kgUp", t: "Se te nota el cambio físico, ¿eh? No te voy a dar los detalles técnicos, que para eso está tu preparador, pero como mánager de tu imagen: te sienta bien. Es un dato relevante también." },
+  { beats: [
+    { m: "idle", t: "En mis tiempos de jugadora en activo tenía una rutina previa al partido que jamás le he contado a nadie de prensa." },
+    { m: "angry", t: "A ti tampoco te la voy a contar. Solo quería que supieras que existía. Un poco de misterio no le viene mal a nadie." }] },
+];
+
+/* --- YUNI · canterano, fan número 1 del jugador. Enérgico, alegre, sin angry. --- */
+const YUNI_INTRO_BEATS = [
+  { m: "happy", t: "¡ERES TÚ! O sea, sé quién eres, obviamente, todo el mundo en la cantera sabe quién eres. Soy Yuni, subí este año del filial. Perdona, estoy nervioso, esto no me pasa nunca." },
+  { m: "happy", t: "Llevo un cuaderno con tus estadísticas de esta temporada. No es raro. Bueno, un poco sí. ¡Pero es que quiero ser como tú algún día!" },
+];
+const YUNI_POOL = [
+  { t: "¿Puedo preguntarte algo de veterano a novato? Bueno, tú no eres tan veterano, pero para mí sí lo eres.", replies: [
+    { t: "Claro, dime", m: "happy", r: ["¿Qué es lo primero que tienes que hacer bien para que el míster... digo, Elisa, confíe en ti? Necesito la fórmula exacta.",
+      "¡Genial! Vale, apunta esto en mi cuaderno mental: 'sí me deja preguntar'. Buena señal."] },
+    { t: "Ahora no puedo, luego", m: "idle", r: ["¡Vale, vale, perdona! No quería agobiarte. Te espero, eh, sin presión. Ninguna presión. *sí hay presión*"] }] },
+  { w: "scorer", t: "¡{goals} GOLES! Los tengo todos anotados con la fecha. Se lo he enseñado a medio filial, creo que ya están un poco hartos de mí, la verdad." },
+  { beats: [
+    { m: "happy", t: "Hoy te he visto entrenar desde la valla de la cantera. No es que te espíe, es que el campo está al lado, literal." },
+    { m: "happy", t: "Intenté copiar uno de tus controles luego con mis compañeros. Salió fatal. Pero algún día me va a salir bien, ya verás." }] },
+  { t: "¿Puedo entrenar contigo algún día? Aunque sea solo mirar de cerca cómo calientas. Sé que suena raro dicho en voz alta.", replies: [
+    { t: "Claro, algún día te aviso", m: "happy", setFlag: "yuniTrain", r: ["¿EN SERIO?! Vale, tranquilo, tranquilo, no voy a ilusionarme demasiado... me he ilusionado muchísimo, para que lo sepas."] },
+    { t: "Ahora mismo tengo mucho lío", m: "idle", r: ["¡No pasa nada, lo entiendo total! Sigo entrenando yo por mi cuenta a ver si algún día me lo gano de verdad."] }] },
+  { w: "benched", t: "Te vi en el banquillo el otro día y quiero que sepas que yo también te sigo apoyando igual, ¿eh? Bueno, más, porque ahora sé lo que se siente esperar tu momento." },
+  { w: "yuniTrain", beats: [
+    { m: "happy", t: "¡No se me ha olvidado lo que me dijiste! Lo de entrenar juntos algún día. Lo tengo anotado con fecha y todo, por si se te olvida a ti." },
+    { m: "happy", t: "No hace falta que sea ya. Puedo esperar. He esperado cosas peores. Bueno, no, esta es la que más ilusión me hace de toda mi vida, pero puedo esperar igual." }] },
+  { beats: [
+    { m: "happy", t: "Hoy en el filial el entrenador nos hizo ver un vídeo tuyo del año pasado como ejemplo de 'lectura de espacios'." },
+    { m: "happy", t: "Me dio una vergüenza y un orgullo al mismo tiempo que no sabía ni dónde meterme. Todos sabían que te conocía. TODOS." }] },
+  { t: "Oye, pregunta random: ¿tú también tenías miedo escénico al principio, o eso se te pasó rápido?", replies: [
+    { t: "Sí, muchísimo al principio", m: "happy", r: ["Uf, menos mal que lo dices. Pensaba que era solo cosa mía. Vale, esto me tranquiliza mucho, gracias en serio.",
+      "Eso me alivia un montón. A veces pienso que soy el único que se pone así antes de salir a calentar."] },
+    { t: "No demasiado, la verdad", m: "idle", r: ["Vale, entonces sí que hay gente a la que se le da bien de fábrica. Voy a tener que currármelo por otro lado, supongo.",
+      "Impresionante. Yo con eso ya habría vomitado dos veces antes de pisar el campo, sin exagerar mucho."] }] },
+  { w: "metDino", t: "Dino me está ayudando con un plan de comidas 'de cantera', dice él. Me hizo una tabla con dibujitos porque, cito textual, 'así la entiendes mejor'. No sé si ofenderme o agradecérselo." },
+  { w: "metMilly", beats: [
+    { m: "happy", t: "Milly me regaló ayer un periódico atrasado con una foto tuya en portada. Lo tengo colgado en mi taquilla del filial." },
+    { m: "happy", t: "Alguien intentó quitármelo para quedárselo y casi organizamos un incidente internacional. Es MÍO. Bueno, técnicamente es del club, pero es MÍO." }] },
+  { w: "hot", t: "{streak} días de racha y en la cantera ya no hablamos de otra cosa. El entrenador nos ha prohibido mencionarte en los rondos porque nos distraemos discutiendo tus estadísticas." },
+  { t: "Si algún día subo yo también al primer equipo, ¿me prometes hacer como que no te acuerdas de lo pesado que fui al principio?", replies: [
+    { t: "Prometido, palabra", m: "happy", r: ["¡GRACIAS! Aunque sinceramente, si subo, pienso recordártelo YO a ti cada día, solo para devolvértela con cariño."] },
+    { t: "No prometo nada", m: "happy", r: ["JAJA justo, me lo merezco. Aun así, cuando suba te voy a perseguir igual, aviso desde ya."] }] },
+  { w: "metLisa", t: "Vi a Lisa hablando contigo el otro día y casi me da algo. ESA Lisa. La de la liga femenina. Le pedí una foto con una excusa malísima y aun así me la hizo. Sigo flotando." },
+  { w: "metPunky", t: "Punky me hizo dos preguntas 'para el archivo' el otro día y yo, nervioso, le conté hasta el color de mis calcetines de la suerte. Ni sé por qué se lo dije." },
+  { t: "¿Te puedo confesar mi mayor miedo del fútbol? Prometo que no es nada raro, más o menos.", replies: [
+    { t: "Claro, dime", m: "happy", r: ["Que me llamen para el primer equipo un día que no me lo espero y meta la pata delante de todos. Sé que es una tontería, pero ahí está."] },
+    { t: "Mejor me lo cuentas otro día", m: "idle", r: ["¡Vale, tranquilo! Lo guardo para cuando te venga mejor. No tengo prisa, tengo cien miedos más de reserva."] }] },
+];
+
+/* --- MILLY · dueña del Kiosco, te trae el periódico en persona cada día.
+   Alegre, curiosa, cotilla, algo dramática. Sin angry: lo suyo es la efusividad, no el enfado. --- */
+const MILLY_INTRO_BEATS = [
+  { m: "idle", t: "¡Ay, tú debes de ser el fichaje nuevo! Me lo han contado ya tres personas distintas esta mañana, así que imagínate cómo está la cosa por aquí." },
+  { m: "happy", t: "Soy Milly, del Kiosco. A partir de hoy te traigo yo misma el periódico cada mañana, en persona, como hago con mis clientes favoritos. ¡Bienvenido a la familia! Toma, el de hoy." },
+];
+const MILLY_POOL = [
+  { t: "¡Buenos días! Aquí tienes tu periódico, calentito de la rotativa. Bueno, calentito no, pero recién salido, que es lo que cuenta." },
+  { beats: [
+    { m: "idle", t: "No te lo vas a creer, pero esta mañana han pasado TRES personas a preguntarme por ti antes de las nueve." },
+    { m: "happy", t: "Les he dicho que no sé nada, por supuesto. Aunque, entre tú y yo, sí que sé algo. Pero eso ya te lo cuento otro día. Toma, tu periódico." }] },
+  { w: "win", beats: [
+    { m: "happy", t: "¡Ay, qué alegría lo de ayer! Se ha notado en el kiosco, ¿eh? Todo el mundo entraba sonriendo a comprar el periódico." },
+    { m: "happy", t: "He vendido el doble que un lunes cualquiera. Toma el tuyo, que este te lo guardo yo aparte, con cariño." }] },
+  { w: "loss", t: "Uy, lo de ayer... no te voy a mentir, hasta yo me quedé un poco tocada detrás del mostrador. Pero bueno, aquí tienes tu periódico, que la vida sigue y el lunes es el lunes." },
+  { w: "hot", beats: [
+    { m: "idle", t: "{streak} días que llevas ya, ¿no? Lo sé porque llevo la cuenta en un papelito pegado a la caja registradora." },
+    { m: "happy", t: "No me preguntes por qué lo hago, simplemente me gusta. Toma tu periódico, sigues siendo mi cliente favorito del mes." }] },
+  { w: "scorer", t: "{goals} goles ya esta temporada, ¿eh? Un señor de la peña vino ayer solo a comentármelo, como si yo no lo supiera ya de sobra. Aquí tienes el periódico, hoy sales otra vez." },
+  { beats: [
+    { m: "idle", t: "Uy, casi se me olvida contarte... bueno, no, mejor no digo nada, que luego se enfadan conmigo por cotilla." },
+    { m: "happy", t: "Vale, vale, no digo nada más. Toma tu periódico, que hoy además trae una portada que te va a gustar." }] },
+  { w: "derbiSoon", t: "¡Uy, la semana del {derbiRival}! Aquí se nota en el ambiente, la gente entra más nerviosa de lo normal a comprar el periódico. Toma el tuyo, esta edición va a volar." },
+  { t: "Sabes que llevo veinte años detrás de este mostrador, ¿verdad? Me conozco cada cotilleo de esta ciudad desde antes de que tú nacieras, prácticamente. Toma, tu periódico de hoy." },
+  { beats: [
+    { m: "idle", t: "Hoy he tenido una mañana de lo más dramática, ya te cuento otro día, que si no llego tarde al reparto." },
+    { m: "happy", t: "Pero antes de irme corriendo, ¡toma! Tu periódico. Que no se me olvide nunca contigo, aunque sea lo último que haga." }] },
+  { t: "Oye, antes de darte el periódico... ¿te puedo contar un secretillo mío si tú me cuentas uno tuyo? Es un trato justo.", replies: [
+    { t: "Va, trato hecho", m: "happy", setFlag: "millySecret", r: ["¡Sabía que dirías que sí! Vale, no te lo voy a sonsacar ahora mismo delante de la cola del kiosco, pero lo recuerdo, eh. Toma tu periódico, luego seguimos.",
+      "Estupendo. Yo cumplo mi parte tarde o temprano, ya lo verás. Anda, toma tu periódico, que se hace cola."] },
+    { t: "Prefiero mantener el misterio", m: "idle", r: ["Aaaay, qué soso. Bueno, lo entiendo, no todo el mundo es tan abierto de corazón como yo. Toma tu periódico igualmente.",
+      "Respeto absoluto. Yo también me guardo cosas, aunque cueste creerlo viniendo de mí. Aquí tienes el periódico."] }] },
+  { w: "millySecret", beats: [
+    { m: "idle", t: "Sigo pensando en lo que hablamos el otro día. No he dicho nada a nadie, que conste. Bueno, casi nadie." },
+    { m: "happy", t: "Es broma, es broma. O no. Toma tu periódico y hagamos como que no he dicho eso último." }] },
+  { t: "¿Quieres saber cuál es el rumor más ridículo que me han contado esta semana sobre el club?", replies: [
+    { t: "Cuéntamelo", m: "happy", r: ["Que el presidente ficha un delfín entrenado como amuleto de la suerte. Un DELFÍN. La ciudad no tiene ni piscina olímpica, para que veas el nivel del rumor. Toma tu periódico.",
+      "Que el campo se va a mudar de sitio piedra a piedra, como en las películas. Ni te cuento quién me lo dijo, con toda la seriedad del mundo. Aquí tienes el periódico."] },
+    { t: "Mejor no, ya tengo suficiente caos", m: "idle", r: ["Sabia decisión, la verdad, hay días que hasta a mí me supera. Toma tu periódico, hoy viene tranquilito, lo prometo."] }] },
+  { w: "metDino", t: "Ese chico, Dino, viene cada mañana a comprarme el periódico de deportes y se queda leyendo la sección de fichajes con una concentración que da miedo. Un cielo de chico, eso sí. Toma el tuyo." },
+  { w: "metPunky", beats: [
+    { m: "idle", t: "Punky y yo nos peleamos amistosamente cada semana por quién se entera antes de las cosas. De momento vamos empatadas." },
+    { m: "happy", t: "Aunque, entre nosotras, yo gano casi siempre. No se lo digas. Toma tu periódico, edición de hoy." }] },
+  { w: "metLisa", t: "Esa futbolista, Lisa, entró una vez al kiosco y preguntó si tenía la prensa deportiva internacional. Le dije que sí por no quedar mal. No la tenía. Toma, tu periódico de hoy, este si lo tengo seguro." },
+  { w: "metYuni", t: "El chaval de la cantera viene también a comprarme chuches de camino al entreno. Un día se gastó toda la paga en cromos tuyos de una colección que ni sabía que existía. Toma tu periódico." },
+  { w: "yuniTrain", t: "Me ha contado el chico de la cantera que le prometiste entrenar con él algún día. Se lo ha contado a media ciudad, que lo sepas. Aquí tienes el periódico, más te vale cumplirlo." },
+  { w: "seasonEnd", t: "Se acaba la temporada {season} y no sabes lo que voy a echar de menos nuestra charla de las mañanas. Bueno, la próxima empieza pronto, así que tampoco te libras de mí. Toma, tu último periódico de esta campaña." },
+];
+
+/* goles a lo largo de TODA la carrera (todas las temporadas), para el hito del Centro de Alto Rendimiento */
+const careerGoals = (g) => (g.matchHistory || []).reduce((a, m) => a + (m.myGoals || 0), 0);
+
+/* ============================================================
+   LA CIUDAD · zonas del mapa, con su requisito de desbloqueo.
+   x/y son porcentajes sobre un lienzo vertical largo (con scroll).
+   ============================================================ */
+/* mapa dibujado a mano por el usuario en Illustrator (public/images/city-map.svg).
+   viewBox recortado al contenido real (el original tenía mucho margen vacío a los lados,
+   lo que hacía que el mapa saliera diminuto y descentrado): 220.14 -8.23 437.96 760.68.
+   x/y de cada zona son el centro de su forma en ese mismo sistema, convertido a %
+   para posicionar la burbuja encima del dibujo. "pts" son los puntos del polígono
+   de esa zona (coordenadas absolutas, sin tocar), para pintarla de gris con su
+   silueta exacta cuando está bloqueada. Los nombres ya están dibujados en el propio
+   SVG, así que aquí NO se repite ninguna etiqueta de texto. */
+const CITY_MAP_VB = { x: 220.14, y: -8.23, w: 437.96, h: 760.68 };
+const ZONES = [
+  { id: "oficina", kind: "npc", npc: "elisa", label: "Oficina", icon: "🏢", x: 22.50, y: 11.06,
+    pts: "256.99 59.94 260.4 109.64 409.5 101.81 409.5 48.37 256.99 59.94",
+    unlocked: () => true },
+  { id: "ciudad-dep", kind: "npc", npc: "lopez", label: "Ciudad Deportiva", icon: "🏟️", x: 64.97, y: 34.42,
+    pts: "431.63 217.22 418.95 256.54 461.84 305.56 642.1 305.56 642.1 219.77 431.63 217.22",
+    unlocked: () => true },
+  { id: "kiosco", kind: "paper", npc: "milly", label: "Kiosco", icon: "📰", x: 70.71, y: 46.45,
+    pts: "507.8 317.81 572.65 317.81 561.42 382.66 525.33 379.09 503.72 355.6 507.8 317.81",
+    unlocked: () => true },
+  /* El Barrio no es un edificio: es una zona de calle, sin forma propia que pintar de gris */
+  { id: "barrio", kind: "npc", npc: "yuna", label: "El Barrio", icon: "🌆", x: 57.83, y: 52.92,
+    unlocked: (g) => !!g.yunaMet, reqLabel: "Gánate tu primera victoria" },
+  { id: "car", kind: "npc", npc: "dino", label: "Centro de Alto Rendimiento", icon: "🏋️", x: 63.19, y: 21.84,
+    pts: "434.69 136.71 434.69 194.24 592.65 195.94 587.89 125.73 434.69 136.71",
+    unlocked: (g) => careerGoals(g) >= 3, reqLabel: "Marca 3 goles en tu carrera", metFlag: "metDino", intro: DINO_INTRO_BEATS },
+  { id: "prensa", kind: "npc", npc: "punky", label: "Sala de Prensa", icon: "🎙️", x: 27.28, y: 35.54,
+    pts: "336.65 217.22 392.4 265.73 372.99 331.09 295.89 309.64 303.03 231.52 336.65 217.22",
+    unlocked: (g) => calcOVR(g.player.stats) >= 70, reqLabel: "Alcanza 70 de media", metFlag: "metPunky", intro: PUNKY_INTRO_BEATS },
+  { id: "patro", kind: "npc", npc: "lisa", label: "Zona de Patrocinadores", icon: "🏙️", x: 34.97, y: 82.54,
+    pts: "335.99 543 291.05 632.88 368.09 687.73 395.51 662.64 418.95 674.31 450.08 641.63 390.6 571.89 335.99 543",
+    unlocked: (g) => g.tier.id >= 2, reqLabel: "Asciende a Primera Federación", metFlag: "metLisa", intro: LISA_INTRO_BEATS },
+  { id: "cantera", kind: "npc", npc: "yuni", label: "Cantera", icon: "🎓", x: 86.99, y: 47.88,
+    pts: "581.84 317.81 642.1 315.77 631.37 414.32 568.57 414.32 581.84 317.81",
+    unlocked: (g) => calcOVR(g.player.stats) >= 78, reqLabel: "Alcanza 78 de media", metFlag: "metYuni", intro: YUNI_INTRO_BEATS },
+  { id: "tienda", kind: "soon", npc: null, label: "Tienda Oficial", icon: "🛍️", x: 82.14, y: 66.90,
+    pts: "547.12 483.77 551.72 531.77 628.82 524.62 624.74 479.69 547.12 483.77",
+    unlocked: (g) => g.tier.id >= 3, reqLabel: "Asciende a LaLiga Hypermotion / 2ª europea" },
+  { id: "estadio", kind: "soon", npc: null, label: "Gran Estadio", icon: "🏆", x: 75.80, y: 88.46,
+    pts: "588.81 606.32 499.76 629.73 467.63 649.9 494.8 736.45 588.81 736.45 635.81 687.73 588.81 606.32",
+    unlocked: (g) => g.tier.id >= 4, reqLabel: "Asciende a Primera división · media tabla", big: true },
 ];
 
 /* --- EL PERIÓDICO · plantillas con titular y cuerpo, por secciones.
@@ -1954,6 +2312,91 @@ function Newspaper({ game, onRead }) {
         </div>)}
       <div className="np-rule" style={{ marginTop: 14 }} />
       <div className="np-date" style={{ paddingBottom: 4 }}>LA JORNADA · se imprime donde se gana</div>
+    </div>);
+}
+
+/* Periódico como ventana modal: se cierra con la X o tocando fuera, y se puede
+   reabrir las veces que quieras el mismo día (cada apertura vuelve a animar la portada). */
+function PaperModal({ game, onRead, onClose }) {
+  return (
+    <div className="overlay" style={{ background: "rgba(5,7,13,.88)", zIndex: 70, padding: 14 }} onClick={onClose}>
+      <button className="chat-back" style={{ position: "fixed", top: 14, right: 14, zIndex: 71 }} onClick={onClose}>✕</button>
+      <div style={{ width: "100%", maxWidth: 460, maxHeight: "90vh", overflowY: "auto", borderRadius: 14 }}
+        onClick={(e) => e.stopPropagation()}>
+        <Newspaper game={game} onRead={onRead} />
+      </div>
+    </div>);
+}
+
+/* ---------- LA CIUDAD · mapa de zonas con desbloqueo progresivo ---------- */
+function CityMap({ game, onOpenNpc, onOpenPaper }) {
+  const today = todayStr();
+  const paperPending = !!game.paper && game.paperRead !== today;
+  const npcQueue = game.npcQueue || [];
+  const [flash, setFlash] = useState(null); /* id de zona mostrando su requisito/aviso */
+
+  const flashReq = (id) => {
+    buzz(10);
+    setFlash(id);
+    setTimeout(() => setFlash((cur) => (cur === id ? null : cur)), 2200);
+  };
+  const zoneClick = (z, unlocked) => {
+    if (!unlocked || z.kind === "soon") { flashReq(z.id); return; }
+    if (z.kind === "paper") {
+      /* Milly te trae el periódico en persona: si todavía no ha "pasado" hoy, se habla
+         con ella primero; una vez la cola de Milly está vacía, el kiosco abre el periódico. */
+      const millyPending = z.npc && npcQueue.some((e) => e.npc === z.npc);
+      if (millyPending) onOpenNpc(z.npc); else onOpenPaper();
+      return;
+    }
+    onOpenNpc(z.npc);
+  };
+  /* centro de cada zona en las coordenadas nativas del SVG (para el texto del candado) */
+  const cx = (z) => CITY_MAP_VB.x + (z.x / 100) * CITY_MAP_VB.w;
+  const cy = (z) => CITY_MAP_VB.y + (z.y / 100) * CITY_MAP_VB.h;
+
+  return (
+    <div className="city-wrap">
+      <img src="/images/city-map.svg" alt="Mapa de la ciudad" className="city-bg-img" />
+      {/* zonas bloqueadas: se pintan de gris con su silueta exacta (las que tienen edificio propio)
+          y un candado centrado; El Barrio, al no ser un edificio, solo lleva el candado suelto */}
+      <svg className="city-overlay" viewBox={`${CITY_MAP_VB.x} ${CITY_MAP_VB.y} ${CITY_MAP_VB.w} ${CITY_MAP_VB.h}`} preserveAspectRatio="none">
+        {ZONES.filter((z) => !z.unlocked(game)).map((z) => (
+          <g key={z.id} className="city-lockshape" onClick={() => zoneClick(z, false)}>
+            {z.pts ? <polygon points={z.pts} className="city-lockfill" />
+              /* sin edificio propio (El Barrio): círculo invisible solo para ampliar la zona tocable */
+              : <circle cx={cx(z)} cy={cy(z)} r="20" fill="transparent" />}
+            <text x={cx(z)} y={cy(z)} className={"city-locktxt" + (z.pts ? "" : " small")} textAnchor="middle" dominantBaseline="central">🔒</text>
+          </g>))}
+      </svg>
+      {ZONES.map((z) => {
+        const unlocked = z.unlocked(game);
+        const style = { left: z.x + "%", top: z.y + "%" };
+        /* el candado y el aviso van dentro del overlay SVG / centrados en el punto;
+           los nombres ya están dibujados en el propio mapa, aquí no se repiten */
+        if (!unlocked) {
+          return (
+            <div key={z.id} className="city-zone" style={style}>
+              {flash === z.id && <div className="city-req" style={{ top: 14 }}>{z.reqLabel}</div>}
+            </div>);
+        }
+        /* la cara del personaje solo se ve si tiene algo pendiente que contar; ya leído,
+           queda solo un punto discreto (sigue siendo clicable, p.ej. el kiosco para releer) */
+        const pending = z.kind === "paper" ? (paperPending || (z.npc && npcQueue.some((e) => e.npc === z.npc)))
+          : z.npc && npcQueue.some((e) => e.npc === z.npc);
+        const npc = z.npc ? NPCS[z.npc] : null;
+        const reqTop = pending ? (z.big ? 45 : 34) : (z.big ? 15 : 13);
+        return (
+          <div key={z.id} className="city-zone" style={style}>
+            <button className={"city-bubble" + (pending ? " pend" : " quiet") + (z.big ? " big" : "")}
+              onClick={() => zoneClick(z, true)} aria-label={z.label}>
+              {pending ? (npc ? <img src={npc.icon} alt={npc.name} className="city-ico-img" />
+                : <span className="city-ico-emoji">{z.icon}</span>) : null}
+              {pending && <span className="dot" style={{ top: -2, right: -2, padding: "3px 4px" }} />}
+            </button>
+            {flash === z.id && z.kind === "soon" && <div className="city-req" style={{ top: reqTop + 24 }}>Próximamente</div>}
+          </div>);
+      })}
     </div>);
 }
 
@@ -3072,9 +3515,17 @@ export default function App() {
   const [liveMatch, setLiveMatch] = useState(null);
   const [tab, setTab] = useState("home");
   const [toast, setToast] = useState(null);
+  const [activeNpc, setActiveNpc] = useState(null); // qué personaje de la Ciudad tiene el diálogo abierto
+  const [showPaper, setShowPaper] = useState(false); // periódico abierto como ventana modal desde el Kiosco
   const saveTimer = useRef();
 
   const pushToast = (t) => { setToast(t); setTimeout(() => setToast(null), 3200); };
+  /* como el periódico: al salir de la pestaña Ciudad, cualquier diálogo/periódico abierto se cierra */
+  useEffect(() => { if (tab !== "chat") { setActiveNpc(null); setShowPaper(false); } }, [tab]);
+  /* si el diálogo abierto se vacía (se acabó la escena), cierra el overlay solo */
+  useEffect(() => {
+    if (activeNpc && !(game && (game.npcQueue || []).some((e) => e.npc === activeNpc))) setActiveNpc(null);
+  }, [activeNpc, game]);
 
   /* mensajes en 2ª persona -> cola de diálogos NPC; 3ª persona -> artículo del periódico.
      Mantiene la firma histórica: los ~20 puntos que llaman addMsg no cambian. */
@@ -3114,6 +3565,18 @@ export default function App() {
     if (entry.beats) return addScene(g, from, entry.beats.map((b) => ({ m: b.m, t: fillTpl(b.t, ctx) })), { replies: entry.replies, ...extra });
     return addMsg(g, from, fillTpl(entry.t, ctx), { mood: entry.m, replies: entry.replies, ...extra });
   };
+  /* comprueba si alguna zona de la ciudad se acaba de desbloquear (Dino/Punky/Lisa/Yuni)
+     y, si es la primera vez, encola su escena de presentación. Se llama tras cualquier
+     acción que pueda mover el requisito: media, goles de carrera o ascenso de categoría. */
+  const checkZoneUnlocks = (g) => {
+    let out = g;
+    ZONES.forEach((z) => {
+      if (!z.metFlag || out[z.metFlag] || !z.unlocked(out)) return;
+      out = { ...out, [z.metFlag]: true };
+      out = addScene(out, NPCS[z.npc].name, z.intro.map((b) => ({ m: b.m, t: fillTpl(b.t, flavorCtx(out)) })));
+    });
+    return out;
+  };
 
   /* cola de diálogos: avanzar, elegir respuesta, resolver oferta */
   const advanceNpc = (id) => setGame((g) => ({ ...g, npcQueue: (g.npcQueue || []).filter((e) => e.id !== id) }));
@@ -3121,10 +3584,15 @@ export default function App() {
     const q = g.npcQueue || [];
     const e = q.find((x) => x.id === id);
     if (!e || !e.replies || !e.replies[idx]) return g;
+    const opt = e.replies[idx];
     /* la réplica del personaje entra al frente de la cola: responde al momento,
        con su propia expresión (por defecto "happy" si la opción no especifica otra) */
-    const resp = { id: Date.now() + Math.random(), npc: e.npc, mood: e.replies[idx].m || "happy", text: pick(e.replies[idx].r) };
-    return { ...g, npcQueue: [resp, ...q.filter((x) => x.id !== id)] };
+    const resp = { id: Date.now() + Math.random(), npc: e.npc, mood: opt.m || "happy", text: pick(opt.r) };
+    let out = { ...g, npcQueue: [resp, ...q.filter((x) => x.id !== id)] };
+    /* algunas respuestas dejan una marca que otro personaje puede recordar más adelante
+       (p.ej. le cuentas un secreto a Milly y luego Yuna "se entera" por su cuenta) */
+    if (opt.setFlag) out[opt.setFlag] = true;
+    return out;
   });
   const answerOffer = (id, accept) => {
     const e = (game.npcQueue || []).find((x) => x.id === id);
@@ -3241,6 +3709,9 @@ export default function App() {
     out = buildPaper(out);
     if (!yaEstaba) {
       const c = flavorCtx(out);
+      /* Milly te trae el periódico en persona cada día que hay edición nueva */
+      const mp = MILLY_POOL.filter((y) => !y.w || (COND[y.w] && COND[y.w](c)));
+      out = playPoolEntry(out, "Milly", mp[Math.floor(Math.random() * mp.length)], c);
       /* breves del día: 2-3 líneas cortas de prensa/afición/redes/club */
       const brevs = pickFlavor(out, 2 + Math.round(Math.random()), ["press", "fan", "social", "club"]);
       brevs.forEach((fv) => { out = addMsg(out, fv.from, fv.text); });
@@ -3265,7 +3736,7 @@ export default function App() {
         }
       }
     }
-    return out;
+    return checkZoneUnlocks(out);
   }
 
   /* onboarding terminado -> generar 3 ofertas regionales */
@@ -3318,13 +3789,22 @@ export default function App() {
       /* fecha de inicio de carrera (para aniversarios) y primer ascenso de categoría */
       out.signedAt = out.signedAt || todayStr();
       out = buildPaper(out); /* el día del fichaje ya tiene su edición, no un periódico vacío */
+      /* Milly te trae ese primer periódico en persona; se presenta solo la primera vez de tu carrera */
+      if (!out.metMilly) {
+        out.metMilly = true;
+        out = addScene(out, "Milly", MILLY_INTRO_BEATS.map((b) => ({ m: b.m, t: fillTpl(b.t, flavorCtx(out)) })));
+      } else {
+        const c = flavorCtx(out);
+        const mp = MILLY_POOL.filter((y) => !y.w || (COND[y.w] && COND[y.w](c)));
+        out = playPoolEntry(out, "Milly", mp[Math.floor(Math.random() * mp.length)], c);
+      }
       if (viaTransfer && tierId > g.tier.id) buzz([30, 40, 60]);
       if (viaTransfer && tierId > g.tier.id && !g.firstRiseDone) {
         out.firstRiseDone = true;
         out = addMsg(out, "Tu agente",
           "Tu primer salto de categoría. 📈 El primero de muchos. Firmé contigo por días como hoy — disfrútalo.");
       }
-      return out;
+      return checkZoneUnlocks(out);
     });
     setSigning(null);
     setTab("home");
@@ -3444,7 +3924,7 @@ export default function App() {
           rivals: pickN(RIVALS_BY_TIER[Math.min(g.tier.id, RIVALS_BY_TIER.length - 1)], SEASON_LENGTH), midOfferDone: false };
         out = addMsg(out, "Elisa", `La temporada ${s.num + 1} arranca ya. Pretemporada exprés: mañana se juega. 🏃`);
       }
-      return out;
+      return checkZoneUnlocks(out);
     });
     setLiveMatch(null);
   };
@@ -3476,8 +3956,8 @@ export default function App() {
     let upped = false;
     while (stats.MEN < 99 && xp.MEN >= xpToNext(stats.MEN)) { xp.MEN -= xpToNext(stats.MEN); stats.MEN += 1; upped = true; }
     if (upped) setTimeout(() => pushToast("🧠 ¡MEN sube a " + stats.MEN + "! Cabeza fría, crack"), 600);
-    return { ...g, player: { ...p, stats, xp,
-      weightLog: [...p.weightLog, { d: todayStr(), kg }] } };
+    return checkZoneUnlocks({ ...g, player: { ...p, stats, xp,
+      weightLog: [...p.weightLog, { d: todayStr(), kg }] } });
   }); pushToast("⚖️ Peso registrado — tu valor de mercado se actualiza · +8 XP MEN"); };
   /* el vestuario "se entera" cuando ajustas tus objetivos de kcal/proteína */
   /* ---------- acciones del gym ---------- */
@@ -3617,7 +4097,7 @@ export default function App() {
     if (r.form === "alza") buzz([20, 30, 20]);
     if (r.ups.length) buzz(30);
     setTimeout(() => pushToast(`📋 Día ${dateStr.slice(8)}/${dateStr.slice(5, 7)} cerrado · ${r.pct}%`), 100);
-    return out;
+    return checkZoneUnlocks(out);
   });
 
   /* respaldo manual (independiente del almacenamiento automático) */
@@ -3645,7 +4125,7 @@ export default function App() {
       <div style={{ color: "#16190F", fontFamily: "'Oswald',sans-serif", letterSpacing: 4, fontSize: 15 }}>FUTABITA 3.1</div>
     </div>);
 
-  /* aviso en la pestaña Diario: diálogos en cola + la edición de hoy sin leer */
+  /* aviso en la pestaña Ciudad: diálogos en cola + la edición de hoy sin leer */
   const unreadTotal = (game.npcQueue || []).length +
     (game.phase === "main" && game.paper && game.paperRead !== todayStr() ? 1 : 0);
 
@@ -3674,14 +4154,14 @@ export default function App() {
               notify={pushToast} onGoGym={() => setTab("gym")} onAddNote={addNote} onDelNote={delNote} />}
             {tab === "gym" && <GymTab game={game} api={gymApi} notify={pushToast} />}
             {tab === "league" && <LeagueTab game={game} onPlayMatch={playMatch} crest={crest} crestScale={crestScale} />}
-            {tab === "chat" && <Newspaper game={game} onRead={markPaperRead} />}
+            {tab === "chat" && <CityMap game={game} onOpenNpc={setActiveNpc} onOpenPaper={() => setShowPaper(true)} />}
             {tab === "me" && <ProfileTab game={game} photo={photo} onWeight={addWeight} onPhoto={savePhoto} onRemovePhoto={removePhoto}
               crest={crest} onCrest={saveCrest} onRemoveCrest={removeCrest} crestScale={crestScale} onCrestScale={saveCrestScale}
               onGoals={setGoals} getBackup={getBackup} onRestore={restoreBackup} haptics={haptics} onHaptics={setHapticsPref}
               voices={voicesOn} onVoices={setVoicesPref} />}
           </div>
           <nav className="tabbar">
-            {[["home", "🏠", "Inicio"], ["log", "📝", "Registro"], ["gym", "🏋️", "Gym"], ["league", "🏆", "Liga"], ["chat", "🗞️", "Diario"], ["me", "👤", "Yo"]].map(([id, ic, lb]) => (
+            {[["home", "🏠", "Inicio"], ["log", "📝", "Registro"], ["gym", "🏋️", "Gym"], ["league", "🏆", "Liga"], ["chat", "🏙️", "Ciudad"], ["me", "👤", "Yo"]].map(([id, ic, lb]) => (
               <button key={id} className={"tabbtn" + (tab === id ? " on" : "")}
                 onClick={() => setTab(id)}>
                 <span style={{ fontSize: 17, position: "relative" }}>{ic}
@@ -3692,10 +4172,16 @@ export default function App() {
           </nav>
         </>
       )}
-      {/* diálogo de personaje: overlay a nivel de App (fuera de .tab-in), visible en el Diario */}
-      {tab === "chat" && (game.npcQueue || []).length > 0 && (
-        <NpcDialogue entry={game.npcQueue[0]} queueLeft={game.npcQueue.length}
-          onAdvance={advanceNpc} onChoice={answerChoice} onOffer={answerOffer} />)}
+      {/* diálogo de personaje: overlay a nivel de App (fuera de .tab-in), visible en la Ciudad.
+          se elige el personaje tocando su burbuja en el mapa (activeNpc), no siempre el primero de la cola */}
+      {tab === "chat" && activeNpc && (() => {
+        const q = (game.npcQueue || []).filter((e) => e.npc === activeNpc);
+        return q.length > 0 && (
+          <NpcDialogue entry={q[0]} queueLeft={q.length}
+            onAdvance={advanceNpc} onChoice={answerChoice} onOffer={answerOffer} />);
+      })()}
+      {tab === "chat" && showPaper && (
+        <PaperModal game={game} onRead={markPaperRead} onClose={() => setShowPaper(false)} />)}
       {game.pendingSummary && !liveMatch && (
         <div className="overlay" style={{ background: "radial-gradient(ellipse at 50% 0%, #0E3320, #05070d 75%)", overflowY: "auto" }}>
           <div className="pop-in" style={{ width: "100%", maxWidth: 340, padding: "30px 0" }}>
@@ -3983,6 +4469,34 @@ function StyleTag() {
       .toast { position:fixed; bottom:84px; left:50%; transform:translateX(-50%); background:#16190F; color:#EFEEE3;
         border:1.5px solid #CDF546; border-radius:14px; padding:10px 16px; font-size:13px; z-index:80;
         animation:pop .3s ease both; max-width:90%; text-align:center; }
+      /* --- la ciudad: mapa dibujado (SVG propio) + capa de zonas encima --- */
+      .city-wrap { position:relative; width:100%; margin:6px 0 30px; line-height:0; }
+      .city-bg-img { display:block; width:100%; height:auto; }
+      .city-overlay { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+      .city-lockshape { pointer-events:auto; cursor:pointer; }
+      .city-lockfill { fill:#8b8878; opacity:.82; }
+      .city-locktxt { font-size:34px; pointer-events:none; }
+      /* El Barrio no tiene edificio propio que pintar de gris: su candado va suelto y más pequeño */
+      .city-locktxt.small { font-size:20px; }
+      /* ancla de tamaño cero: la burbuja se centra por su cuenta con su propio transform */
+      .city-zone { position:absolute; width:0; height:0; z-index:2; }
+      .city-bubble { position:absolute; left:0; top:0; transform:translate(-50%,-50%);
+        width:58px; height:58px; border-radius:50%; background:#FFFFFF; border:2px solid #16190F;
+        display:flex; align-items:center; justify-content:center; overflow:hidden; padding:0;
+        cursor:pointer; box-shadow:0 4px 0 rgba(20,23,14,.35); flex-shrink:0; }
+      .city-bubble.big { width:80px; height:80px; border-width:2.5px; box-shadow:0 5px 0 rgba(20,23,14,.35); }
+      .city-bubble.pend { animation:citybob 1.15s ease-in-out infinite; }
+      @keyframes citybob { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-10px); } }
+      /* sin nada pendiente: ni cara ni burbuja grande, solo un punto discreto que sigue siendo clicable */
+      .city-bubble.quiet { width:16px; height:16px; background:#16190F; opacity:.32; border:none; box-shadow:none; }
+      .city-bubble.quiet.big { width:20px; height:20px; }
+      .city-ico-img { width:100%; height:100%; object-fit:cover; background:#FFFFFF; display:block; }
+      .city-ico-emoji { font-size:27px; }
+      .city-bubble.big .city-ico-emoji { font-size:36px; }
+      .city-req { position:absolute; left:0; transform:translateX(-50%); background:#16190F; color:#EFEEE3; font-size:10.5px;
+        line-height:1.35; padding:6px 10px; border-radius:10px; width:140px; text-align:center; z-index:5;
+        animation:pop .25s ease both; box-shadow:0 6px 16px rgba(20,23,14,.4); }
+      @media (prefers-reduced-motion: reduce) { .city-bubble.pend { animation:none !important; } }
       @media (prefers-reduced-motion: reduce) { .fut-shine, .fade-seq, .official-flash, .card-drop, .pop-in, .event-in { animation:none !important; opacity:1 !important; } }
     `}</style>
   );

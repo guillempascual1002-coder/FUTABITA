@@ -8,6 +8,10 @@ const STAT_KEYS = ["FIS", "FUE", "RES", "NUT", "REC", "MEN"];
 const STAT_LABELS = { FIS: "Físico", FUE: "Fuerza", RES: "Resistencia", NUT: "Nutrición", REC: "Recuperación", MEN: "Mentalidad" };
 const OVR_WEIGHTS = { FIS: 0.22, FUE: 0.2, RES: 0.15, NUT: 0.18, REC: 0.12, MEN: 0.13 };
 const POSITIONS = ["DEL", "EXT", "MCO", "MC", "MCD", "LTD", "LTI", "DFC", "POR"];
+/* probabilidad de gol/asistencia por posición: nadie se queda a 0 goles de por vida,
+   pero un central no remata tanto como un delantero. Multiplican a "perf" (0-1 aprox). */
+const GOAL_RATE = { DEL: 0.75, EXT: 0.75, MCO: 0.75, MC: 0.30, MCD: 0.22, LTD: 0.16, LTI: 0.16, DFC: 0.14, POR: 0.015 };
+const ASSIST_RATE = { DEL: 0.45, EXT: 0.45, MCO: 0.45, MC: 0.55, MCD: 0.45, LTD: 0.35, LTI: 0.35, DFC: 0.25, POR: 0.05 };
 
 const REGIONAL_POOL = [
   { name: "CD Guijuelo", c1: "#B3202C", c2: "#FFFFFF", city: "Guijuelo, Salamanca" },
@@ -383,12 +387,13 @@ function simulateMatch(player, rival, jornada) {
   const benched = f === "caida" && Math.random() < 0.5;
   const gf = Math.max(0, Math.round(rnd(0, 1.2) + perf * 2.6));
   const ga = Math.max(0, Math.round(rnd(0, 1.1) + (1 - perf) * 2.2));
-  const atk = ["DEL", "EXT", "MCO"].includes(player.position);
+  const goalRate = GOAL_RATE[player.position] ?? 0.3;
+  const assistRate = ASSIST_RATE[player.position] ?? 0.35;
   let myGoals = 0, myAssists = 0;
   if (!benched && gf > 0) {
     for (let i = 0; i < gf; i++) {
-      if (atk && Math.random() < perf * 0.75) myGoals++;
-      else if (Math.random() < perf * 0.45) myAssists++;
+      if (Math.random() < perf * goalRate) myGoals++;
+      else if (Math.random() < perf * assistRate) myAssists++;
     }
   }
   let rating = benched ? 0 : Math.min(9.9, Math.max(4.8, 5.6 + perf * 3 + myGoals * 0.6 + myAssists * 0.35 + rnd(-0.3, 0.3)));

@@ -870,6 +870,10 @@ const NPCS = {
      su "angry" es en realidad PREOCUPACIÓN. Sin happy: no es su registro. */
   mabel: { name: "Mabel", color: "#2E5C8A", voice: "/audio/vozchica02.mp3", icon: "/images/mabel_icon.webp",
     arts: { idle: "/images/mabel_idle.webp", angry: "/images/mabel_angry.webp" }, def: "idle" },
+  /* Karlos: chaval de barrio, chulito, cría fanfarronería para tapar que le importa mucho la opinión ajena.
+     Su "angry" es en realidad pose de ego/chulería, no enfado. Sin happy: no es su registro. */
+  karlos: { name: "Karlos", color: "#D68A2E", voice: "/audio/vozchico01.mp3", icon: "/images/karlos_icon.webp",
+    arts: { idle: "/images/karlos_idle.webp", angry: "/images/karlos_angry.webp" }, def: "idle" },
 };
 const senderToNpc = (from) => {
   if (from === "Entrenador" || from === "Tu agente" || from === "Elisa") return "elisa";
@@ -881,6 +885,7 @@ const senderToNpc = (from) => {
   if (from === "Milly") return "milly";
   if (from === "Lili") return "lili";
   if (from === "Mabel") return "mabel";
+  if (from === "Karlos") return "karlos";
   if (from === "López" || from.includes("Capitán") || from.includes("· Vestuario")) return "lopez";
   return null; /* prensa/afición/redes/club -> periódico */
 };
@@ -1494,6 +1499,31 @@ const MABEL_POOL = [
   { t: "Confesión que no debería hacer estando de servicio: me gusta muchísimo este deporte. Nunca lo diría en la comisaría, pero aquí, contigo, sí." },
 ];
 
+/* --- KARLOS · chaval de barrio, chulito, cría fanfarronería para tapar que le importa
+   la opinión ajena. Su "angry" es pose de ego, no enfado real. Sin happy. --- */
+const KARLOS_INTRO_BEATS = [
+  { m: "angry", t: "Anda, mira quién anda por aquí. El famosillo. Yo llevo jugando en estas calles desde antes de que supieras atarte los botines, que lo sepas." },
+  { m: "angry", t: "No te creas mejor que nadie solo porque te paguen por dar patadas a un balón. Aquí el que manda de verdad soy yo. Pero bueno, tú a lo tuyo." },
+];
+const KARLOS_POOL = [
+  { w: "loss", t: "JA. Vi lo de ayer. Yo hubiera metido ese gol con los ojos cerrados. Bueno, a lo mejor no, pero suena bien decirlo." },
+  { w: "win", t: "Vale, vale, no ha estado mal lo de ayer. No te lo tengas muy creído, eh, que un partido bueno lo tiene cualquiera." },
+  { beats: [
+    { m: "angry", t: "Me he criado jugando en cada pista de esta ciudad, en cada campo, en cada solar con dos porterías pintadas con tiza." },
+    { m: "angry", t: "Algún día van a hablar de mí igual que hablan de ti. Ya lo verás. Apúntate esto." }] },
+  { w: "benched", t: "¿En el banquillo? JA, típico. Yo en tu lugar no me dejaría sentar ni de broma. Aunque, bueno, seguro que tienes tus motivos. O no. Yo qué sé." },
+  { w: "scorer", t: "{goals} goles, vale, está bien. No digo que esté mal. Solo digo que yo, con la mitad de las ocasiones que tienes tú, habría metido el doble." },
+  { t: "Oye, ¿a que no te atreves a hacerme un caño ahora mismo, aquí en medio de la calle?", replies: [
+    { t: "Cuando quieras", m: "angry", r: ["JA, palabras. Ya veremos, ya. Algún día te tomo la palabra, no creas que se me olvida."] },
+    { t: "Paso, no tengo nada que demostrarte", m: "angry", r: ["Ya, claro, la excusa fácil. Como digas. Yo lo hubiera aceptado sin dudar, para que lo sepas."] }] },
+  { beats: [
+    { m: "angry", t: "La gente cree que soy un borde porque sí. No es eso." },
+    { m: "angry", t: "Bueno, da igual, olvida que he dicho algo. No es asunto tuyo. Sigue con lo tuyo, campeón." }] },
+  { w: "hot", t: "{streak} días de racha, ¿eh? Vale, reconozco que impresiona un poco. UN POCO. No te vengas arriba solo porque yo lo diga." },
+  { w: "derbiSoon", t: "Con lo del {derbiRival} esta semana, más te vale ganar. Como pierdas, no te va a dejar en paz nadie en esta ciudad, y yo el primero, para que lo sepas." },
+  { t: "Algún día voy a jugar en un equipo de verdad, ya lo verás. Y cuando pase, te vas a acordar de mí." },
+];
+
 /* goles a lo largo de TODA la carrera (todas las temporadas), para el hito del Centro de Alto Rendimiento */
 const careerGoals = (g) => (g.matchHistory || []).reduce((a, m) => a + (m.myGoals || 0), 0);
 
@@ -1523,7 +1553,7 @@ const ZONES = [
   /* El Barrio no es un edificio: es una zona de calle, sin forma propia que pintar de gris */
   /* varios personajes comparten esta zona de calle: la burbuja muestra a quien tenga
      algo pendiente ahora mismo (ver EXTRA_NPCS y CityMap); en reposo, el puntito de siempre */
-  { id: "barrio", kind: "npc", npc: ["yuna", "lili", "mabel"], label: "El Barrio", icon: "🌆", x: 57.83, y: 52.92,
+  { id: "barrio", kind: "npc", npc: ["yuna", "lili", "mabel", "karlos"], label: "El Barrio", icon: "🌆", x: 57.83, y: 52.92,
     unlocked: (g) => !!g.yunaMet, reqLabel: "Gánate tu primera victoria" },
   { id: "car", kind: "npc", npc: "dino", label: "Centro de Alto Rendimiento", icon: "🏋️", x: 63.19, y: 21.84,
     pts: "434.69 136.71 434.69 194.24 592.65 195.94 587.89 125.73 434.69 136.71",
@@ -1553,6 +1583,8 @@ const EXTRA_NPCS = [
     unlocked: (g) => !!g.yunaMet },
   { npc: "mabel", metFlag: "metMabel", intro: MABEL_INTRO_BEATS,
     unlocked: (g) => !!g.yunaMet && dayDiff(g.signedAt || todayStr(), todayStr()) >= 12 },
+  { npc: "karlos", metFlag: "metKarlos", intro: KARLOS_INTRO_BEATS,
+    unlocked: (g) => !!g.yunaMet && dayDiff(g.signedAt || todayStr(), todayStr()) >= 6 },
 ];
 
 /* ============================================================
@@ -2862,12 +2894,15 @@ function CityMap({ game, onOpenNpc, onOpenPaper }) {
   const cx = (z) => CITY_MAP_VB.x + (z.x / 100) * CITY_MAP_VB.w;
   const cy = (z) => CITY_MAP_VB.y + (z.y / 100) * CITY_MAP_VB.h;
   const flashZone = flash ? ZONES.find((z) => z.id === flash) : null;
+  const isPending = (z) => z.kind === "paper" ? (paperPending || (z.npc && npcQueue.some((e) => e.npc === z.npc)))
+    : zoneNpcs(z).some((n) => npcQueue.some((e) => e.npc === n));
 
   return (
     <div className="city-wrap">
       <img src="/images/city-map.svg" alt="Mapa de la ciudad" className="city-bg-img" />
-      {/* zonas bloqueadas: se pintan de gris con su silueta exacta (las que tienen edificio propio)
-          y un candado centrado; El Barrio, al no ser un edificio, solo lleva el candado suelto */}
+      {/* la zona en sí (su silueta real del mapa) es lo clicable, no un círculo suelto encima.
+          bloqueadas: gris + candado. desbloqueadas sin nada pendiente: invisible, pero clicable
+          en toda su forma. Con algo pendiente, esa silueta queda tapada por la burbuja de personaje. */}
       <svg className="city-overlay" viewBox={`${CITY_MAP_VB.x} ${CITY_MAP_VB.y} ${CITY_MAP_VB.w} ${CITY_MAP_VB.h}`} preserveAspectRatio="none">
         {ZONES.filter((z) => !z.unlocked(game)).map((z) => (
           <g key={z.id} className="city-lockshape" onClick={() => zoneClick(z, false)}>
@@ -2876,29 +2911,32 @@ function CityMap({ game, onOpenNpc, onOpenPaper }) {
               : <circle cx={cx(z)} cy={cy(z)} r="20" fill="transparent" />}
             <text x={cx(z)} y={cy(z)} className={"city-locktxt" + (z.pts ? "" : " small")} textAnchor="middle" dominantBaseline="central">🔒</text>
           </g>))}
+        {ZONES.filter((z) => z.unlocked(game) && !isPending(z)).map((z) => (
+          <g key={z.id} className="city-clickshape" onClick={() => zoneClick(z, true)}>
+            {z.pts ? <polygon points={z.pts} fill="transparent" />
+              : <circle cx={cx(z)} cy={cy(z)} r="20" fill="transparent" />}
+          </g>))}
       </svg>
       {ZONES.map((z) => {
         const unlocked = z.unlocked(game);
         const style = { left: z.x + "%", top: z.y + "%" };
-        /* el candado y el aviso van dentro del overlay SVG / centrados en el punto;
-           los nombres ya están dibujados en el propio mapa, aquí no se repiten */
-        if (!unlocked) {
+        /* el candado, el clic en reposo y el aviso van todos dentro del overlay SVG /
+           centrados en el punto; los nombres ya están dibujados en el propio mapa. */
+        const pending = unlocked && isPending(z);
+        if (!pending) {
           return <div key={z.id} className="city-zone" style={style} />;
         }
-        /* la cara del personaje solo se ve si tiene algo pendiente que contar; ya leído,
-           queda solo un punto discreto (sigue siendo clicable, p.ej. el kiosco para releer).
+        /* la cara del personaje solo se ve si tiene algo pendiente que contar.
            en zonas con varios personajes, se enseña el primero que tenga algo pendiente. */
         const activeKey = activeNpcOf(z);
-        const pending = z.kind === "paper" ? (paperPending || (z.npc && npcQueue.some((e) => e.npc === z.npc)))
-          : zoneNpcs(z).some((n) => npcQueue.some((e) => e.npc === n));
-        const npc = pending && activeKey ? NPCS[activeKey] : (z.npc && !Array.isArray(z.npc) ? NPCS[z.npc] : null);
+        const npc = activeKey ? NPCS[activeKey] : null;
         return (
           <div key={z.id} className="city-zone" style={style}>
-            <button className={"city-bubble" + (pending ? " pend" : " quiet") + (z.big ? " big" : "")}
+            <button className={"city-bubble pend" + (z.big ? " big" : "")}
               onClick={() => zoneClick(z, true)} aria-label={z.label}>
-              {pending ? (npc ? <img src={npc.icon} alt={npc.name} className="city-ico-img" />
-                : <span className="city-ico-emoji">{z.icon}</span>) : null}
-              {pending && <span className="dot" style={{ top: -2, right: -2, padding: "3px 4px" }} />}
+              {npc ? <img src={npc.icon} alt={npc.name} className="city-ico-img" />
+                : <span className="city-ico-emoji">{z.icon}</span>}
+              <span className="dot" style={{ top: -2, right: -2, padding: "3px 4px" }} />
             </button>
           </div>);
       })}
@@ -4269,6 +4307,7 @@ export default function App() {
         if (out.metYuni) candidates.push(["Yuni", YUNI_POOL]);
         if (out.metLili) candidates.push(["Lili", LILI_POOL]);
         if (out.metMabel) candidates.push(["Mabel", MABEL_POOL]);
+        if (out.metKarlos) candidates.push(["Karlos", KARLOS_POOL]);
         candidates.push([null, null]); /* comodín: flavor genérico de vestuario/prensa/agente */
         const [name, pool] = candidates[Math.floor(Math.random() * candidates.length)];
         if (!name) {
@@ -5032,6 +5071,10 @@ function StyleTag() {
       .city-bg-img { display:block; width:100%; height:auto; }
       .city-overlay { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
       .city-lockshape { pointer-events:auto; cursor:pointer; }
+      /* pointer-events:auto no basta con fill transparent (el SVG solo cuenta el área
+         pintada); "all" fuerza a que toda la silueta sea clicable aunque sea invisible */
+      .city-clickshape { cursor:pointer; }
+      .city-clickshape polygon, .city-clickshape circle { pointer-events:all; }
       .city-lockfill { fill:#8b8878; opacity:.82; }
       .city-locktxt { font-size:34px; pointer-events:none; }
       /* El Barrio no tiene edificio propio que pintar de gris: su candado va suelto y más pequeño */
@@ -5044,10 +5087,9 @@ function StyleTag() {
         cursor:pointer; box-shadow:0 4px 0 rgba(20,23,14,.35); flex-shrink:0; }
       .city-bubble.big { width:80px; height:80px; border-width:2.5px; box-shadow:0 5px 0 rgba(20,23,14,.35); }
       .city-bubble.pend { animation:citybob 1.15s ease-in-out infinite; }
-      @keyframes citybob { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-10px); } }
-      /* sin nada pendiente: ni cara ni burbuja grande, solo un punto discreto que sigue siendo clicable */
-      .city-bubble.quiet { width:16px; height:16px; background:#16190F; opacity:.32; border:none; box-shadow:none; }
-      .city-bubble.quiet.big { width:20px; height:20px; }
+      /* la animación tiene que arrastrar el translate(-50%,-50%) del centrado en cada frame:
+         una keyframe reemplaza el transform entero, no lo suma al de la regla base */
+      @keyframes citybob { 0%,100% { transform:translate(-50%,-50%) translateY(0); } 50% { transform:translate(-50%,-50%) translateY(-10px); } }
       .city-ico-img { width:100%; height:100%; object-fit:cover; background:#FFFFFF; display:block; }
       .city-ico-emoji { font-size:27px; }
       .city-bubble.big .city-ico-emoji { font-size:36px; }

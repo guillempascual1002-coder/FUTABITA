@@ -3832,29 +3832,32 @@ function HomeTab({ game, photo, log, crest, crestScale }) {
 function BackupPanel({ getBackup, onRestore }) {
   const [show, setShow] = useState(false);
   const [txt, setTxt] = useState("");
-  const [copied, setCopied] = useState(false);
-  const [manual, setManual] = useState(null);
-  const copy = async () => {
+  const [downloaded, setDownloaded] = useState(false);
+  /* archivo descargado, no portapapeles: un respaldo largo (muchos días de registro)
+     se puede cortar al copiar/pegar entre apps sin avisar; un archivo no tiene ese riesgo */
+  const download = () => {
     const t = getBackup();
-    try { await navigator.clipboard.writeText(t); setCopied(true); setManual(null); setTimeout(() => setCopied(false), 2500); }
-    catch (e) { setManual(t); }
+    const blob = new Blob([t], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `futabita-respaldo-${todayStr()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setDownloaded(true);
+    setTimeout(() => setDownloaded(false), 2500);
   };
   return (
     <div className="panel" style={{ borderColor: "#B8E02E", borderWidth: 2 }}>
       <div className="ptitle">💾 Copia de seguridad</div>
       <div style={{ fontSize: 12, color: "#6F7563", marginBottom: 10, lineHeight: 1.5 }}>
-        Copia tu partida como texto y guárdala donde quieras (notas, un chat contigo…). Si la app se resetea,
-        pégala en "Restaurar" (o en la pantalla inicial) y recuperas todo: stats, temporada, mensajes y foto.
+        Descarga tu partida como archivo y guárdalo donde quieras. Si la app se resetea, pégalo (o su contenido)
+        en "Restaurar" (o en la pantalla inicial) y recuperas todo: stats, temporada, mensajes y foto.
         Hazlo al final de cada día por seguridad.</div>
       <div style={{ display: "flex", gap: 8 }}>
-        <button className="btn-gold sm" style={{ flex: 1 }} onClick={copy}>{copied ? "✓ ¡Copiado!" : "Copiar respaldo"}</button>
+        <button className="btn-gold sm" style={{ flex: 1 }} onClick={download}>{downloaded ? "✓ ¡Descargado!" : "Descargar respaldo"}</button>
         <button className="btn-ghost sm" style={{ flex: 1 }} onClick={() => setShow(!show)}>Restaurar</button>
       </div>
-      {manual && (
-        <div style={{ marginTop: 8 }}>
-          <div style={{ fontSize: 11.5, color: "#5C7010", marginBottom: 4 }}>Copia manualmente este texto (mantén pulsado → seleccionar todo):</div>
-          <textarea className="inp" rows={4} readOnly value={manual} onFocus={(e) => e.target.select()} />
-        </div>)}
       {show && (
         <div style={{ marginTop: 8 }}>
           <textarea className="inp" rows={4} placeholder="Pega aquí tu respaldo" value={txt} onChange={(e) => setTxt(e.target.value)} />

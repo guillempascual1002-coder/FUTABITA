@@ -3852,7 +3852,9 @@ function BackupPanel({ getBackup, onRestore }) {
       <div className="ptitle">💾 Copia de seguridad</div>
       <div style={{ fontSize: 12, color: "#6F7563", marginBottom: 10, lineHeight: 1.5 }}>
         Descarga tu partida como archivo y guárdalo donde quieras. Si la app se resetea, pégalo (o su contenido)
-        en "Restaurar" (o en la pantalla inicial) y recuperas todo: stats, temporada, mensajes y foto.
+        en "Restaurar" (o en la pantalla inicial) y recuperas tu carrera entera: stats, temporada, mensajes y misiones.
+        (La foto de perfil y el escudo no se incluyen, para no hacer el archivo gigante — tendrás que
+        volver a ponerlos a mano si los usabas.)
         Hazlo al final de cada día por seguridad.</div>
       <div style={{ display: "flex", gap: 8 }}>
         <button className="btn-gold sm" style={{ flex: 1 }} onClick={download}>{downloaded ? "✓ ¡Descargado!" : "Descargar respaldo"}</button>
@@ -4717,7 +4719,9 @@ export default function App() {
   });
 
   /* respaldo manual (independiente del almacenamiento automático) */
-  const getBackup = () => JSON.stringify({ v: 1, game, photo, crest, crestScale });
+  /* la foto de perfil y el escudo van como imagen en base64: ocupan muchísimo texto
+     y no aportan nada a la partida en sí, así que se quedan fuera del respaldo */
+  const getBackup = () => JSON.stringify({ v: 1, game });
   const restoreBackup = (txt) => {
     try {
       const b = JSON.parse(txt.trim());

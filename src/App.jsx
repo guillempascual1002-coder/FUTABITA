@@ -1492,6 +1492,245 @@ const QUESTS = {
         reward: (g) => { const stats = { ...g.player.stats }; stats.MEN = Math.min(99, stats.MEN + 1); return { ...g, player: { ...g.player, stats } }; } },
     ],
   },
+  elisa: {
+    label: "La apuesta que hizo por ti",
+    npc: "elisa",
+    trigger: (g) => dayDiff(g.signedAt || todayStr(), todayStr()) >= 7,
+    stages: [
+      { title: "La primera duda", objective: "Encadena una racha de 3 días",
+        intro: [
+          { m: "idle", t: "Necesito hablar contigo de algo que todavía no te he contado." },
+          { m: "idle", t: "Hace unas semanas puse tu nombre encima de una mesa importante. En serio, encima de una mesa de las que importan. Ahora necesito que tú sostengas esa apuesta. Empecemos por lo básico: constancia." }],
+        snap: () => ({}),
+        check: (g) => (g.player.streak || 0) >= 3 },
+      { title: "La prueba de fuego", objective: "Gana 2 partidos",
+        intro: [
+          { m: "idle", t: "Bien. Primer paso superado. Ahora viene la parte que no se puede fingir." },
+          { m: "happy", t: "Necesito verte ganar bajo presión, no solo entrenar bien. Gánamelo en el campo, que es donde de verdad se firman los contratos." }],
+        snap: (g) => ({ matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => (g.matchHistory || []).slice(snap.matchCount).filter((m) => m.res === "V").length >= 2 },
+      { title: "La videollamada", objective: "Supera tu mejor nota de la carrera", deadlineDays: 25,
+        intro: [
+          { m: "idle", t: "Mañana tengo una videollamada que puede cambiar bastante las cosas para ti. No te voy a decir con quién todavía." },
+          { m: "happy", t: "Solo te pido una cosa antes: dame el mejor partido de tu carrera. Necesito enseñarles algo que no se pueda discutir." }] ,
+        snap: (g) => ({ best: g.bestRating || 0 }),
+        check: (g, snap) => (g.bestRating || 0) > snap.best },
+      { title: "El resultado", final: true,
+        intro: [
+          { m: "happy", t: "La llamada fue bien. Muy bien. No puedo darte detalles todavía, pero recuerda este día, porque dentro de un tiempo vas a entender por qué te lo pedí todo esto." },
+          { m: "happy", t: "Gracias por no hacerme quedar como una mentirosa delante de esa gente. Sabía que podía apostar por ti. Ahora sigamos, que esto no ha hecho más que empezar." }],
+        introFail: [
+          { m: "idle", t: "La llamada se enfrió. No pasa nada, estas cosas llevan su tiempo y no siempre dependen de una sola actuación." },
+          { m: "happy", t: "Lo que sí tengo claro es que la apuesta que hice por ti sigue en pie. Vamos a por la siguiente oportunidad, que seguro que llega." }],
+        reward: (g) => { const stats = { ...g.player.stats }; stats.REC = Math.min(99, stats.REC + 1); return { ...g, player: { ...g.player, stats } }; } },
+    ],
+  },
+  lopez: {
+    label: "El brazalete",
+    npc: "lopez",
+    trigger: (g) => dayDiff(g.signedAt || todayStr(), todayStr()) >= 14,
+    stages: [
+      { title: "Aprender a escuchar", objective: "Entrena (gym) 4 días distintos",
+        intro: [
+          { m: "idle", t: "Llevo un tiempo fijándome en ti. No de forma rara, tranquilo, es cosa de capitán." },
+          { m: "happy", t: "Creo que tienes madera de liderar este vestuario algún día. Pero eso se gana entrenando duro cuando nadie mira, no con discursos. Demuéstramelo." }],
+        snap: () => ({ today: todayStr() }),
+        check: (g, snap) => Object.entries(g.logs || {}).filter(([d, l]) => l.gym && d >= snap.today).length >= 4 },
+      { title: "Hablar por el grupo", objective: "Encadena una racha de 5 días",
+        intro: [
+          { m: "idle", t: "Bien. Ahora viene lo difícil: la constancia cuando ya nadie te aplaude por currar." },
+          { m: "happy", t: "Un capitán no es el que más grita, es el que más aguanta. Enséñame que puedes sostener el nivel varios días seguidos." }],
+        snap: () => ({}),
+        check: (g) => (g.player.streak || 0) >= 5 },
+      { title: "El día que fallé", objective: "Gana el partido siguiente a una derrota", deadlineDays: 30,
+        intro: [
+          { m: "idle", t: "Te voy a contar algo que no le cuento a cualquiera: mi peor temporada empezó justo después de perder un partido que me hundió." },
+          { m: "happy", t: "Lo que te define no es esa derrota, es lo que haces el domingo siguiente. Cuando pierdas uno, quiero verte responder en el próximo. Ese es el verdadero examen." }],
+        snap: (g) => ({ matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => {
+          const hist = (g.matchHistory || []).slice(snap.matchCount);
+          for (let i = 0; i < hist.length - 1; i++) if (hist[i].res === "D" && hist[i + 1].res === "V") return true;
+          return false;
+        } },
+      { title: "El relevo", final: true,
+        intro: [
+          { m: "happy", t: "Eso que has hecho, responder así después de un mal día, es exactamente lo que buscaba ver. Algún día, cuando yo cuelgue las botas, este vestuario va a necesitar a alguien así." },
+          { m: "happy", t: "No te prometo el brazalete mañana. Pero apúntate esto: cuando llegue el momento, mi voto ya lo tienes." }],
+        introFail: [
+          { m: "idle", t: "No ha llegado esa reacción todavía, pero tampoco pasa nada, el liderazgo no tiene fecha límite." },
+          { m: "happy", t: "Sigue currando como hasta ahora. Estas cosas se ganan despacio, y tú vas por el buen camino, te lo digo yo." }],
+        reward: (g) => { const stats = { ...g.player.stats }; stats.FUE = Math.min(99, stats.FUE + 1); return { ...g, player: { ...g.player, stats } }; } },
+    ],
+  },
+  yuna: {
+    label: "La bufanda equivocada",
+    npc: "yuna",
+    trigger: (g) => !!g.yunaMet && dayDiff(g.signedAt || todayStr(), todayStr()) >= 10,
+    stages: [
+      { title: "Confesión a medias", objective: "Marca un gol",
+        intro: [
+          { m: "idle", t: "Tengo... una petición. Puramente periodística, que conste. Nada personal." },
+          { m: "angry", t: "Marca un gol pronto, ¿vale? No es que quiera verte celebrar ni nada. Es que necesito material nuevo para mi archivo de seguimiento. ¡ES DOCUMENTACIÓN!" }],
+        snap: (g) => ({ goals: careerGoals(g) }),
+        check: (g, snap) => careerGoals(g) > snap.goals },
+      { title: "El offside emocional", objective: "Gana el derbi",
+        intro: [
+          { m: "idle", t: "Se acerca el derbi y no voy a mentir, estoy más nerviosa de lo normal. Por el Barça, claro. Por nada más." },
+          { m: "angry", t: "Gánalo. Por favor. ...¡Por favor no, por estadística! Por el bien de mi análisis táctico. Nada más. Gánalo y ya está." }],
+        snap: (g) => ({ matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.derbi && m.res === "V") },
+      { title: "La palabra prohibida", objective: "Llega a {streak} de 6 días de racha", deadlineDays: 25,
+        intro: [
+          { m: "idle", t: "Llevo días queriéndote decir una cosa y no me sale. Así que te voy a dar un objetivo en vez de decírtela, que es más fácil." },
+          { m: "angry", t: "Llega a seis días de racha seguidos. Cuando lo hagas... a lo mejor te lo digo. A lo mejor no. Ya veremos cómo estoy ese día." }],
+        snap: () => ({}),
+        check: (g) => (g.player.streak || 0) >= 6 },
+      { title: "Sin rodeos", final: true,
+        intro: [
+          { m: "idle", t: "Lo prometido... vale. Aquí va, sin tsundere, sin excusas de periodista amateur." },
+          { m: "happy", t: "Me alegro muchísimo de haberte conocido. Ya está. Eso era todo. No lo voy a repetir, así que grábatelo bien, porque no vuelve a salir de mi boca así de claro." }],
+        introFail: [
+          { m: "idle", t: "Bueno, no ha llegado el día de la racha larga. Da igual, tampoco tenía tanto preparado que decir." },
+          { m: "angry", t: "N-no pienses que me importa. Es solo que tenía el discurso ya medio escrito y ahora no sé qué hacer con él. Da igual, lo guardo para otra ocasión." }],
+        reward: (g) => { const stats = { ...g.player.stats }; stats.MEN = Math.min(99, stats.MEN + 1); return { ...g, player: { ...g.player, stats } }; } },
+    ],
+  },
+  dino: {
+    label: "El informe imposible",
+    npc: "dino",
+    trigger: (g) => ZONES.find((z) => z.id === "car").unlocked(g),
+    stages: [
+      { title: "El primer dato", objective: "Gana 1 kg de peso desde hoy",
+        intro: [
+          { m: "idle", t: "Tengo un proyecto personal. Bueno, más bien obsesivo. Un informe completo sobre tu evolución física. Nadie me lo ha pedido." },
+          { m: "happy", t: "Necesito el primer dato real: gana al menos un kilo de masa desde hoy, siguiendo el plan. Prometo que el informe va a quedar precioso." }],
+        snap: (g) => ({ kg0: (g.player.weightLog || []).length ? g.player.weightLog[g.player.weightLog.length - 1].kg : g.player.weight0 }),
+        check: (g, snap) => {
+          const wl = g.player.weightLog || [];
+          const last = wl.length ? wl[wl.length - 1].kg : g.player.weight0;
+          return last - snap.kg0 >= 1;
+        } },
+      { title: "El segundo dato", objective: "Consigue un récord nuevo en el gimnasio",
+        intro: [
+          { m: "idle", t: "Segundo dato del informe: rendimiento en fuerza. Necesito ver una mejora real, no una sensación." },
+          { m: "happy", t: "Consígueme un récord personal nuevo en cualquier ejercicio. El sistema ya te avisa cuando lo logras, así que ni tienes que decírmelo, lo veré yo solo." }],
+        snap: (g) => ({ prCount: Object.keys((g.gym && g.gym.prs) || {}).length }),
+        check: (g, snap) => Object.keys((g.gym && g.gym.prs) || {}).length > snap.prCount },
+      { title: "El dato final", objective: "Sube tu media +3 puntos", deadlineDays: 30,
+        intro: [
+          { m: "idle", t: "Último dato y el más difícil. Si esto sale bien, tengo entre manos algo que podría hasta publicarse en algún sitio serio." },
+          { m: "happy", t: "Sube tu media tres puntos desde hoy. Sé que pido mucho. Pero es que creo de verdad que puedes." }],
+        snap: (g) => ({ ovr: calcOVR(g.player.stats) }),
+        check: (g, snap) => calcOVR(g.player.stats) >= snap.ovr + 3 },
+      { title: "El informe", final: true,
+        intro: [
+          { m: "happy", t: "Lo terminé. El informe. Está... está bastante bien, creo. Nunca había estado tan orgulloso de un trabajo mío." },
+          { m: "happy", t: "Quiero que sepas que gran parte es gracias a ti, por dejarte medir, pesar y agobiar durante semanas sin quejarte ni una vez. Gracias de verdad." }],
+        introFail: [
+          { m: "idle", t: "No he podido cerrar el último dato a tiempo. El informe se queda incompleto, supongo." },
+          { m: "happy", t: "Aun así, con lo que tengo ya podría escribir un capítulo entero. Gracias por dejarme acompañarte en esto, ha sido lo más interesante que he hecho en meses." }],
+        reward: (g) => { const stats = { ...g.player.stats }; stats.NUT = Math.min(99, stats.NUT + 1); return { ...g, player: { ...g.player, stats } }; } },
+    ],
+  },
+  punky: {
+    label: "El reportaje que me haría famosa",
+    npc: "punky",
+    trigger: (g) => ZONES.find((z) => z.id === "prensa").unlocked(g),
+    stages: [
+      { title: "La primera exclusiva", objective: "Marca 3 goles esta temporada",
+        intro: [
+          { m: "idle", t: "Tengo una idea que puede ser mi gran reportaje del año. O una pérdida de tiempo total. Solo hay una forma de saberlo." },
+          { m: "happy", t: "Necesito seguir tu progresión goleadora de cerca. Llega a 3 goles esta temporada y empiezo a escribir en serio." }],
+        snap: () => ({}),
+        check: (g) => flavorCtx(g).scorer },
+      { title: "La portada", objective: "Consigue una nota de 8.5 o más en un partido",
+        intro: [
+          { m: "idle", t: "El reportaje va tomando forma, pero me falta la imagen central: el partidazo que lo justifique todo." },
+          { m: "happy", t: "Dame una actuación de las que paran el tiempo. Nota alta, de esas que la afición recuerda meses después." }],
+        snap: (g) => ({ matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.rating >= 8.5) },
+      { title: "El notición", objective: "Asciende de categoría", deadlineDays: 40,
+        intro: [
+          { m: "idle", t: "Vale, ya tengo casi todo el reportaje. Me falta el final, y el final lo decides tú, no yo." },
+          { m: "happy", t: "Si asciendes de categoría antes de que lo cierre, tengo el titular perfecto ya escrito en la cabeza. No te lo puedo decir todavía, da mala suerte." }],
+        snap: (g) => ({ tier: g.tier.id }),
+        check: (g, snap) => g.tier.id > snap.tier },
+      { title: "Portada nacional", final: true,
+        intro: [
+          { m: "happy", t: "SALIÓ. En portada. Con mi nombre. Llevo temblando desde esta mañana y no es solo por el café." },
+          { m: "happy", t: "Gracias por dejarme contar tu historia de cerca todo este tiempo. Lo que viene ahora para ti también lo voy a seguir contando, que no te quede duda." }],
+        introFail: [
+          { m: "idle", t: "El ascenso no llegó a tiempo para cerrar el reportaje como quería, así que lo he adaptado un poco." },
+          { m: "happy", t: "Igualmente ha salido publicado, con otro final, pero igual de sincero. Esta historia todavía no ha terminado, y yo sigo aquí para contarla." }],
+        reward: (g) => { const stats = { ...g.player.stats }; stats.MEN = Math.min(99, stats.MEN + 1); return { ...g, player: { ...g.player, stats } }; } },
+    ],
+  },
+  lisa: {
+    label: "La apuesta de la campeona",
+    npc: "lisa",
+    trigger: (g) => ZONES.find((z) => z.id === "patro").unlocked(g),
+    stages: [
+      { title: "Ponte a mi altura", objective: "Llega a {streak} de 6 días de racha",
+        intro: [
+          { m: "angry", t: "Voy a ponerte un reto, y no porque me importe especialmente cómo te vaya. Es puro interés profesional." },
+          { m: "angry", t: "Seis días de racha seguidos. Si lo consigues, hablamos de patrocinios de verdad. Si no... bueno, seguiremos hablando igual, pero con menos ceros." }],
+        snap: () => ({}),
+        check: (g) => (g.player.streak || 0) >= 6 },
+      { title: "El contrato de verdad", objective: "Alcanza la media de la siguiente categoría",
+        intro: [
+          { m: "idle", t: "Bien. Nada mal. Ahora el reto de verdad, el que decide si esto va en serio." },
+          { m: "angry", t: "Sube tu media hasta lo que pide la siguiente categoría. Un patrocinador de nivel no invierte en potencial, invierte en hechos." }],
+        snap: (g) => ({ need: (TIERS.find((t) => t.id === g.tier.id + 1) || { minOvr: 99 }).minOvr }),
+        check: (g, snap) => calcOVR(g.player.stats) >= snap.need },
+      { title: "El partidazo", objective: "Consigue una nota de 8.5 o más", deadlineDays: 35,
+        intro: [
+          { m: "idle", t: "Ya tengo el contrato prácticamente cerrado. Solo falta un detalle que quieren ver antes de firmar." },
+          { m: "angry", t: "Un partido a tu mejor nivel, delante de la gente correcta. Dame eso y esto está hecho." }],
+        snap: (g) => ({ matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.rating >= 8.5) },
+      { title: "La firma", final: true,
+        intro: [
+          { m: "happy", t: "Firmado. Y no te voy a mentir: me ha costado convencerles, pero al final has hecho tú todo el trabajo por mí." },
+          { m: "happy", t: "Reconozco cuando alguien vale lo que promete. Tú lo vales. No te acostumbres a que te lo diga así de claro, es un caso excepcional." }],
+        introFail: [
+          { m: "angry", t: "No hemos llegado a tiempo para esta oferta concreta, se enfrió. Ya habrá otras, no es el fin del mundo." },
+          { m: "angry", t: "Sigo pensando que vales la pena, que conste. Esto no cambia mi opinión sobre ti, solo el calendario." }],
+        reward: (g) => { const stats = { ...g.player.stats }; stats.FIS = Math.min(99, stats.FIS + 1); return { ...g, player: { ...g.player, stats } }; } },
+    ],
+  },
+  milly: {
+    label: "El rumor del siglo",
+    npc: "milly",
+    trigger: (g) => dayDiff(g.signedAt || todayStr(), todayStr()) >= 21,
+    stages: [
+      { title: "Sigue las migas", objective: "Conoce a 2 personajes más de la ciudad",
+        intro: [
+          { m: "idle", t: "Tengo un rumor entre manos que llevo semanas siguiendo, y creo que tiene que ver contigo." },
+          { m: "happy", t: "Necesito que hables con más gente de la ciudad para confirmar un par de cosas. Cuantos más conozcas, antes ato cabos. Toma, tu periódico, mientras tanto." }],
+        snap: (g) => ({ count: ["metDino", "metPunky", "metLisa", "metYuni"].filter((k) => g[k]).length }),
+        check: (g, snap) => (["metDino", "metPunky", "metLisa", "metYuni"].filter((k) => g[k]).length - snap.count) >= 2 },
+      { title: "El ingrediente secreto", objective: "Pasa 5 días viniendo a por tu periódico",
+        intro: [
+          { m: "idle", t: "Vas por buen camino. El rumor se sostiene, pero necesito una cosa más: continuidad." },
+          { m: "happy", t: "Sigue viniendo cada día a por tu periódico, sin faltar, durante unos días. Confía en mí, tiene sentido, ya lo verás." }],
+        snap: () => ({ start: todayStr() }),
+        check: (g, snap) => dayDiff(snap.start, todayStr()) >= 5 },
+      { title: "La confirmación", objective: "Gana la semana del derbi", deadlineDays: 30,
+        intro: [
+          { m: "idle", t: "Última pieza del puzle, y es la gorda: necesito que ganes el derbi. Todo el rumor depende de eso, literalmente." },
+          { m: "happy", t: "No te puedo contar más sin arruinarlo. Gánalo y te cuento todo, te lo prometo por el kiosco entero." }],
+        snap: (g) => ({ matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.derbi && m.res === "V") },
+      { title: "El titular", final: true,
+        intro: [
+          { m: "happy", t: "¡CONFIRMADO! El rumor era que ibas a convertirte en el nombre más comentado de esta ciudad. Y mírate. Lo has hecho tú solito, delante de mis narices." },
+          { m: "happy", t: "Llevo veinte años en este mostrador y pocas veces me ha dado tanta alegría tener razón en un cotilleo. Toma, este periódico te lo regalo yo." }],
+        introFail: [
+          { m: "idle", t: "El derbi no salió como esperaba, así que el rumor se queda sin confirmar del todo, de momento." },
+          { m: "happy", t: "Pero oye, sigo pensando que algún día vas a dar que hablar en esta ciudad. Los rumores buenos tardan en cumplirse, no en desaparecer." }],
+        reward: (g) => { const stats = { ...g.player.stats }; stats.REC = Math.min(99, stats.REC + 1); return { ...g, player: { ...g.player, stats } }; } },
+    ],
+  },
 };
 
 /* --- EL PERIÓDICO · plantillas con titular y cuerpo, por secciones.

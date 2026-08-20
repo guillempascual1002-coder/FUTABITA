@@ -1449,6 +1449,51 @@ const ZONES = [
     unlocked: (g) => g.tier.id >= 4, reqLabel: "Asciende a Primera división · media tabla", big: true },
 ];
 
+/* ============================================================
+   MISIONES · historias por entregas, aparte de las frases sueltas.
+   Se guardan en g.quests[npc] = { stage, snap, startDay, done, failed }.
+   Cada etapa: intro (escena al empezarla), objective (texto para el
+   registro), snap (foto del estado al empezar, para medir el progreso),
+   check (si ya se cumplió). La última etapa lleva final:true y no
+   tiene objetivo propio: solo resuelve la historia (con introFail si
+   se cumplió el plazo sin lograrlo).
+   ============================================================ */
+const QUESTS = {
+  yuni: {
+    label: "La sombra que quiere ser luz",
+    npc: "yuni",
+    trigger: (g) => ZONES.find((z) => z.id === "cantera").unlocked(g),
+    stages: [
+      { title: "El cuaderno", objective: "Gana tu próximo partido",
+        intro: [
+          { m: "happy", t: "Oye... esto va a sonar raro, pero necesito pedirte algo." },
+          { m: "happy", t: "El próximo partido, gánalo. No por ti. Bueno, sí por ti, pero también un poco por mí. Necesito creer que se puede. ¿Me cuentas después qué se siente?" }],
+        snap: (g) => ({ matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") },
+      { title: "Los mismos pasos", objective: "Entrena (gym) 3 días distintos",
+        intro: [
+          { m: "happy", t: "¡LO SABÍA! Sabía que podías. Vale, ahora te pido otra cosa, prométeme que no te vas a reír." },
+          { m: "happy", t: "Déjame entrenar cerca de ti unos días. No hace falta que hablemos ni nada, solo... verte de cerca. Aprender mirando, ya sabes." }],
+        snap: () => ({ today: todayStr() }),
+        check: (g, snap) => Object.entries(g.logs || {}).filter(([d, l]) => l.gym && d >= snap.today).length >= 3 },
+      { title: "La prueba", objective: "Sube tu media +2 puntos", deadlineDays: 20,
+        intro: [
+          { m: "idle", t: "Tengo que contarte algo y estoy que no puedo con los nervios." },
+          { m: "happy", t: "El cuerpo técnico del filial me va a hacer una prueba pronto. Necesito verte a ti rindiendo a tope para creer que yo también puedo. No sé si tiene sentido, pero es así." }],
+        snap: (g) => ({ ovr: calcOVR(g.player.stats) }),
+        check: (g, snap) => calcOVR(g.player.stats) >= snap.ovr + 2 },
+      { title: "El día D", final: true,
+        intro: [
+          { m: "happy", t: "¡LO CONSEGUÍ! Bueno, técnicamente todavía estoy en el filial, pero el segundo entrenador me dijo 'nos volveremos a ver pronto', ¡y esa frase la tengo enmarcada en la cabeza para siempre!" },
+          { m: "happy", t: "Todo esto empezó porque tú me dejaste preguntarte tonterías el primer día. Gracias. De verdad." }],
+        introFail: [
+          { m: "idle", t: "No ha podido ser esta vez. La prueba no salió como quería." },
+          { m: "happy", t: "Pero, ¿sabes qué? Seguiré aquí, currándomelo. Tú me enseñaste eso sin darte cuenta: que se puede seguir después de un mal día. Gracias por eso, en serio." }],
+        reward: (g) => { const stats = { ...g.player.stats }; stats.MEN = Math.min(99, stats.MEN + 1); return { ...g, player: { ...g.player, stats } }; } },
+    ],
+  },
+};
+
 /* --- EL PERIÓDICO · plantillas con titular y cuerpo, por secciones.
    Mínimo ~20 por sección para que la edición diaria no se repita enseguida. --- */
 const NEWS = [
@@ -2324,6 +2369,47 @@ function PaperModal({ game, onRead, onClose }) {
       <div style={{ width: "100%", maxWidth: 460, maxHeight: "90vh", overflowY: "auto", borderRadius: 14 }}
         onClick={(e) => e.stopPropagation()}>
         <Newspaper game={game} onRead={onRead} />
+      </div>
+    </div>);
+}
+
+/* Registro de misiones: solo enseña las historias que ya han empezado (nada de spoilers
+   de las que aún no se han desbloqueado), con el objetivo actual y una barra de progreso. */
+function QuestPanel({ game, onClose }) {
+  const active = Object.entries(QUESTS)
+    .map(([key, def]) => ({ key, def, qs: (game.quests || {})[key] }))
+    .filter((x) => x.qs);
+  return (
+    <div className="overlay" style={{ background: "rgba(5,7,13,.75)", zIndex: 65, alignItems: "flex-end", padding: 0 }} onClick={onClose}>
+      <div className="sheet" style={{ maxHeight: "78vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+        <div className="ptitle" style={{ fontSize: 16, marginBottom: 14 }}>📜 MISIONES</div>
+        {active.length === 0 && (
+          <div className="empty"><span className="em-ico">🎯</span>
+            Todavía no hay ninguna historia en marcha.<br />Sigue explorando la ciudad.</div>)}
+        {active.map(({ key, def, qs }) => {
+          const npc = NPCS[def.npc];
+          const totalStages = def.stages.length - 1;
+          const stageDef = def.stages[qs.stage];
+          return (
+            <div key={key} className="panel" style={{ display: "flex", gap: 12, alignItems: "center" }}>
+              <img src={npc.icon} alt={npc.name} style={{ width: 44, height: 44, borderRadius: "50%",
+                objectFit: "cover", flexShrink: 0, border: "1.5px solid #16190F" }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 13, marginBottom: 2 }}>{def.label}</div>
+                {qs.done ? (
+                  <div style={{ fontSize: 12, color: qs.failed ? "#9a9e8e" : "#3F8F2B", fontWeight: 600 }}>
+                    {qs.failed ? "Historia cerrada" : "✓ Completada"}</div>
+                ) : (
+                  <>
+                    <div style={{ fontSize: 11.5, color: "#6F7563" }}>Etapa {qs.stage + 1}/{totalStages} · {stageDef.title}</div>
+                    <div style={{ fontSize: 12.5, marginTop: 3 }}>{stageDef.objective}</div>
+                    <div className="track" style={{ marginTop: 6 }}>
+                      <div className="fill" style={{ width: `${(qs.stage / totalStages) * 100}%`, background: "#CDF546" }} />
+                    </div>
+                  </>)}
+              </div>
+            </div>);
+        })}
       </div>
     </div>);
 }
@@ -3519,11 +3605,12 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [activeNpc, setActiveNpc] = useState(null); // qué personaje de la Ciudad tiene el diálogo abierto
   const [showPaper, setShowPaper] = useState(false); // periódico abierto como ventana modal desde el Kiosco
+  const [showQuests, setShowQuests] = useState(false); // registro de misiones
   const saveTimer = useRef();
 
   const pushToast = (t) => { setToast(t); setTimeout(() => setToast(null), 3200); };
-  /* como el periódico: al salir de la pestaña Ciudad, cualquier diálogo/periódico abierto se cierra */
-  useEffect(() => { if (tab !== "chat") { setActiveNpc(null); setShowPaper(false); } }, [tab]);
+  /* como el periódico: al salir de la pestaña Ciudad, cualquier diálogo/periódico/registro abierto se cierra */
+  useEffect(() => { if (tab !== "chat") { setActiveNpc(null); setShowPaper(false); setShowQuests(false); } }, [tab]);
   /* si el diálogo abierto se vacía (se acabó la escena), cierra el overlay solo */
   useEffect(() => {
     if (activeNpc && !(game && (game.npcQueue || []).some((e) => e.npc === activeNpc))) setActiveNpc(null);
@@ -3577,6 +3664,35 @@ export default function App() {
       out = { ...out, [z.metFlag]: true };
       out = addScene(out, NPCS[z.npc].name, z.intro.map((b) => ({ m: b.m, t: fillTpl(b.t, flavorCtx(out)) })));
     });
+    return out;
+  };
+  /* motor de misiones: arranca la historia de un personaje cuando toca, avanza de etapa
+     cuando se cumple el objetivo (o se agota el plazo) y encola la escena correspondiente. */
+  const checkQuests = (g) => {
+    let out = g;
+    const quests = { ...(out.quests || {}) };
+    Object.entries(QUESTS).forEach(([key, def]) => {
+      let qs = quests[key];
+      if (!qs) {
+        if (!def.trigger(out)) return;
+        const s0 = def.stages[0];
+        quests[key] = { stage: 0, snap: s0.snap ? s0.snap(out) : {}, startDay: todayStr() };
+        out = addScene(out, NPCS[def.npc].name, s0.intro.map((b) => ({ m: b.m, t: fillTpl(b.t, flavorCtx(out)) })));
+        return;
+      }
+      if (qs.done) return;
+      const stage = def.stages[qs.stage];
+      const deadlineHit = stage.deadlineDays && dayDiff(qs.startDay, todayStr()) > stage.deadlineDays;
+      if (!stage.check(out, qs.snap) && !deadlineHit) return;
+      const failed = deadlineHit && !stage.check(out, qs.snap);
+      const nextIdx = qs.stage + 1;
+      const next = def.stages[nextIdx];
+      quests[key] = { stage: nextIdx, snap: next.snap ? next.snap(out) : {}, startDay: todayStr(), done: !!next.final, failed };
+      const beats = failed && next.introFail ? next.introFail : next.intro;
+      out = addScene(out, NPCS[def.npc].name, beats.map((b) => ({ m: b.m, t: fillTpl(b.t, flavorCtx(out)) })));
+      if (next.final && next.reward && !failed) out = next.reward(out);
+    });
+    out.quests = quests;
     return out;
   };
 
@@ -3738,7 +3854,7 @@ export default function App() {
         }
       }
     }
-    return checkZoneUnlocks(out);
+    return checkQuests(checkZoneUnlocks(out));
   }
 
   /* onboarding terminado -> generar 3 ofertas regionales */
@@ -3806,7 +3922,7 @@ export default function App() {
         out = addMsg(out, "Tu agente",
           "Tu primer salto de categoría. 📈 El primero de muchos. Firmé contigo por días como hoy — disfrútalo.");
       }
-      return checkZoneUnlocks(out);
+      return checkQuests(checkZoneUnlocks(out));
     });
     setSigning(null);
     setTab("home");
@@ -3926,7 +4042,7 @@ export default function App() {
           rivals: pickN(RIVALS_BY_TIER[Math.min(g.tier.id, RIVALS_BY_TIER.length - 1)], SEASON_LENGTH), midOfferDone: false };
         out = addMsg(out, "Elisa", `La temporada ${s.num + 1} arranca ya. Pretemporada exprés: mañana se juega. 🏃`);
       }
-      return checkZoneUnlocks(out);
+      return checkQuests(checkZoneUnlocks(out));
     });
     setLiveMatch(null);
   };
@@ -3958,8 +4074,8 @@ export default function App() {
     let upped = false;
     while (stats.MEN < 99 && xp.MEN >= xpToNext(stats.MEN)) { xp.MEN -= xpToNext(stats.MEN); stats.MEN += 1; upped = true; }
     if (upped) setTimeout(() => pushToast("🧠 ¡MEN sube a " + stats.MEN + "! Cabeza fría, crack"), 600);
-    return checkZoneUnlocks({ ...g, player: { ...p, stats, xp,
-      weightLog: [...p.weightLog, { d: todayStr(), kg }] } });
+    return checkQuests(checkZoneUnlocks({ ...g, player: { ...p, stats, xp,
+      weightLog: [...p.weightLog, { d: todayStr(), kg }] } }));
   }); pushToast("⚖️ Peso registrado — tu valor de mercado se actualiza · +8 XP MEN"); };
   /* el vestuario "se entera" cuando ajustas tus objetivos de kcal/proteína */
   /* ---------- acciones del gym ---------- */
@@ -4099,7 +4215,7 @@ export default function App() {
     if (r.form === "alza") buzz([20, 30, 20]);
     if (r.ups.length) buzz(30);
     setTimeout(() => pushToast(`📋 Día ${dateStr.slice(8)}/${dateStr.slice(5, 7)} cerrado · ${r.pct}%`), 100);
-    return checkZoneUnlocks(out);
+    return checkQuests(checkZoneUnlocks(out));
   });
 
   /* respaldo manual (independiente del almacenamiento automático) */
@@ -4184,6 +4300,12 @@ export default function App() {
       })()}
       {tab === "chat" && showPaper && (
         <PaperModal game={game} onRead={markPaperRead} onClose={() => setShowPaper(false)} />)}
+      {tab === "chat" && !activeNpc && !showPaper && (
+        <div className="quest-fab-wrap">
+          <button className="quest-fab" onClick={() => setShowQuests(true)} aria-label="Misiones">📜</button>
+        </div>)}
+      {tab === "chat" && showQuests && (
+        <QuestPanel game={game} onClose={() => setShowQuests(false)} />)}
       {game.pendingSummary && !liveMatch && (
         <div className="overlay" style={{ background: "radial-gradient(ellipse at 50% 0%, #0E3320, #05070d 75%)", overflowY: "auto" }}>
           <div className="pop-in" style={{ width: "100%", maxWidth: 340, padding: "30px 0" }}>
@@ -4311,6 +4433,14 @@ function StyleTag() {
       .tabbar { position:fixed; bottom:10px; left:50%; transform:translateX(-50%); width:calc(100% - 20px); max-width:460px;
         display:flex; background:#16190F; border-radius:22px; padding:5px 6px; z-index:40;
         box-shadow:0 8px 24px rgba(20,23,14,.35); }
+      /* botón de misiones: mismo truco de centrado que la tabbar (para alinearse con ella
+         sin importar el ancho de viewport), pero el botón en sí solo ocupa la izquierda */
+      .quest-fab-wrap { position:fixed; bottom:78px; left:50%; transform:translateX(-50%);
+        width:calc(100% - 20px); max-width:460px; display:flex; justify-content:flex-start;
+        z-index:35; pointer-events:none; }
+      .quest-fab { pointer-events:auto; width:52px; height:52px; border-radius:50%; background:#16190F;
+        color:#CDF546; border:2px solid #CDF546; font-size:22px; display:flex; align-items:center;
+        justify-content:center; cursor:pointer; box-shadow:0 6px 16px rgba(20,23,14,.4); }
       .tabbtn { flex:1; min-width:0; background:none; border:none; color:#8d9279; padding:8px 0 9px; display:flex; flex-direction:column;
         align-items:center; gap:2px; cursor:pointer; font-family:'Barlow',sans-serif; border-radius:16px; }
       /* --- periódico --- */

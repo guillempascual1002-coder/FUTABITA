@@ -1574,6 +1574,15 @@ const ZONES = [
     pts: "588.81 606.32 499.76 629.73 467.63 649.9 494.8 736.45 588.81 736.45 635.81 687.73 588.81 606.32",
     unlocked: (g) => g.tier.id >= 4, reqLabel: "Asciende a Primera división · media tabla", big: true },
 ];
+/* una zona puede tener uno o varios personajes asignados (p.ej. El Barrio) */
+const zoneNpcList = (z) => (Array.isArray(z.npc) ? z.npc : z.npc ? [z.npc] : []);
+/* quién de esa zona tiene algo pendiente que contar AHORA MISMO (null si nadie) */
+const zoneActiveNpc = (z, npcQueue) => zoneNpcList(z).find((n) => npcQueue.some((e) => e.npc === n)) || null;
+const zonePending = (z, game) => {
+  const npcQueue = game.npcQueue || [];
+  if (z.kind === "paper") return (!!game.paper && game.paperRead !== todayStr()) || (z.npc && npcQueue.some((e) => e.npc === z.npc));
+  return zoneNpcList(z).some((n) => npcQueue.some((e) => e.npc === n));
+};
 
 /* Personajes que comparten burbuja con una zona ya existente en vez de tener la suya propia
    (de momento, El Barrio). Mismo mecanismo que ZONES.metFlag/intro, pero sin polígono ni
@@ -2809,6 +2818,37 @@ function Newspaper({ game, onRead }) {
 
 /* Periódico como ventana modal: se cierra con la X o tocando fuera, y se puede
    reabrir las veces que quieras el mismo día (cada apertura vuelve a animar la portada). */
+/* Pantalla de "visitar" una zona: fondo a toda pantalla + flecha para volver.
+   Si hay alguien esperando ahí, su diálogo (NpcDialogue) aparece por encima, a nivel
+   de App. Si no hay nadie, un cartel lo dice; el Kiosco es la excepción porque
+   siempre hay periódico, así que en vez de cartel ofrece abrirlo.
+   Fondo real: si existe /images/zones/{id}.webp se usa; si no (todavía no se ha
+   subido), cae a un degradado de marcador de posición sin romper nada. */
+function ZoneScreen({ zone, pendingNpc, onBack, onOpenPaper }) {
+  const [imgOk, setImgOk] = useState(true);
+  const npc = pendingNpc ? NPCS[pendingNpc] : null;
+  const showPaperPrompt = zone.kind === "paper" && !pendingNpc;
+  return (
+    <div className="zone-screen">
+      {imgOk ? (
+        <img key={zone.id} src={`/images/zones/${zone.id}.webp`} alt="" className="zone-bg-img" onError={() => setImgOk(false)} />
+      ) : (
+        <div className="zone-bg-fallback" style={{ background:
+          `linear-gradient(160deg, ${npc ? npc.color : "#7A8065"}77, #16190F 78%)` }} />
+      )}
+      <div className="zone-shade" />
+      <button className="zone-back" onClick={onBack}>← Volver</button>
+      <div className="zone-label">{zone.label}</div>
+      {!pendingNpc && !showPaperPrompt && (
+        <div className="zone-empty-card">
+          <div style={{ fontSize: 30, marginBottom: 6 }}>🏚️</div>
+          Parece que no hay nadie por aquí ahora mismo.</div>)}
+      {showPaperPrompt && (
+        <button className="zone-empty-card zone-paper-btn" onClick={onOpenPaper}>
+          🗞️ Leer el periódico de hoy</button>)}
+    </div>);
+}
+
 function PaperModal({ game, onRead, onClose }) {
   return (
     <div className="overlay" style={{ background: "rgba(5,7,13,.88)", zIndex: 70, padding: 14 }} onClick={onClose}>
@@ -2862,9 +2902,7 @@ function QuestPanel({ game, onClose }) {
 }
 
 /* ---------- LA CIUDAD · mapa de zonas con desbloqueo progresivo ---------- */
-function CityMap({ game, onOpenNpc, onOpenPaper }) {
-  const today = todayStr();
-  const paperPending = !!game.paper && game.paperRead !== today;
+function CityMap({ game, onVisit }) {
   const npcQueue = game.npcQueue || [];
   const [flash, setFlash] = useState(null); /* id de zona mostrando su requisito/aviso */
 
@@ -2873,29 +2911,16 @@ function CityMap({ game, onOpenNpc, onOpenPaper }) {
     setFlash(id);
     setTimeout(() => setFlash((cur) => (cur === id ? null : cur)), 2200);
   };
-  /* una zona puede tener varios personajes asignados (p.ej. El Barrio): se muestra
-     el primero que tenga algo pendiente que contar; si ninguno tiene, se usa el
-     primero de la lista solo como valor por defecto para el click (no pasa nada,
-     no hay cola que abrir y no ocurre nada visible, igual que con un solo personaje) */
-  const zoneNpcs = (z) => (Array.isArray(z.npc) ? z.npc : z.npc ? [z.npc] : []);
-  const activeNpcOf = (z) => zoneNpcs(z).find((n) => npcQueue.some((e) => e.npc === n)) || zoneNpcs(z)[0] || null;
+  /* tocar una zona ya no abre nada directamente: te lleva a visitarla (ZoneScreen),
+     que es quien decide si hay alguien esperando o si está vacía */
   const zoneClick = (z, unlocked) => {
     if (!unlocked || z.kind === "soon") { flashReq(z.id); return; }
-    if (z.kind === "paper") {
-      /* Milly te trae el periódico en persona: si todavía no ha "pasado" hoy, se habla
-         con ella primero; una vez la cola de Milly está vacía, el kiosco abre el periódico. */
-      const millyPending = z.npc && npcQueue.some((e) => e.npc === z.npc);
-      if (millyPending) onOpenNpc(z.npc); else onOpenPaper();
-      return;
-    }
-    onOpenNpc(activeNpcOf(z));
+    onVisit(z.id);
   };
   /* centro de cada zona en las coordenadas nativas del SVG (para el texto del candado) */
   const cx = (z) => CITY_MAP_VB.x + (z.x / 100) * CITY_MAP_VB.w;
   const cy = (z) => CITY_MAP_VB.y + (z.y / 100) * CITY_MAP_VB.h;
   const flashZone = flash ? ZONES.find((z) => z.id === flash) : null;
-  const isPending = (z) => z.kind === "paper" ? (paperPending || (z.npc && npcQueue.some((e) => e.npc === z.npc)))
-    : zoneNpcs(z).some((n) => npcQueue.some((e) => e.npc === n));
 
   return (
     <div className="city-wrap">
@@ -2911,7 +2936,7 @@ function CityMap({ game, onOpenNpc, onOpenPaper }) {
               : <circle cx={cx(z)} cy={cy(z)} r="20" fill="transparent" />}
             <text x={cx(z)} y={cy(z)} className={"city-locktxt" + (z.pts ? "" : " small")} textAnchor="middle" dominantBaseline="central">🔒</text>
           </g>))}
-        {ZONES.filter((z) => z.unlocked(game) && !isPending(z)).map((z) => (
+        {ZONES.filter((z) => z.unlocked(game) && !zonePending(z, game)).map((z) => (
           <g key={z.id} className="city-clickshape" onClick={() => zoneClick(z, true)}>
             {z.pts ? <polygon points={z.pts} fill="transparent" />
               : <circle cx={cx(z)} cy={cy(z)} r="20" fill="transparent" />}
@@ -2922,13 +2947,13 @@ function CityMap({ game, onOpenNpc, onOpenPaper }) {
         const style = { left: z.x + "%", top: z.y + "%" };
         /* el candado, el clic en reposo y el aviso van todos dentro del overlay SVG /
            centrados en el punto; los nombres ya están dibujados en el propio mapa. */
-        const pending = unlocked && isPending(z);
+        const pending = unlocked && zonePending(z, game);
         if (!pending) {
           return <div key={z.id} className="city-zone" style={style} />;
         }
         /* la cara del personaje solo se ve si tiene algo pendiente que contar.
            en zonas con varios personajes, se enseña el primero que tenga algo pendiente. */
-        const activeKey = activeNpcOf(z);
+        const activeKey = zoneActiveNpc(z, npcQueue);
         const npc = activeKey ? NPCS[activeKey] : null;
         return (
           <div key={z.id} className="city-zone" style={style}>
@@ -4069,18 +4094,19 @@ export default function App() {
   const [liveMatch, setLiveMatch] = useState(null);
   const [tab, setTab] = useState("home");
   const [toast, setToast] = useState(null);
-  const [activeNpc, setActiveNpc] = useState(null); // qué personaje de la Ciudad tiene el diálogo abierto
+  const [visitedZone, setVisitedZone] = useState(null); // qué zona de la Ciudad estás visitando ahora mismo
   const [showPaper, setShowPaper] = useState(false); // periódico abierto como ventana modal desde el Kiosco
   const [showQuests, setShowQuests] = useState(false); // registro de misiones
   const saveTimer = useRef();
 
   const pushToast = (t) => { setToast(t); setTimeout(() => setToast(null), 3200); };
-  /* como el periódico: al salir de la pestaña Ciudad, cualquier diálogo/periódico/registro abierto se cierra */
-  useEffect(() => { if (tab !== "chat") { setActiveNpc(null); setShowPaper(false); setShowQuests(false); } }, [tab]);
-  /* si el diálogo abierto se vacía (se acabó la escena), cierra el overlay solo */
-  useEffect(() => {
-    if (activeNpc && !(game && (game.npcQueue || []).some((e) => e.npc === activeNpc))) setActiveNpc(null);
-  }, [activeNpc, game]);
+  /* como el periódico: al salir de la pestaña Ciudad, cualquier visita/periódico/registro abierto se cierra */
+  useEffect(() => { if (tab !== "chat") { setVisitedZone(null); setShowPaper(false); setShowQuests(false); } }, [tab]);
+  /* quién tiene algo pendiente en la zona que estás visitando ahora: se recalcula solo
+     en cada render, así que en cuanto se vacía su cola la pantalla pasa sola al cartel
+     de "no hay nadie" sin necesidad de un efecto aparte que pueda desincronizarse */
+  const visitedZoneObj = visitedZone ? ZONES.find((z) => z.id === visitedZone) : null;
+  const visitedActiveNpc = visitedZoneObj ? zoneActiveNpc(visitedZoneObj, game ? (game.npcQueue || []) : []) : null;
 
   /* mensajes en 2ª persona -> cola de diálogos NPC; 3ª persona -> artículo del periódico.
      Mantiene la firma histórica: los ~20 puntos que llaman addMsg no cambian. */
@@ -4774,7 +4800,7 @@ export default function App() {
               notify={pushToast} onGoGym={() => setTab("gym")} onAddNote={addNote} onDelNote={delNote} />}
             {tab === "gym" && <GymTab game={game} api={gymApi} notify={pushToast} />}
             {tab === "league" && <LeagueTab game={game} onPlayMatch={playMatch} crest={crest} crestScale={crestScale} />}
-            {tab === "chat" && <CityMap game={game} onOpenNpc={setActiveNpc} onOpenPaper={() => setShowPaper(true)} />}
+            {tab === "chat" && <CityMap game={game} onVisit={setVisitedZone} />}
             {tab === "me" && <ProfileTab game={game} photo={photo} onWeight={addWeight} onPhoto={savePhoto} onRemovePhoto={removePhoto}
               crest={crest} onCrest={saveCrest} onRemoveCrest={removeCrest} crestScale={crestScale} onCrestScale={saveCrestScale}
               onGoals={setGoals} getBackup={getBackup} onRestore={restoreBackup} haptics={haptics} onHaptics={setHapticsPref}
@@ -4792,17 +4818,21 @@ export default function App() {
           </nav>
         </>
       )}
-      {/* diálogo de personaje: overlay a nivel de App (fuera de .tab-in), visible en la Ciudad.
-          se elige el personaje tocando su burbuja en el mapa (activeNpc), no siempre el primero de la cola */}
-      {tab === "chat" && activeNpc && (() => {
-        const q = (game.npcQueue || []).filter((e) => e.npc === activeNpc);
+      {/* visitar una zona: fondo a toda pantalla + flecha para volver */}
+      {tab === "chat" && visitedZoneObj && (
+        <ZoneScreen zone={visitedZoneObj} pendingNpc={visitedActiveNpc}
+          onBack={() => setVisitedZone(null)} onOpenPaper={() => setShowPaper(true)} />)}
+      {/* diálogo de personaje: overlay a nivel de App (fuera de .tab-in), aparece encima
+          del fondo de la zona en cuanto hay alguien esperando ahí (visitedActiveNpc) */}
+      {tab === "chat" && visitedActiveNpc && (() => {
+        const q = (game.npcQueue || []).filter((e) => e.npc === visitedActiveNpc);
         return q.length > 0 && (
           <NpcDialogue entry={q[0]} queueLeft={q.length}
             onAdvance={advanceNpc} onChoice={answerChoice} onOffer={answerOffer} />);
       })()}
       {tab === "chat" && showPaper && (
         <PaperModal game={game} onRead={markPaperRead} onClose={() => setShowPaper(false)} />)}
-      {tab === "chat" && !activeNpc && !showPaper && (
+      {tab === "chat" && !visitedZone && !showPaper && (
         <div className="quest-fab-wrap">
           <button className="quest-fab" onClick={() => setShowQuests(true)} aria-label="Misiones">📜</button>
         </div>)}
@@ -4943,6 +4973,21 @@ function StyleTag() {
       .quest-fab { pointer-events:auto; width:52px; height:52px; border-radius:50%; background:#16190F;
         color:#CDF546; border:2px solid #CDF546; font-size:22px; display:flex; align-items:center;
         justify-content:center; cursor:pointer; box-shadow:0 6px 16px rgba(20,23,14,.4); }
+      /* --- visitar una zona: fondo a toda pantalla --- */
+      .zone-screen { position:fixed; inset:0; z-index:25; background:#16190F; overflow:hidden; }
+      .zone-bg-img, .zone-bg-fallback { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+      .zone-shade { position:absolute; inset:0; background:linear-gradient(to bottom, rgba(5,7,13,.55) 0%, rgba(5,7,13,.05) 22%, rgba(5,7,13,.1) 60%, rgba(5,7,13,.75) 100%); }
+      .zone-back { position:fixed; top:14px; left:14px; z-index:2; background:rgba(16,18,8,.75); color:#EFEEE3;
+        border:1.5px solid rgba(239,238,227,.4); border-radius:20px; padding:9px 16px; font-size:13px;
+        font-family:'Oswald',sans-serif; letter-spacing:.5px; cursor:pointer; }
+      .zone-label { position:fixed; top:16px; left:50%; transform:translateX(-50%); z-index:1; color:#EFEEE3;
+        font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:2px; text-transform:uppercase;
+        text-shadow:0 2px 8px rgba(0,0,0,.6); }
+      .zone-empty-card { position:fixed; left:50%; bottom:18%; transform:translateX(-50%); z-index:2;
+        background:rgba(16,18,8,.82); color:#EFEEE3; padding:16px 22px; border-radius:18px; text-align:center;
+        max-width:78%; font-size:13.5px; line-height:1.5; border:1.5px solid rgba(239,238,227,.25); }
+      .zone-paper-btn { border:1.5px solid #CDF546; cursor:pointer; font-family:'Oswald',sans-serif;
+        letter-spacing:1px; font-size:14px; }
       .tabbtn { flex:1; min-width:0; background:none; border:none; color:#8d9279; padding:8px 0 9px; display:flex; flex-direction:column;
         align-items:center; gap:2px; cursor:pointer; font-family:'Barlow',sans-serif; border-radius:16px; }
       /* --- periódico --- */

@@ -287,6 +287,12 @@ function sanitizeGame(g) {
   if (out.savedMeals) out.savedMeals = out.savedMeals.filter((m) => m && Number.isFinite(m.kcal) && Number.isFinite(m.prot));
   /* gym: crear estructura en partidas anteriores al módulo y compactar sesiones antiguas */
   out.gym = pruneGym({ ...emptyGym(), ...(out.gym || {}) });
+  /* Karlos y Mabel se han quitado del juego: limpia rastros de partidas guardadas antes
+     de este cambio para que no se quede un aviso de "pendiente" imposible de abrir */
+  if (out.npcQueue) out.npcQueue = out.npcQueue.filter((e) => e.npc !== "mabel" && e.npc !== "karlos");
+  if (out.quests) { const { mabel, ...restQuests } = out.quests; out.quests = restQuests; }
+  if (out.questPending) { const { mabel, ...restQP } = out.questPending; out.questPending = restQP; }
+  if (out.introQueued) { const { metMabel, metKarlos, ...restIQ } = out.introQueued; out.introQueued = restIQ; }
   /* migración al sistema de personajes: la primera vez se crea la cola de diálogos
      y las ofertas que quedaran pendientes en el chat antiguo pasan a Elisa */
   if (out.phase === "main" && out.player) {
@@ -478,10 +484,10 @@ const COND = {
   /* memoria cruzada entre personajes y callbacks de decisiones */
   metDino: (c) => c.metDino, metPunky: (c) => c.metPunky, metLisa: (c) => c.metLisa,
   metYuni: (c) => c.metYuni, metMilly: (c) => c.metMilly, metYuna: (c) => c.metYuna,
-  metLili: (c) => c.metLili, metMabel: (c) => c.metMabel,
+  metLili: (c) => c.metLili,
   dinoTip: (c) => c.dinoTip, punkyMote: (c) => c.punkyMote, lisaTilin: (c) => c.lisaTilin,
   yuniTrain: (c) => c.yuniTrain, millySecret: (c) => c.millySecret,
-  liliBouquet: (c) => c.liliBouquet, mabelTrust: (c) => c.mabelTrust,
+  liliBouquet: (c) => c.liliBouquet,
 };
 const FLAVOR = [
   /* ---- PRENSA (tercera persona) ---- */
@@ -726,10 +732,10 @@ function flavorCtx(g) {
      y para pequeños "callbacks" a decisiones concretas que tomaste en otras conversaciones */
   c.metDino = !!g.metDino; c.metPunky = !!g.metPunky; c.metLisa = !!g.metLisa;
   c.metYuni = !!g.metYuni; c.metMilly = !!g.metMilly; c.metYuna = !!g.yunaMet;
-  c.metLili = !!g.metLili; c.metMabel = !!g.metMabel;
+  c.metLili = !!g.metLili;
   c.dinoTip = !!g.dinoTip; c.punkyMote = !!g.punkyMote; c.lisaTilin = !!g.lisaTilin;
   c.yuniTrain = !!g.yuniTrain; c.millySecret = !!g.millySecret;
-  c.liliBouquet = !!g.liliBouquet; c.mabelTrust = !!g.mabelTrust;
+  c.liliBouquet = !!g.liliBouquet;
   return c;
 }
 
@@ -866,14 +872,6 @@ const NPCS = {
   /* Lili: florista, dulce y observadora. Su "angry" es en realidad PREOCUPACIÓN, no enfado. */
   lili: { name: "Lili", color: "#D65C8C", voice: "/audio/vozchica01.mp3", icon: "/images/lili_icon.webp",
     arts: { idle: "/images/lili_idle.webp", happy: "/images/lili_happy.webp", angry: "/images/lili_angry.webp" }, def: "idle" },
-  /* Mabel: policía de la ciudad, seria y meticulosa. Su "idle" ya sirve de pequeño enfado;
-     su "angry" es en realidad PREOCUPACIÓN. Sin happy: no es su registro. */
-  mabel: { name: "Mabel", color: "#2E5C8A", voice: "/audio/vozchica02.mp3", icon: "/images/mabel_icon.webp",
-    arts: { idle: "/images/mabel_idle.webp", angry: "/images/mabel_angry.webp" }, def: "idle" },
-  /* Karlos: chaval de barrio, chulito, cría fanfarronería para tapar que le importa mucho la opinión ajena.
-     Su "angry" es en realidad pose de ego/chulería, no enfado. Sin happy: no es su registro. */
-  karlos: { name: "Karlos", color: "#D68A2E", voice: "/audio/vozchico01.mp3", icon: "/images/karlos_icon.webp",
-    arts: { idle: "/images/karlos_idle.webp", angry: "/images/karlos_angry.webp" }, def: "idle" },
 };
 const senderToNpc = (from) => {
   if (from === "Entrenador" || from === "Tu agente" || from === "Elisa") return "elisa";
@@ -884,8 +882,6 @@ const senderToNpc = (from) => {
   if (from === "Yuni") return "yuni";
   if (from === "Milly") return "milly";
   if (from === "Lili") return "lili";
-  if (from === "Mabel") return "mabel";
-  if (from === "Karlos") return "karlos";
   if (from === "López" || from.includes("Capitán") || from.includes("· Vestuario")) return "lopez";
   return null; /* prensa/afición/redes/club -> periódico */
 };
@@ -1451,77 +1447,12 @@ const LILI_POOL = [
     { m: "idle", t: "La gente cree que no entiendo de fútbol porque no sé de tácticas ni de sistemas." },
     { m: "happy", t: "Pero entiendo de caras. Y las vuestras hablan más que cualquier crónica del periódico de al lado. Nunca me equivoco con un ramo." }] },
   { w: "metMilly", t: "Milly y yo compartimos pared, prácticamente. Se pasa el día contándome cotilleos que yo no le he pedido, y aun así siempre acabo escuchando hasta el final." },
-  { w: "metMabel", beats: [
-    { m: "idle", t: "Mabel pasa por aquí cada mañana en su ronda. Serísima, como siempre, hasta que cree que no la veo mirar las flores más bonitas del puesto." },
-    { m: "happy", t: "Un día le voy a regalar una, aunque me diga que 'está de servicio' y no puede aceptar nada. Ya la conozco." }] },
   { w: "derbiSoon", t: "Con lo del {derbiRival} esta semana he preparado ramos extra, que se nota en el ambiente que la gente anda más nerviosa de lo normal por aquí. Toma el tuyo, para que entres tranquilo." },
   { w: "kgUp", t: "Se te ve más fuerte últimamente, ¿sabes? Como una planta bien regada. Sigue así, se nota el cuidado desde fuera." },
   { t: "¿Tienes algún mal recuerdo con las flores? A veces la gente los tiene y no lo sabe hasta que le regalo una equivocada.", replies: [
     { t: "No que yo sepa", m: "happy", r: ["Mejor así, entonces no tengo que andarme con cuidado contigo. Se agradece, la verdad."] },
     { t: "Puede que sí, ahora que lo dices", m: "idle", r: ["Lo siento si alguna vez te he dado alguna sin querer. Prométeme que me lo dirás si vuelve a pasar, no quiero ser yo quien te recuerde algo feo."] }] },
   { t: "Llevo la floristería sola desde hace un tiempo. Al principio me daba miedo, ahora ya no tanto. Supongo que hasta las personas florecemos tarde, ¿no crees?" },
-];
-
-/* --- MABEL · policía de la ciudad, seria y meticulosa, en El Barrio.
-   Su "idle" ya sirve de pequeño enfado; su "angry" es en realidad PREOCUPACIÓN. Sin happy. --- */
-const MABEL_INTRO_BEATS = [
-  { m: "idle", t: "Buenas. Agente Mabel, patrulla de la zona. No te alarmes, esto no es nada oficial, solo presentación de rutina con los vecinos nuevos de interés." },
-  { m: "idle", t: "Vigilo que los partidos, las celebraciones y demás no se descontrolen. Suelo pasar por aquí a menudo, así que nos veremos. Que sigas bien, eso es todo." },
-];
-const MABEL_POOL = [
-  { w: "derbiSoon", t: "Con lo del {derbiRival} esta semana he reforzado el operativo entero. No es paranoia, es experiencia: estas fechas se descontrolan solas si nadie las vigila." },
-  { w: "win", t: "Buen resultado el de ayer. La celebración en la plaza se mantuvo dentro de lo razonable, así que técnicamente ha sido una victoria doble para mí también." },
-  { w: "loss", beats: [
-    { m: "angry", t: "Me he enterado del resultado de ayer. No voy a fingir que no me preocupa cómo estará el ambiente de la ciudad hoy." },
-    { m: "idle", t: "Pero tranquilo, de eso me encargo yo. Tú preocúpate del campo, que de la calle ya me ocupo yo." }] },
-  { t: "Pregunta de rutina, nada oficial: ¿por dónde sueles volver a casa después de entrenar? Es para tener controlada la zona, no por otra cosa.", replies: [
-    { t: "Por la calle principal", m: "idle", r: ["Anotado. Esa zona la superviso bien, así que puedes ir tranquilo. No es que vaya a escoltarte ni nada parecido. Solo... lo tengo en cuenta.",
-      "Ruta razonable. Bien iluminada, además. Apruebo la decisión, por así decirlo."] },
-    { t: "Voy cambiando, según el día", m: "idle", r: ["Eso complica mi trabajo de control, para que lo sepas. Pero bueno, supongo que la imprevisibilidad también tiene su lado bueno.",
-      "Poco ortodoxo, pero lo respeto. Intentaré no perderte de vista de todas formas."] }] },
-  { beats: [
-    { m: "idle", t: "La gente cree que patrullar es aburrido. No se imaginan la cantidad de cosas que se escuchan caminando por esta ciudad." },
-    { m: "idle", t: "No es que yo escuche a propósito, que conste. Simplemente... pasa. Y una vez que lo oyes, ya no se puede dejar de oír." }] },
-  { w: "benched", t: "Te vi entrar al estadio ayer sin jugar. No voy a decir gran cosa, no es mi terreno, pero anda con la cabeza alta. Se nota cuando alguien se lo toma en serio, y tú te lo tomas en serio." },
-  { w: "hot", t: "{streak} días de regularidad. Como agente valoro mucho la constancia, así que considera esto un cumplido oficial, poco frecuente en mí." },
-  { w: "metMilly", beats: [
-    { m: "idle", t: "Milly y yo tenemos un acuerdo tácito: ella se entera de todo por el mostrador, yo por la calle. Comparamos notas de vez en cuando." },
-    { m: "idle", t: "No es que nos llevemos mal, todo lo contrario. Simplemente no lo vamos a admitir en público ninguna de las dos." }] },
-  { w: "metLili", t: "La florista de al lado, Lili, es de las personas más observadoras que conozco en esta ciudad, y eso que yo me dedico profesionalmente a observar. Buena vecina." },
-  { t: "Otra pregunta de rutina: ¿algún incidente que reportar esta semana? Da igual lo pequeño que sea.", replies: [
-    { t: "No, todo tranquilo", m: "idle", setFlag: "mabelTrust", r: ["Bien. Me gusta que la gente responda rápido y sin rodeos cuando pregunto. Eso también se anota, para que lo sepas.",
-      "Perfecto. Sigamos así. Ciudad tranquila, cabeza despejada, mejor fútbol. Es mi teoría, y de momento no falla."] },
-    { t: "Nada que te interese, agente", m: "idle", r: ["Interesante elección de palabras. No insisto, pero lo apunto mentalmente para más adelante."] }] },
-  { w: "mabelTrust", beats: [
-    { m: "idle", t: "Desde que empezaste a contestarme claro en mis rondas, he bajado un poco la guardia contigo. No se lo digas a nadie." },
-    { m: "angry", t: "Y cuando digo que me preocupo, lo digo en serio, aunque no se me note en la cara. Cuídate ahí fuera, es lo único que pido." }] },
-  { w: "scorer", t: "Con {goals} goles ya, la plaza se llena cada vez que juegas. Más trabajo para mí, pero no me quejo: prefiero mil veces una multitud feliz que una calle vacía y silenciosa." },
-  { t: "Confesión que no debería hacer estando de servicio: me gusta muchísimo este deporte. Nunca lo diría en la comisaría, pero aquí, contigo, sí." },
-];
-
-/* --- KARLOS · chaval de barrio, chulito, cría fanfarronería para tapar que le importa
-   la opinión ajena. Su "angry" es pose de ego, no enfado real. Sin happy. --- */
-const KARLOS_INTRO_BEATS = [
-  { m: "angry", t: "Anda, mira quién anda por aquí. El famosillo. Yo llevo jugando en estas calles desde antes de que supieras atarte los botines, que lo sepas." },
-  { m: "angry", t: "No te creas mejor que nadie solo porque te paguen por dar patadas a un balón. Aquí el que manda de verdad soy yo. Pero bueno, tú a lo tuyo." },
-];
-const KARLOS_POOL = [
-  { w: "loss", t: "JA. Vi lo de ayer. Yo hubiera metido ese gol con los ojos cerrados. Bueno, a lo mejor no, pero suena bien decirlo." },
-  { w: "win", t: "Vale, vale, no ha estado mal lo de ayer. No te lo tengas muy creído, eh, que un partido bueno lo tiene cualquiera." },
-  { beats: [
-    { m: "angry", t: "Me he criado jugando en cada pista de esta ciudad, en cada campo, en cada solar con dos porterías pintadas con tiza." },
-    { m: "angry", t: "Algún día van a hablar de mí igual que hablan de ti. Ya lo verás. Apúntate esto." }] },
-  { w: "benched", t: "¿En el banquillo? JA, típico. Yo en tu lugar no me dejaría sentar ni de broma. Aunque, bueno, seguro que tienes tus motivos. O no. Yo qué sé." },
-  { w: "scorer", t: "{goals} goles, vale, está bien. No digo que esté mal. Solo digo que yo, con la mitad de las ocasiones que tienes tú, habría metido el doble." },
-  { t: "Oye, ¿a que no te atreves a hacerme un caño ahora mismo, aquí en medio de la calle?", replies: [
-    { t: "Cuando quieras", m: "angry", r: ["JA, palabras. Ya veremos, ya. Algún día te tomo la palabra, no creas que se me olvida."] },
-    { t: "Paso, no tengo nada que demostrarte", m: "angry", r: ["Ya, claro, la excusa fácil. Como digas. Yo lo hubiera aceptado sin dudar, para que lo sepas."] }] },
-  { beats: [
-    { m: "angry", t: "La gente cree que soy un borde porque sí. No es eso." },
-    { m: "angry", t: "Bueno, da igual, olvida que he dicho algo. No es asunto tuyo. Sigue con lo tuyo, campeón." }] },
-  { w: "hot", t: "{streak} días de racha, ¿eh? Vale, reconozco que impresiona un poco. UN POCO. No te vengas arriba solo porque yo lo diga." },
-  { w: "derbiSoon", t: "Con lo del {derbiRival} esta semana, más te vale ganar. Como pierdas, no te va a dejar en paz nadie en esta ciudad, y yo el primero, para que lo sepas." },
-  { t: "Algún día voy a jugar en un equipo de verdad, ya lo verás. Y cuando pase, te vas a acordar de mí." },
 ];
 
 /* goles a lo largo de TODA la carrera (todas las temporadas), para el hito del Centro de Alto Rendimiento */
@@ -1553,7 +1484,7 @@ const ZONES = [
   /* El Barrio no es un edificio: es una zona de calle, sin forma propia que pintar de gris */
   /* varios personajes comparten esta zona de calle: la burbuja muestra a quien tenga
      algo pendiente ahora mismo (ver EXTRA_NPCS y CityMap); en reposo, el puntito de siempre */
-  { id: "barrio", kind: "npc", npc: ["yuna", "lili", "mabel", "karlos"], label: "El Barrio", icon: "🌆", x: 57.83, y: 52.92,
+  { id: "barrio", kind: "npc", npc: ["yuna", "lili"], label: "El Barrio", icon: "🌆", x: 57.83, y: 52.92,
     unlocked: (g) => !!g.yunaMet, reqLabel: "Gánate tu primera victoria" },
   { id: "car", kind: "npc", npc: "dino", label: "Centro de Alto Rendimiento", icon: "🏋️", x: 63.19, y: 21.84,
     pts: "434.69 136.71 434.69 194.24 592.65 195.94 587.89 125.73 434.69 136.71",
@@ -1590,10 +1521,6 @@ const zonePending = (z, game) => {
 const EXTRA_NPCS = [
   { npc: "lili", metFlag: "metLili", intro: LILI_INTRO_BEATS,
     unlocked: (g) => !!g.yunaMet },
-  { npc: "mabel", metFlag: "metMabel", intro: MABEL_INTRO_BEATS,
-    unlocked: (g) => !!g.yunaMet && dayDiff(g.signedAt || todayStr(), todayStr()) >= 12 },
-  { npc: "karlos", metFlag: "metKarlos", intro: KARLOS_INTRO_BEATS,
-    unlocked: (g) => !!g.yunaMet && dayDiff(g.signedAt || todayStr(), todayStr()) >= 6 },
 ];
 
 /* ============================================================
@@ -1913,39 +1840,6 @@ const QUESTS = {
           { m: "angry", t: "No hemos llegado a esos siete días seguidos, pero no pasa nada, de verdad." },
           { m: "idle", t: "Las plantas más bonitas suelen ser las que más tardan en florecer. Yo sigo aquí, con tu ramo a medio hacer, esperando el momento." }],
         reward: (g) => { const stats = { ...g.player.stats }; stats.RES = Math.min(99, stats.RES + 1); return { ...g, player: { ...g.player, stats } }; } },
-    ],
-  },
-  mabel: {
-    label: "El expediente abierto",
-    npc: "mabel",
-    trigger: (g) => !!g.metMabel && dayDiff(g.signedAt || todayStr(), todayStr()) >= 20,
-    stages: [
-      { title: "El informe preliminar", objective: "Gana de titular tu próximo partido",
-        intro: [
-          { m: "idle", t: "Tengo una especie de expediente abierto sobre ti. No es nada malo, tranquilo, es más bien... una costumbre profesional con la gente que me interesa vigilar de cerca." },
-          { m: "idle", t: "Primer punto a comprobar: rendimiento bajo responsabilidad. Sal de titular y gana. Quiero verlo con mis propios ojos." }],
-        snap: (g) => ({ matchCount: (g.matchHistory || []).length }),
-        check: (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V" && !m.benched) },
-      { title: "La ronda nocturna", objective: "Sube tu media +2 puntos",
-        intro: [
-          { m: "idle", t: "Punto dos del expediente: progresión sostenida. No me sirve un pico de un día, quiero constancia medible." },
-          { m: "angry", t: "Sube tu media un par de puntos desde hoy. Y sí, esto me preocupa un poco si no ocurre, para que lo sepas, aunque no debería admitirlo." }],
-        snap: (g) => ({ ovr: calcOVR(g.player.stats) }),
-        check: (g, snap) => calcOVR(g.player.stats) >= snap.ovr + 2 },
-      { title: "El caso importante", objective: "Gana el derbi", deadlineDays: 30,
-        intro: [
-          { m: "idle", t: "Último punto, y el más serio de todos: el derbi contra el {derbiRival}. Ese día despliego el operativo grande." },
-          { m: "angry", t: "Gánalo. No solo por el resultado, también porque una ciudad contenta es una ciudad tranquila, y eso también es cosa mía." }],
-        snap: (g) => ({ matchCount: (g.matchHistory || []).length }),
-        check: (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.derbi && m.res === "V") },
-      { title: "Caso cerrado", final: true,
-        intro: [
-          { m: "idle", t: "Expediente cerrado. Con resultado favorable, para que conste por escrito." },
-          { m: "angry", t: "Fuera de lo oficial: me alegro muchísimo por ti. No se lo digas a nadie de comisaría, esta versión mía es solo para gente de confianza." }],
-        introFail: [
-          { m: "idle", t: "El derbi no salió como quería el expediente, así que queda abierto por ahora, sin cerrar." },
-          { m: "angry", t: "No es un fracaso, es una investigación en curso. Seguiré vigilando de cerca, como siempre. Cuídate ahí fuera." }],
-        reward: (g) => { const stats = { ...g.player.stats }; stats.FIS = Math.min(99, stats.FIS + 1); return { ...g, player: { ...g.player, stats } }; } },
     ],
   },
 };
@@ -4367,8 +4261,6 @@ export default function App() {
         if (out.metLisa) candidates.push(["Lisa", LISA_POOL]);
         if (out.metYuni) candidates.push(["Yuni", YUNI_POOL]);
         if (out.metLili) candidates.push(["Lili", LILI_POOL]);
-        if (out.metMabel) candidates.push(["Mabel", MABEL_POOL]);
-        if (out.metKarlos) candidates.push(["Karlos", KARLOS_POOL]);
         candidates.push([null, null]); /* comodín: flavor genérico de vestuario/prensa/agente */
         const [name, pool] = candidates[Math.floor(Math.random() * candidates.length)];
         if (!name) {

@@ -485,7 +485,7 @@ const COND = {
   metDino: (c) => c.metDino, metPunky: (c) => c.metPunky, metLisa: (c) => c.metLisa,
   metYuni: (c) => c.metYuni, metMilly: (c) => c.metMilly, metYuna: (c) => c.metYuna,
   metLili: (c) => c.metLili, metCubarsi: (c) => c.metCubarsi, metYamal: (c) => c.metYamal,
-  metIrina: (c) => c.metIrina,
+  metIrina: (c) => c.metIrina, metIgor: (c) => c.metIgor, metFortuna: (c) => c.metFortuna,
   dinoTip: (c) => c.dinoTip, punkyMote: (c) => c.punkyMote, lisaTilin: (c) => c.lisaTilin,
   yuniTrain: (c) => c.yuniTrain, millySecret: (c) => c.millySecret,
   liliBouquet: (c) => c.liliBouquet,
@@ -734,7 +734,7 @@ function flavorCtx(g) {
   c.metDino = !!g.metDino; c.metPunky = !!g.metPunky; c.metLisa = !!g.metLisa;
   c.metYuni = !!g.metYuni; c.metMilly = !!g.metMilly; c.metYuna = !!g.yunaMet;
   c.metLili = !!g.metLili; c.metCubarsi = !!g.metCubarsi; c.metYamal = !!g.metYamal;
-  c.metIrina = !!g.metIrina;
+  c.metIrina = !!g.metIrina; c.metIgor = !!g.metIgor; c.metFortuna = !!g.metFortuna;
   c.dinoTip = !!g.dinoTip; c.punkyMote = !!g.punkyMote; c.lisaTilin = !!g.lisaTilin;
   c.yuniTrain = !!g.yuniTrain; c.millySecret = !!g.millySecret;
   c.liliBouquet = !!g.liliBouquet;
@@ -886,6 +886,13 @@ const NPCS = {
      no alegría pura. Sin angry: su armadura es la seguridad, no el enfado. */
   irina: { name: "Irina", color: "#C8102E", voice: "/audio/vozchica02.mp3", icon: "/images/irina_icon.webp",
     arts: { idle: "/images/irina_idle.webp", happy: "/images/irina_happy.webp" }, def: "idle" },
+  /* Igor: chef estrella del Restaurante (Metrópolis). Grande, carismático, trata la nutrición
+     como táctica de fútbol. Sin happy ni angry: solo hay retrato idle. */
+  igor: { name: "Igor", color: "#B5651D", voice: "/audio/vozchico01.mp3", icon: "/images/igor_icon.webp",
+    arts: { idle: "/images/igor_idle.webp" }, def: "idle" },
+  /* Fortuna: croupier del Casino (Metrópolis). Misteriosa, coqueta, regenta la ruleta diaria. Sin angry. */
+  fortuna: { name: "Fortuna", color: "#7A1F3D", voice: "/audio/vozchica01.mp3", icon: "/images/fortuna_icon.webp",
+    arts: { idle: "/images/fortuna_idle.webp", happy: "/images/fortuna_happy.webp" }, def: "idle" },
 };
 const senderToNpc = (from) => {
   if (from === "Entrenador" || from === "Tu agente" || from === "Elisa") return "elisa";
@@ -899,6 +906,8 @@ const senderToNpc = (from) => {
   if (from === "Cubarsí") return "cubarsi";
   if (from === "Yamal") return "yamal";
   if (from === "Irina") return "irina";
+  if (from === "Igor") return "igor";
+  if (from === "Fortuna") return "fortuna";
   if (from === "López" || from.includes("Capitán") || from.includes("· Vestuario")) return "lopez";
   return null; /* prensa/afición/redes/club -> periódico */
 };
@@ -1584,6 +1593,77 @@ const IRINA_POOL = [
     { m: "happy", t: "No, no te voy a contar qué es. Es... personal. Muy personal. Deja de mirarme así, que me pones nerviosa." }] },
 ];
 
+/* --- IGOR · chef estrella del Restaurante (Metrópolis). Grande, carismático, trata la
+   nutrición como si fuera táctica de fútbol. Muy informativo: datos curiosos de comida
+   y recetas de verdad, contados sin ponerse técnico. Sin happy ni angry: solo idle. --- */
+const IGOR_INTRO_BEATS = [
+  { m: "idle", t: "¡Ahí está mi próximo proyecto! Perdona, así les digo a todos los que entran nuevos por esa puerta. Igor, chef de este restaurante. Cada plato que sale de mi cocina tiene una función táctica, ¿me explico?" },
+  { m: "idle", t: "La nutrición es como el fútbol: no sirve tener buenos ingredientes sueltos, hay que combinarlos en el momento justo. Ven cuando quieras, te voy a enseñar unas cuantas jugadas maestras de cocina." },
+];
+const IGOR_POOL = [
+  { beats: [
+    { m: "idle", t: "Dato de vestuario que casi nadie aprovecha: el plátano no es solo azúcar rápido, lleva potasio de verdad." },
+    { m: "idle", t: "Y el potasio es justo lo que se te va con el sudor. Menos calambres en el 90, más piernas frescas. Cómetelo con cabeza, no de postre porque sí." }] },
+  { w: "kgUp", t: "Esos {kg} kg que has ganado no son cualquier cosa si has comido bien mientras tanto. El músculo se construye con proteína repartida en el día, no metida toda de una sentada como quien mete un gol de churro." },
+  { t: "Pregunta táctica del día: ¿desayunas fuerte o sales de casa con el estómago casi vacío?", replies: [
+    { t: "Desayuno fuerte, siempre", m: "idle", r: ["¡ESO es una alineación titular! El desayuno es tu once inicial del día, no un suplente que sale si sobra tiempo.",
+      "Perfecto. Un cuerpo que arranca con combustible rinde distinto, y eso no lo dice una app, lo digo yo, que llevo veinte años viéndolo en cocina."] },
+    { t: "Casi nada, la verdad", m: "idle", r: ["Ahí tenemos margen de mejora, campeón. No hace falta un banquete, con huevo y fruta ya cambia el partido entero.",
+      "Vamos a corregir eso poco a poco. Ni te pido tortilla de diez huevos, solo algo antes de salir por esa puerta."] }] },
+  { w: "win", t: "¡Buen partido! Y no me digas que fue solo mérito tuyo, seguro que algo tuvo que ver la cena de anoche. Yo también sumo puntos, aunque no salga en la ficha." },
+  { w: "loss", t: "Día flojo, lo sé. Un truco de cocina para la recuperación: proteína + carbohidrato en la próxima comida, en una proporción tipo 1 a 3. Eso ayuda a recargar más rápido que dejarlo al azar." },
+  { beats: [
+    { m: "idle", t: "Dato curioso de hoy: la quinoa es de las pocas plantas con proteína completa, con los nueve aminoácidos esenciales." },
+    { m: "idle", t: "La mayoría de cereales se quedan cortos en alguno. Por eso en Perú y Bolivia llevan siglos usándola como base, no es ninguna moda reciente de gimnasio." }] },
+  { w: "hot", t: "{streak} días de racha y no me extraña, con la cara de estar comiendo bien que traes últimamente. Sigue así, que un cuerpo bien alimentado no falla en el momento clave." },
+  { t: "Otro dato para la libreta: ¿sabías que el 'carbo-loading' del día antes del partido, si ya comes bien toda la semana, apenas suma nada extra?", replies: [
+    { t: "No tenía ni idea", m: "idle", r: ["Es uno de los mitos más repetidos del deporte. Lo importante es la semana entera, no el plato de pasta de la noche anterior.",
+      "Se ha vendido mucho ese cuento. La base se construye día a día, como el buen equipo: no se gana la liga en un solo entrenamiento."] },
+    { t: "Algo había oído", m: "idle", r: ["Pues ya lo tienes confirmado por un profesional. Un plato extra de pasta no arregla una semana comiendo mal.",
+      "Exacto, y encima mucha gente se pasa y termina el partido pesada en vez de ligera. Cantidad no es lo mismo que estrategia."] }] },
+  { w: "benched", t: "¿Suplente hoy? Aprovecha para cuidar la recuperación igual que si hubieras jugado los noventa. El cuerpo no distingue entre banquillo y titularidad a la hora de repararse." },
+  { beats: [
+    { m: "idle", t: "Llevo meses experimentando con una receta japonesa: natto, judías de soja fermentadas." },
+    { m: "idle", t: "Huele fuerte, no te lo voy a negar, pero tiene una vitamina K2 que casi ningún otro alimento tiene en esa cantidad. La cocina de verdad se atreve a probar cosas raras." }] },
+  { w: "derbiSoon", t: "Con lo del {derbiRival} esta semana te voy a preparar algo especial: nada nuevo el día antes, eso ya lo sabes, pero sí un extra de hierro en los días previos. Ese partido no se juega con las reservas bajas." },
+  { w: "scorer", t: "{goals} goles ya. Cada uno de esos, aunque tú no lo pienses así, lleva algo de las comidas de esta cocina metidas dentro. Modestia aparte, yo también sumo a la jugada." },
+  { t: "Última curiosidad del día, prometido: ¿sabes qué tienen en común la tortilla española y el tofu japonés?", replies: [
+    { t: "Ni idea, cuéntamelo", m: "idle", r: ["Los dos son formas antiguas de concentrar proteína con pocos ingredientes baratos. Cocinas separadas por medio mundo, llegando a la misma idea. Eso es fútbol total en la cocina."] },
+    { t: "Que llevan huevo, ¿no?", m: "idle", r: ["Casi, el tofu no lleva huevo, es soja cuajada. Pero el espíritu es el mismo: mucha proteína, pocos ingredientes, siglos de tradición detrás."] }] },
+  { beats: [
+    { m: "idle", t: "La gente cree que cocinar sano es aburrido, sin sabor, todo a la plancha." },
+    { m: "idle", t: "Y no, eso es cocinar mal con excusa de salud. Una buena especia cambia el partido entero sin sumar ni una caloría de más." }] },
+];
+
+/* --- FORTUNA · croupier del Casino (Metrópolis). Misteriosa, coqueta, segura de sí misma.
+   No da misión: regenta la ruleta diaria (ver zone.id==="casino" en ZoneScreen). Sin angry. --- */
+const FORTUNA_INTRO_BEATS = [
+  { m: "idle", t: "Vaya, vaya. Alguien nuevo cruzando mi mesa. Fortuna, encantada. Llevo toda la noche notando que algo iba a cambiar el ambiente aquí dentro." },
+  { m: "happy", t: "Cada día giro la rueda para los que se atreven a pasar por aquí. Una tirada gratis, nada más. Lo que salga... eso ya depende de si la suerte te quiere hoy o no." },
+];
+const FORTUNA_POOL = [
+  { w: "win", t: "Sabía que ibas a ganar ayer. No preguntes cómo lo sé, digamos que estas cosas... se sienten venir en una mesa como la mía." },
+  { w: "loss", beats: [
+    { m: "idle", t: "La suerte no te acompañó ayer, ¿eh? Pasa hasta a los mejores jugadores de esta mesa." },
+    { m: "happy", t: "Pero yo no creo mucho en las rachas malas que duran. Vuelve mañana a la rueda, a ver qué te tengo preparado." }] },
+  { t: "Te voy a hacer una pregunta que les hago a todos los que se sientan aquí: ¿crees en la suerte, o crees que todo se puede controlar?", replies: [
+    { t: "Creo en la suerte", m: "happy", r: ["Interesante. La mayoría de los que dicen eso son justo a los que mejor les va en mi rueda. Curioso, ¿no te parece?"] },
+    { t: "Todo se puede controlar", m: "idle", r: ["Qué seguridad. Me gusta desmontar esa teoría de vez en cuando, así que... cuidado con lo que digas la próxima vez que gires."] }] },
+  { w: "hot", t: "{streak} días de racha. Yo tengo las mías también, aunque las mías se cuentan en fichas, no en días. Cada una tiene su forma de ganar." },
+  { beats: [
+    { m: "idle", t: "La gente cree que esta mesa va de suerte pura, sin más." },
+    { m: "happy", t: "Y puede que tengan razón. O puede que no. No te voy a aclarar ese misterio, forma parte del espectáculo." }] },
+  { w: "benched", t: "¿Fuera del once hoy? A veces la suerte también descansa un rato antes de volver con más fuerza. No te preocupes por eso." },
+  { t: "Confesión a medias, para que no te aburras: a veces sé lo que va a salir en la rueda antes de girarla.", replies: [
+    { t: "¿Cómo lo sabes?", m: "happy", r: ["Ah, eso ya sería contarlo todo. Un poco de misterio mantiene interesante la noche, ¿no crees?"] },
+    { t: "No te creo nada", m: "idle", r: ["Mejor así. La duda es la mitad de la diversión de venir a esta mesa."] }] },
+  { w: "derbiSoon", t: "Con lo del {derbiRival} esta semana toda la ciudad anda apostando en susurros. Yo ya sé cómo va a acabar. O eso digo yo, al menos." },
+  { w: "scorer", t: "{goals} goles y sigues contando. Empiezo a pensar que la suerte te tiene cariño a ti especialmente. No es algo que reparta con cualquiera." },
+  { beats: [
+    { m: "idle", t: "Cada noche veo caras distintas sentarse en esta mesa, todas pensando que esta vez van a descifrarme." },
+    { m: "happy", t: "Ninguna lo ha hecho todavía. Tú tampoco lo vas a hacer, aunque me hace gracia que lo intentes." }] },
+];
+
 /* goles a lo largo de TODA la carrera (todas las temporadas), para el hito del Centro de Alto Rendimiento */
 const careerGoals = (g) => (g.matchHistory || []).reduce((a, m) => a + (m.myGoals || 0), 0);
 /* hitos de constancia para desbloquear las zonas de La Metrópolis, contados sobre TODO el historial de logs */
@@ -1678,18 +1758,52 @@ const METRO_ZONES = [
   { id: "parque", kind: "npc", npc: null, label: "Parque", icon: "🌳", x: 25.24, y: 15.17,
     pts: "199.15 80.02 81.19 286.08 105.7 333.35 259.66 93.01 199.15 80.02",
     unlocked: (g) => gymDaysCount(g) >= 5, reqLabel: "Completa 5 días de gym" },
-  { id: "casino", kind: "npc", npc: null, label: "Casino", icon: "🎰", x: 43.72, y: 43.21,
+  { id: "casino", kind: "npc", npc: "fortuna", label: "Casino", icon: "🎰", x: 43.72, y: 43.21,
     pts: "220.6 343.57 206.85 417.61 281.87 429.86 294.89 358.89 220.6 343.57",
-    unlocked: (g) => habitDaysCount(g) >= 20, reqLabel: "Registra hábitos 20 días" },
+    unlocked: (g) => habitDaysCount(g) >= 20, reqLabel: "Registra hábitos 20 días", metFlag: "metFortuna", intro: FORTUNA_INTRO_BEATS },
   { id: "atico", kind: "npc", npc: null, label: "Ático de Lujo", icon: "🌇", x: 75.52, y: 63.97,
     pts: "353.11 469.13 347.74 507.48 294.89 602.97 445.02 666.29 460.34 464.53 353.11 469.13",
     unlocked: (g) => calcOVR(g.player.stats) >= 80, reqLabel: "Alcanza 80 de media" },
-  { id: "restaurante", kind: "npc", npc: null, label: "Restaurante", icon: "🍽️", x: 58.72, y: 84.24,
+  { id: "restaurante", kind: "npc", npc: "igor", label: "Restaurante", icon: "🍽️", x: 58.72, y: 84.24,
     pts: "284.94 620.02 223.66 727.26 294.89 776.28 377.62 688.96 335.49 662.91 344.68 647.24 284.94 620.02",
-    unlocked: (g) => kcalGoalHits(g) >= 5, reqLabel: "Llega a tu objetivo de calorías 5 veces" },
+    unlocked: (g) => kcalGoalHits(g) >= 5, reqLabel: "Llega a tu objetivo de calorías 5 veces", metFlag: "metIgor", intro: IGOR_INTRO_BEATS },
 ];
 const METRO_EXTRA_NPCS = [];
-const METRO_QUESTS = {};
+const METRO_QUESTS = {
+  igor: {
+    label: "El recetario del campeón",
+    npc: "igor",
+    trigger: (g) => !!g.metIgor,
+    stages: [
+      { title: "El primer plato táctico", objective: "Cumple tu objetivo de proteína 5 días",
+        intro: [
+          { m: "idle", t: "Te voy a poner a prueba, pero con hambre, que es como mejor se aprende. Nada de teoría sin más: quiero verlo en el plato." },
+          { m: "idle", t: "Cumple tu objetivo de proteína 5 días. No hace falta que sean seguidos, solo que sumen. Ahí empieza el partido de verdad." }],
+        snap: (g) => ({ count: Object.values(g.logs || {}).filter((l) => (l.prot || 0) >= g.player.goals.protein).length }),
+        check: (g, snap) => Object.values(g.logs || {}).filter((l) => (l.prot || 0) >= g.player.goals.protein).length - snap.count >= 5 },
+      { title: "Consistencia en el marcador", objective: "Registra comidas en 10 días distintos",
+        intro: [
+          { m: "idle", t: "Un plato bueno un solo día no dice nada, eso lo sabe cualquiera. Lo que de verdad forma un cuerpo es la constancia, jornada tras jornada." },
+          { m: "idle", t: "Anota tus comidas en 10 días distintos, aunque sea rápido, aunque no sea perfecto. Yo prefiero mil veces un registro sincero a uno bonito y falso." }],
+        snap: (g) => ({ count: Object.values(g.logs || {}).filter((l) => (l.meals || []).length > 0).length }),
+        check: (g, snap) => Object.values(g.logs || {}).filter((l) => (l.meals || []).length > 0).length - snap.count >= 10 },
+      { title: "La dieta de los grandes", objective: "Cumple tu objetivo de proteína 7 días seguidos", deadlineDays: 30,
+        intro: [
+          { m: "idle", t: "Última prueba, y esta es la gorda: nada de días sueltos. Quiero una racha de verdad, sin fallar ni una jornada." },
+          { m: "idle", t: "Siete días seguidos cumpliendo tu proteína. Como una buena racha de resultados: cuesta empezarla, pero una vez cogida, no se suelta." }],
+        snap: () => ({}),
+        check: (g) => catStreak(g, (l) => (l.prot || 0) >= g.player.goals.protein) >= 7 },
+      { title: "Jugada maestra", final: true,
+        intro: [
+          { m: "idle", t: "Lo has conseguido. Y no me refiero solo a la racha, me refiero a que ahora ya piensas en la comida como una jugada, no como un trámite." },
+          { m: "idle", t: "Eso no se me olvida a un chef fácilmente. Ya formas parte del recetario de los que se lo toman en serio de verdad." }],
+        introFail: [
+          { m: "idle", t: "No llegamos a los siete días seguidos, pero no pasa nada, de verdad. Las rachas buenas a veces tardan varios intentos." },
+          { m: "idle", t: "La cocina, como el fútbol, perdona el fallo si sigues viniendo a entrenar. Aquí sigo, cuando quieras retomarlo." }],
+        reward: (g) => { const stats = { ...g.player.stats }; stats.NUT = Math.min(99, stats.NUT + 1); return { ...g, player: { ...g.player, stats } }; } },
+    ],
+  },
+};
 /* todas las zonas de ambos mapas juntas, solo para resolver "en qué zona estoy"
    sin que importe desde qué mapa se abrió (los id no se repiten entre mapas) */
 const ALL_ZONES = [...ZONES, ...METRO_ZONES];
@@ -2989,11 +3103,13 @@ function Newspaper({ game, onRead }) {
    siempre hay periódico, así que en vez de cartel ofrece abrirlo.
    Fondo real: si existe /images/zones/{id}.webp se usa; si no (todavía no se ha
    subido), cae a un degradado de marcador de posición sin romper nada. */
-function ZoneScreen({ zone, pendingNpc, onBack, onOpenPaper, game }) {
+function ZoneScreen({ zone, pendingNpc, onBack, onOpenPaper, game, onSpin }) {
   const [imgOk, setImgOk] = useState(true);
   const npc = pendingNpc ? NPCS[pendingNpc] : null;
   const showPaperPrompt = zone.kind === "paper" && !pendingNpc;
   const isHome = zone.kind === "home";
+  const isCasino = zone.id === "casino";
+  const spunToday = game && game.casinoSpinDay === todayStr();
   return (
     <div className="zone-screen">
       {imgOk ? (
@@ -3005,7 +3121,7 @@ function ZoneScreen({ zone, pendingNpc, onBack, onOpenPaper, game }) {
       <div className="zone-shade" />
       <button className="zone-back" onClick={onBack}>← Volver</button>
       <div className="zone-label">{zone.label}</div>
-      {!pendingNpc && !showPaperPrompt && !isHome && (
+      {!pendingNpc && !showPaperPrompt && !isHome && !isCasino && (
         <div className="zone-empty-card">
           <div style={{ fontSize: 30, marginBottom: 6 }}>🏚️</div>
           Parece que no hay nadie por aquí ahora mismo.</div>)}
@@ -3013,6 +3129,17 @@ function ZoneScreen({ zone, pendingNpc, onBack, onOpenPaper, game }) {
         <button className="zone-empty-card zone-paper-btn" onClick={onOpenPaper}>
           🗞️ Leer el periódico de hoy</button>)}
       {isHome && <HouseRoom game={game} />}
+      {isCasino && !pendingNpc && (
+        spunToday ? (
+          <div className="zone-empty-card">
+            <div style={{ fontSize: 30, marginBottom: 6 }}>🎰</div>
+            Ya has girado la ruleta hoy.
+            {game.casinoLastSpin && <><br />Te tocaron +{game.casinoLastSpin.amount} XP en {game.casinoLastSpin.stat}.</>}
+            <br />Vuelve mañana para otra tirada.</div>
+        ) : (
+          <button className="zone-empty-card zone-paper-btn" onClick={onSpin}>
+            🎰 Girar la ruleta (tirada gratis de hoy)</button>
+        ))}
     </div>);
 }
 
@@ -4608,6 +4735,8 @@ export default function App() {
         if (out.metCubarsi) candidates.push(["Cubarsí", CUBARSI_POOL]);
         if (out.metYamal) candidates.push(["Yamal", YAMAL_POOL]);
         if (out.metIrina) candidates.push(["Irina", IRINA_POOL]);
+        if (out.metIgor) candidates.push(["Igor", IGOR_POOL]);
+        if (out.metFortuna) candidates.push(["Fortuna", FORTUNA_POOL]);
         candidates.push([null, null]); /* comodín: flavor genérico de vestuario/prensa/agente */
         const [name, pool] = candidates[Math.floor(Math.random() * candidates.length)];
         if (!name) {
@@ -4834,6 +4963,24 @@ export default function App() {
     return { ...g, savedMeals: [...sm, m].slice(-8) };
   }); pushToast("💾 Guardada en comidas frecuentes"); };
   const deleteSavedMeal = (name) => setGame((g) => ({ ...g, savedMeals: (g.savedMeals || []).filter((m) => m.name !== name) }));
+  /* ruleta de Fortuna en el Casino: una tirada gratis al día, +5..20 XP a una stat al azar */
+  const spinCasino = () => {
+    if (game.casinoSpinDay === todayStr()) return; /* ya se ha usado hoy, botón no debería ni estar visible */
+    const stat = pick(["FIS", "FUE", "RES", "NUT", "REC", "MEN"]);
+    const amount = Math.floor(rnd(5, 21));
+    setGame((g) => {
+      const p = g.player;
+      const stats = { ...p.stats }, xp = { ...p.xp };
+      xp[stat] = (xp[stat] || 0) + amount;
+      let upped = false;
+      while (stats[stat] < 99 && xp[stat] >= xpToNext(stats[stat])) { xp[stat] -= xpToNext(stats[stat]); stats[stat] += 1; upped = true; }
+      if (upped) setTimeout(() => pushToast(`📈 ¡${stat} sube a ${stats[stat]}!`), 700);
+      return { ...g, casinoSpinDay: todayStr(), casinoLastSpin: { stat, amount },
+        player: { ...p, stats, xp } };
+    });
+    buzz(15);
+    pushToast(`🎰 ¡+${amount} XP en ${stat}!`);
+  };
   const addWeight = (kg) => { setGame((g) => {
     const p = g.player;
     const stats = { ...p.stats }, xp = { ...p.xp };
@@ -5068,7 +5215,7 @@ export default function App() {
       {/* visitar una zona: fondo a toda pantalla + flecha para volver */}
       {tab === "chat" && visitedZoneObj && (
         <ZoneScreen zone={visitedZoneObj} pendingNpc={visitedActiveNpc} game={game}
-          onBack={() => setVisitedZone(null)} onOpenPaper={() => setShowPaper(true)} />)}
+          onBack={() => setVisitedZone(null)} onOpenPaper={() => setShowPaper(true)} onSpin={spinCasino} />)}
       {/* diálogo de personaje: overlay a nivel de App (fuera de .tab-in), aparece encima
           del fondo de la zona en cuanto hay alguien esperando ahí (visitedActiveNpc) */}
       {tab === "chat" && visitedActiveNpc && (() => {

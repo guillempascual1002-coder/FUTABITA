@@ -287,11 +287,11 @@ function sanitizeGame(g) {
   if (out.savedMeals) out.savedMeals = out.savedMeals.filter((m) => m && Number.isFinite(m.kcal) && Number.isFinite(m.prot));
   /* gym: crear estructura en partidas anteriores al módulo y compactar sesiones antiguas */
   out.gym = pruneGym({ ...emptyGym(), ...(out.gym || {}) });
-  /* Karlos, Mabel, Dino, Yuni, Lili, Cubarsí, Yamal e Irina se han quitado del juego
-     (roster recortado a menos personajes, mejor desarrollados): limpia rastros de
-     partidas guardadas antes de cada recorte para que no se quede un aviso de
-     "pendiente" imposible de abrir ni una misión colgada sin poder avanzar */
-  const REMOVED_NPCS = ["mabel", "karlos", "dino", "yuni", "lili", "cubarsi", "yamal", "irina"];
+  /* Karlos, Mabel, Dino, Yuni, Lili, Cubarsí, Yamal, Irina, Punky y Fortuna se han
+     quitado del juego (roster recortado a menos personajes, mejor desarrollados):
+     limpia rastros de partidas guardadas antes de cada recorte para que no se quede
+     un aviso de "pendiente" imposible de abrir ni una misión colgada sin poder avanzar */
+  const REMOVED_NPCS = ["mabel", "karlos", "dino", "yuni", "lili", "cubarsi", "yamal", "irina", "punky", "fortuna"];
   if (out.npcQueue) out.npcQueue = out.npcQueue.filter((e) => !REMOVED_NPCS.includes(e.npc));
   if (out.quests) { const rest = { ...out.quests }; REMOVED_NPCS.forEach((k) => delete rest[k]); out.quests = rest; }
   if (out.questPending) { const rest = { ...out.questPending }; REMOVED_NPCS.forEach((k) => delete rest[k]); out.questPending = rest; }
@@ -299,9 +299,14 @@ function sanitizeGame(g) {
     const rest = { ...out.introQueued };
     delete rest.metMabel; delete rest.metKarlos; delete rest.metDino; delete rest.metYuni;
     delete rest.metLili; delete rest.metCubarsi; delete rest.metYamal; delete rest.metIrina;
+    delete rest.metPunky; delete rest.metFortuna;
     out.introQueued = rest;
   }
-  if (out.inventory) { const inv = { ...out.inventory }; delete inv.pulsera_vieja_escuela; out.inventory = inv; }
+  if (out.inventory) {
+    const inv = { ...out.inventory };
+    delete inv.pulsera_vieja_escuela; delete inv.camara_vintage; delete inv.edicion_especial;
+    out.inventory = inv;
+  }
   if (out.seenMoods) { const rest = { ...out.seenMoods }; REMOVED_NPCS.forEach((k) => delete rest[k]); out.seenMoods = rest; }
   /* migración al sistema de personajes: la primera vez se crea la cola de diálogos
      y las ofertas que quedaran pendientes en el chat antiguo pasan a Elisa */
@@ -492,10 +497,9 @@ const COND = {
   seasonStart: (c) => c.seasonStart, seasonEnd: (c) => c.seasonEnd,
   win: (c) => c.win, loss: (c) => c.loss, kgUp: (c) => c.kgUp, derbiSoon: (c) => c.derbiSoon,
   /* memoria cruzada entre personajes y callbacks de decisiones */
-  metPunky: (c) => c.metPunky, metLisa: (c) => c.metLisa, metMilly: (c) => c.metMilly,
+  metLisa: (c) => c.metLisa, metMilly: (c) => c.metMilly,
   metYuna: (c) => c.metYuna, metIgor: (c) => c.metIgor,
-  metFortuna: (c) => c.metFortuna,
-  punkyMote: (c) => c.punkyMote, lisaTilin: (c) => c.lisaTilin, millySecret: (c) => c.millySecret,
+  lisaTilin: (c) => c.lisaTilin, millySecret: (c) => c.millySecret,
 };
 const FLAVOR = [
   /* ---- PRENSA (tercera persona) ---- */
@@ -738,10 +742,9 @@ function flavorCtx(g) {
   c.derbiRival = s ? s.rivals[s.matchday % s.rivals.length] : "";
   /* memoria cruzada: a quién conoces ya, para que los personajes se mencionen entre ellos
      y para pequeños "callbacks" a decisiones concretas que tomaste en otras conversaciones */
-  c.metPunky = !!g.metPunky; c.metLisa = !!g.metLisa; c.metMilly = !!g.metMilly;
+  c.metLisa = !!g.metLisa; c.metMilly = !!g.metMilly;
   c.metYuna = !!g.yunaMet; c.metIgor = !!g.metIgor;
-  c.metFortuna = !!g.metFortuna;
-  c.punkyMote = !!g.punkyMote; c.lisaTilin = !!g.lisaTilin; c.millySecret = !!g.millySecret;
+  c.lisaTilin = !!g.lisaTilin; c.millySecret = !!g.millySecret;
   return c;
 }
 
@@ -870,9 +873,6 @@ const NPCS = {
      vacaciones" en la Metrópolis a la vez (ver processNewDays). Solo idle. */
   elisa_playa: { name: "Elisa", color: "#2E6ED6", voice: "/audio/vozchica02.mp3", icon: "/images/elisa_icon.webp",
     arts: { idle: "/images/elisa_playa.webp" }, def: "idle" },
-  /* Punky: periodista del periódico local, la que trabaja la Sala de prensa. Sin angry. */
-  punky: { name: "Punky", color: "#E23FA0", voice: "/audio/vozchica01.mp3", icon: "/images/punky_icon.webp",
-    arts: { idle: "/images/punky_idle.webp", happy: "/images/punky_happy.webp" }, def: "idle" },
   /* Lisa: futbolista pro, gestiona patrocinios. Su "angry" es en realidad ENGREÍDA/chulería, no enfado real. */
   lisa: { name: "Lisa", color: "#9C6BD6", voice: "/audio/vozchica02.mp3", icon: "/images/lisa_icon.webp",
     arts: { idle: "/images/lisa_idle.webp", happy: "/images/lisa_happy.webp", angry: "/images/lisa_angry.webp" }, def: "idle" },
@@ -883,18 +883,13 @@ const NPCS = {
      como táctica de fútbol. Sin happy ni angry: solo hay retrato idle. */
   igor: { name: "Igor", color: "#B5651D", voice: "/audio/vozchico01.mp3", icon: "/images/igor_icon.webp",
     arts: { idle: "/images/igor_idle.webp" }, def: "idle" },
-  /* Fortuna: croupier del Casino (Metrópolis). Misteriosa, coqueta, regenta la ruleta diaria. Sin angry. */
-  fortuna: { name: "Fortuna", color: "#7A1F3D", voice: "/audio/vozchica01.mp3", icon: "/images/fortuna_icon.webp",
-    arts: { idle: "/images/fortuna_idle.webp", happy: "/images/fortuna_happy.webp" }, def: "idle" },
 };
 const senderToNpc = (from) => {
   if (from === "Entrenador" || from === "Tu agente" || from === "Elisa") return "elisa";
   if (from === "Yuna") return "yuna";
-  if (from === "Punky") return "punky";
   if (from === "Lisa") return "lisa";
   if (from === "Milly") return "milly";
   if (from === "Igor") return "igor";
-  if (from === "Fortuna") return "fortuna";
   if (from === "Elisa Casual") return "elisa_casual";
   if (from === "Elisa Playa") return "elisa_playa";
   if (from === "López" || from.includes("Capitán") || from.includes("· Vestuario")) return "lopez";
@@ -1164,61 +1159,6 @@ const LOPEZ_POOL = [
     { m: "idle", t: "Llevo de capitán aquí más temporadas de las que me gustaría admitir en público." },
     { m: "happy", t: "Pero cada vez que llega alguien como tú, con hambre de verdad, se me recarga la energía entera. Gracias por eso, en serio." }] },
   { w: "seasonEnd", t: "Se acaba otra temporada, {season}. No sé tú, pero yo siempre me pongo un poco sentimental estos días. Buen año el nuestro, pase lo que pase en las últimas jornadas." },
-  { t: "Estaba revolviendo el almacén del club buscando unos conos y encontré esto. Una cámara antigua, de las de carrete. Ni sé de quién es ya.", replies: [
-    { t: "Se la doy a Punky, seguro que le encanta", m: "happy", giveItem: "camara_vintage", r: ["Buena idea, con lo periodista que es. Anda, llévasela, aquí solo cría polvo."] },
-    { t: "Me la quedo yo", m: "idle", r: ["Tú mismo, aunque dudo que le saques la mitad de partido que le sacaría ella."] }] },
-];
-
-/* --- PUNKY · periodista del periódico local, trabaja la Sala de prensa.
-   Enérgica, estilismo rosa chillón, sin angry. --- */
-const PUNKY_INTRO_BEATS = [
-  { m: "idle", t: "¡Ey! Tú eres el fichaje del que todo el mundo habla, ¿no? Punky, redacción local. Bueno, redacción de dos personas y media, pero eso no lo pongas en la entrevista." },
-  { m: "happy", t: "Llevo semanas queriendo hacerte unas preguntas como Dios manda, nada de las típicas de rueda de prensa aburrida. ¿Me dejas robarte cinco minutos de vez en cuando?" },
-];
-const PUNKY_POOL = [
-  { t: "Pregunta rápida para la sección de curiosidades: ¿ritual de antes de partido o cero superstición?", replies: [
-    { t: "Tengo mi ritual, sí", m: "happy", r: ["¡ESO es titular! 'El {position} con el ritual secreto'. No te preocupes, no voy a sacarlo, pero me lo apunto para el archivo mental.",
-      "Sabía que dirías eso. Se te nota en la cara de concentración antes de salir al campo."] },
-    { t: "Nada, salgo y ya está", m: "idle", r: ["Aburrido pero respetable. Los titulares no se escriben solos, pero bueno, algo sacaré igualmente.",
-      "Frialdad total. Me gusta, contrasta con el resto de la plantilla, que tiene cada manía..."] }] },
-  { w: "win", t: "¡Buen partido! Estoy escribiendo la crónica ahora mismo y necesito una frase tuya con gancho. Dame algo bueno, que lo de 'estoy contento por el equipo' ya lo he usado quinientas veces esta temporada." },
-  { w: "loss", beats: [
-    { m: "idle", t: "Sé que hoy no ha sido el día. No vengo a pedirte declaraciones sobre la derrota, tranquilo." },
-    { m: "happy", t: "Vengo a decirte que estoy escribiendo sobre algo distinto: cómo reacciona un vestuario cuando pierde. Y el vuestro, para lo que va, reacciona bastante bien." }] },
-  { t: "Llevo tiempo dándole vueltas a ponerte un mote para mis crónicas. Nada oficial, cosa mía. ¿Algún veto expreso?", replies: [
-    { t: "Ponme lo que quieras", m: "happy", setFlag: "punkyMote", r: ["¡ASÍ SE HABLA! Dame un par de jornadas y vas a tener un mote que se queda para siempre. Para bien o para mal.",
-      "Carta blanca total, me encanta. Voy a abusar de esta confianza, aviso desde ya."] },
-    { t: "Nada ridículo, por favor", m: "idle", r: ["Vale, vale, respeto el veto... por ahora. Pero como marques un gol de vaselina no respondo de mí.",
-      "Anotado: 'nada ridículo'. Interpretación libre garantizada, eso sí."] }] },
-  { w: "hot", t: "{streak} días de nivelazo y todavía nadie fuera del club se ha enterado bien. Eso va a cambiar pronto, que para algo estoy yo aquí currándomelo." },
-  { t: "Off the record: ¿qué es lo que menos te gusta de que te entrevisten?", replies: [
-    { t: "Las preguntas repetidas", m: "happy", r: ["Auch, directo al hígado. Prometo intentar no repetirme... no prometo conseguirlo.",
-      "Tomo nota profesional. Intentaré innovar, aunque el fútbol da para lo que da."] },
-    { t: "Nada, me da igual", m: "idle", r: ["Un entrevistado fácil. Eres un regalo, en serio, no sabes la cantidad de gente que se pone en modo estatua.",
-      "Perfecto, entonces no me corto con las preguntas raras de la próxima vez."] }] },
-  { w: "punkyMote", beats: [
-    { m: "idle", t: "Llevo tres días probando motes para ti en borrador y ninguno me convence del todo." },
-    { m: "happy", t: "Voy a necesitar otra semana de inspiración. No te relajes, eh, en cualquier momento aparece y ya no hay marcha atrás." }] },
-  { beats: [
-    { m: "idle", t: "Ayer entrevisté a un jugador que respondió TODO con 'vamos partido a partido'. Cinco preguntas. Cinco veces la misma frase." },
-    { m: "happy", t: "Casi tiro la libreta por la ventana. Contigo al menos tengo material de verdad, y eso en este oficio se agradece muchísimo." }] },
-  { w: "metLisa", beats: [
-    { m: "idle", t: "Entrevisté a Lisa la semana pasada. En serio, esa mujer responde con la seguridad de quien ya ha ganado la pregunta antes de que termines de hacerla." },
-    { m: "happy", t: "Me encantó, para que lo sepas. Da titulares solos, no hace falta ni editar." }] },
-  { t: "Pregunta indiscreta de periodista mala: ¿qué es lo primero que miras cuando te despiertas, el móvil o el techo?", replies: [
-    { t: "El móvil, como todo el mundo", m: "happy", r: ["Sincero. Y con eso ya tengo el titular de la sección de curiosidades de esta semana, gracias.",
-      "JA, al menos lo admites. La mitad de mis entrevistados mienten en esta pregunta y se les nota."] },
-    { t: "El techo, necesito un minuto", m: "idle", r: ["Filosófico a primera hora. Me gusta, aunque no sé si te va a servir de mucho contra un central rival a las diez de la mañana.",
-      "Eso es una respuesta de veterano con alma vieja. Anotado, aunque no sé muy bien dónde ponerlo."] }] },
-  { w: "seasonStart", t: "Primera crónica de la temporada {season} recién escrita. Siempre me pongo nerviosa con la primera, ¿sabes? Es un poco como estrenar cuaderno el primer día de clase." },
-  { t: "Voy a confesarte algo de oficio: a veces invento la mitad de la pregunta solo para ver cómo reacciona la gente. Contigo no hace falta, pero por si te lo preguntabas.", replies: [
-    { t: "Menuda tramposa", m: "happy", r: ["¡Es investigación periodística de la buena! Bueno. A veces. Vale, la mayoría de las veces es solo curiosidad disfrazada."] },
-    { t: "Respeto la técnica", m: "idle", r: ["Gracias, no todo el mundo lo entiende así. La mayoría se ofende y yo ya ni sé por qué se lo sigo contando."] }] },
-  { w: "scorer", t: "{goals} goles ya. Estoy pensando en abrir una sección fija solo para ti si sigues a este ritmo. La llamaría 'El {position} que no para', pero seguro que se me ocurre algo peor todavía." },
-  { beats: [
-    { m: "idle", t: "Hoy se me ha estropeado la grabadora en mitad de una entrevista importante y he tenido que apuntar todo a mano, como en el siglo pasado." },
-    { m: "happy", t: "Me ha quedado la letra fatal pero la historia entera. A veces lo analógico también funciona, quién lo iba a decir." }] },
-  { w: "derbiSoon", t: "Con lo del {derbiRival} esta semana no doy abasto: entrevistas, rumores, la peña organizándose... esto es justo el caos que me gusta de este trabajo." },
 ];
 
 /* --- LISA · futbolista pro de la liga femenina, gestiona patrocinios.
@@ -1253,9 +1193,6 @@ const LISA_POOL = [
       "Créetelo. Todas empezamos calentando banquillo antes de calentar focos. La diferencia está en lo que haces mientras esperas."] },
     { t: "Por eso entiendes bien mi momento", m: "happy", r: ["Exacto. Por eso te lo cuento a ti y no a cualquiera. No te acostumbres a esta faceta sentimental mía, es limitada.",
       "Ahí está. Alguien que capta las cosas rápido, por fin. Eso me gusta bastante más que un cumplido barato."] }] },
-  { w: "metPunky", beats: [
-    { m: "idle", t: "Esa periodista, Punky, me entrevistó ayer y no paró de moverse en la silla como si tuviera un partido en cinco minutos." },
-    { m: "angry", t: "Le di titulares de sobra, que conste. Sabe reconocer a una profesional cuando la tiene delante." }] },
   { w: "scorer", t: "{goals} goles esta temporada. Voy a empezar a decir por ahí que te descubrí yo, aunque los dos sepamos que eso no es del todo cierto." },
   { t: "Pregunta directa, sin rodeos: ¿te motiva más ganar tú o que yo pierda?", replies: [
     { t: "Ganar yo, sin dudarlo", m: "happy", r: ["Buena respuesta. Competir contra uno mismo es lo único que de verdad funciona a largo plazo. Apúntatelo.",
@@ -1307,9 +1244,6 @@ const MILLY_POOL = [
     { t: "Cuéntamelo", m: "happy", r: ["Que el presidente ficha un delfín entrenado como amuleto de la suerte. Un DELFÍN. La ciudad no tiene ni piscina olímpica, para que veas el nivel del rumor. Toma tu periódico.",
       "Que el campo se va a mudar de sitio piedra a piedra, como en las películas. Ni te cuento quién me lo dijo, con toda la seriedad del mundo. Aquí tienes el periódico."] },
     { t: "Mejor no, ya tengo suficiente caos", m: "idle", r: ["Sabia decisión, la verdad, hay días que hasta a mí me supera. Toma tu periódico, hoy viene tranquilito, lo prometo."] }] },
-  { w: "metPunky", beats: [
-    { m: "idle", t: "Punky y yo nos peleamos amistosamente cada semana por quién se entera antes de las cosas. De momento vamos empatadas." },
-    { m: "happy", t: "Aunque, entre nosotras, yo gano casi siempre. No se lo digas. Toma tu periódico, edición de hoy." }] },
   { w: "metLisa", t: "Esa futbolista, Lisa, entró una vez al kiosco y preguntó si tenía la prensa deportiva internacional. Le dije que sí por no quedar mal. No la tenía. Toma, tu periódico de hoy, este si lo tengo seguro." },
   { w: "seasonEnd", t: "Se acaba la temporada {season} y no sabes lo que voy a echar de menos nuestra charla de las mañanas. Bueno, la próxima empieza pronto, así que tampoco te libras de mí. Toma, tu último periódico de esta campaña." },
   { t: "Tengo un frasco de perfume carísimo que me regalaron y no uso nunca, se me queda grande para el kiosco. ¿Se lo doy a alguien que le pegue más?", replies: [
@@ -1360,35 +1294,6 @@ const IGOR_POOL = [
   { t: "Me han llegado unas especias de un mercado que ni te cuento cómo conseguí. Te preparo una bolsita, ¿la quieres para experimentar en casa?", replies: [
     { t: "Claro, dámela", m: "happy", giveItem: "especias_raras", r: ["¡Así me gusta! Úsalas con cabeza, que pican más de lo que parece a simple vista."] },
     { t: "Mejor no, no sé cocinar", m: "idle", r: ["Ja, justo por eso te la iba a dar, para que empieces a practicar. Pero bueno, tú decides."] }] },
-];
-
-/* --- FORTUNA · croupier del Casino (Metrópolis). Misteriosa, coqueta, segura de sí misma.
-   No da misión: regenta la ruleta diaria (ver zone.id==="casino" en ZoneScreen). Sin angry. --- */
-const FORTUNA_INTRO_BEATS = [
-  { m: "idle", t: "Vaya, vaya. Alguien nuevo cruzando mi mesa. Fortuna, encantada. Llevo toda la noche notando que algo iba a cambiar el ambiente aquí dentro." },
-  { m: "happy", t: "Cada día giro la rueda para los que se atreven a pasar por aquí. Una tirada gratis, nada más. Lo que salga... eso ya depende de si la suerte te quiere hoy o no." },
-];
-const FORTUNA_POOL = [
-  { w: "win", t: "Sabía que ibas a ganar ayer. No preguntes cómo lo sé, digamos que estas cosas... se sienten venir en una mesa como la mía." },
-  { w: "loss", beats: [
-    { m: "idle", t: "La suerte no te acompañó ayer, ¿eh? Pasa hasta a los mejores jugadores de esta mesa." },
-    { m: "happy", t: "Pero yo no creo mucho en las rachas malas que duran. Vuelve mañana a la rueda, a ver qué te tengo preparado." }] },
-  { t: "Te voy a hacer una pregunta que les hago a todos los que se sientan aquí: ¿crees en la suerte, o crees que todo se puede controlar?", replies: [
-    { t: "Creo en la suerte", m: "happy", r: ["Interesante. La mayoría de los que dicen eso son justo a los que mejor les va en mi rueda. Curioso, ¿no te parece?"] },
-    { t: "Todo se puede controlar", m: "idle", r: ["Qué seguridad. Me gusta desmontar esa teoría de vez en cuando, así que... cuidado con lo que digas la próxima vez que gires."] }] },
-  { w: "hot", t: "{streak} días de racha. Yo tengo las mías también, aunque las mías se cuentan en fichas, no en días. Cada una tiene su forma de ganar." },
-  { beats: [
-    { m: "idle", t: "La gente cree que esta mesa va de suerte pura, sin más." },
-    { m: "happy", t: "Y puede que tengan razón. O puede que no. No te voy a aclarar ese misterio, forma parte del espectáculo." }] },
-  { w: "benched", t: "¿Fuera del once hoy? A veces la suerte también descansa un rato antes de volver con más fuerza. No te preocupes por eso." },
-  { t: "Confesión a medias, para que no te aburras: a veces sé lo que va a salir en la rueda antes de girarla.", replies: [
-    { t: "¿Cómo lo sabes?", m: "happy", r: ["Ah, eso ya sería contarlo todo. Un poco de misterio mantiene interesante la noche, ¿no crees?"] },
-    { t: "No te creo nada", m: "idle", r: ["Mejor así. La duda es la mitad de la diversión de venir a esta mesa."] }] },
-  { w: "derbiSoon", t: "Con lo del {derbiRival} esta semana toda la ciudad anda apostando en susurros. Yo ya sé cómo va a acabar. O eso digo yo, al menos." },
-  { w: "scorer", t: "{goals} goles y sigues contando. Empiezo a pensar que la suerte te tiene cariño a ti especialmente. No es algo que reparta con cualquiera." },
-  { beats: [
-    { m: "idle", t: "Cada noche veo caras distintas sentarse en esta mesa, todas pensando que esta vez van a descifrarme." },
-    { m: "happy", t: "Ninguna lo ha hecho todavía. Tú tampoco lo vas a hacer, aunque me hace gracia que lo intentes." }] },
 ];
 
 /* --- ELISA "FUERA DE SERVICIO" · la misma Elisa, pillada relajada en el Parque o el
@@ -1493,9 +1398,9 @@ const ZONES = [
   { id: "car", kind: "npc", npc: null, label: "Centro de Alto Rendimiento", icon: "🏋️", x: 61.35, y: 17.42,
     pts: "230 164.5 230 222 387.9 223.7 383.1 153.5 230 164.5",
     unlocked: (g) => careerGoals(g) >= 3, reqLabel: "Marca 3 goles en tu carrera" },
-  { id: "prensa", kind: "npc", npc: "punky", label: "Sala de Prensa", icon: "🎙️", x: 23.63, y: 31.90,
+  { id: "prensa", kind: "npc", npc: null, label: "Sala de Prensa", icon: "🎙️", x: 23.63, y: 31.90,
     pts: "131.9 245 187.7 293.5 168.3 358.9 91.1 337.4 98.3 259.3 131.9 245",
-    unlocked: (g) => calcOVR(g.player.stats) >= 70, reqLabel: "Alcanza 70 de media", metFlag: "metPunky", intro: PUNKY_INTRO_BEATS },
+    unlocked: (g) => calcOVR(g.player.stats) >= 70, reqLabel: "Alcanza 70 de media" },
   { id: "patro", kind: "npc", npc: "lisa", label: "Zona de Patrocinadores", icon: "🏙️", x: 31.70, y: 81.56,
     pts: "131.2 570.8 86.3 660.7 163.3 715.5 190.8 690.4 214.2 702.1 245.3 669.4 185.9 599.7 131.2 570.8",
     unlocked: (g) => g.tier.id >= 2, reqLabel: "Asciende a Primera Federación", metFlag: "metLisa", intro: LISA_INTRO_BEATS },
@@ -1539,9 +1444,9 @@ const METRO_ZONES = [
   { id: "parque", kind: "npc", npc: "elisa_casual", label: "Parque", icon: "🌳", x: 35.20, y: 18.23,
     pts: "199.15 80.02 81.19 286.08 105.7 333.35 259.66 93.01 199.15 80.02",
     unlocked: (g) => gymDaysCount(g) >= 5, reqLabel: "Completa 5 días de gym" },
-  { id: "casino", kind: "npc", npc: "fortuna", label: "Casino", icon: "🎰", x: 51.03, y: 43.99,
+  { id: "casino", kind: "npc", npc: null, label: "Casino", icon: "🎰", x: 51.03, y: 43.99,
     pts: "220.6 343.57 206.85 417.61 281.87 429.86 294.89 358.89 220.6 343.57",
-    unlocked: (g) => habitDaysCount(g) >= 20, reqLabel: "Registra hábitos 20 días", metFlag: "metFortuna", intro: FORTUNA_INTRO_BEATS },
+    unlocked: (g) => habitDaysCount(g) >= 20, reqLabel: "Registra hábitos 20 días" },
   { id: "enfermeria", kind: "npc", npc: null, label: "Enfermería", icon: "🏥", x: 86.65, y: 22.97,
     pts: "402.89 159.68 353.11 256.96 460.34 286.08 460.34 197.98 402.89 159.68",
     unlocked: (g) => proteinGoalHits(g) >= 10, reqLabel: "Llega a tu objetivo de proteína 10 veces" },
@@ -1710,41 +1615,6 @@ const QUESTS = {
         reward: (g) => { const stats = { ...g.player.stats }; stats.MEN = Math.min(99, stats.MEN + 1); return { ...g, player: { ...g.player, stats } }; } },
     ],
   },
-  punky: {
-    label: "El reportaje que me haría famosa",
-    npc: "punky",
-    trigger: (g) => ZONES.find((z) => z.id === "prensa").unlocked(g),
-    stages: [
-      { title: "La primera exclusiva", objective: "Marca 3 goles esta temporada",
-        intro: [
-          { m: "idle", t: "Tengo una idea que puede ser mi gran reportaje del año. O una pérdida de tiempo total. Solo hay una forma de saberlo." },
-          { m: "happy", t: "Necesito seguir tu progresión goleadora de cerca. Llega a 3 goles esta temporada y empiezo a escribir en serio." }],
-        snap: () => ({}),
-        check: (g) => flavorCtx(g).scorer },
-      { title: "La portada", objective: "Consigue una nota de 8.5 o más en un partido",
-        intro: [
-          { m: "idle", t: "El reportaje va tomando forma, pero me falta la imagen central: el partidazo que lo justifique todo." },
-          { m: "happy", t: "Dame una actuación de las que paran el tiempo. Nota alta, de esas que la afición recuerda meses después." }],
-        snap: (g) => ({ matchCount: (g.matchHistory || []).length }),
-        check: (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.rating >= 8.5) },
-      { title: "El notición", objective: "Asciende de categoría", deadlineDays: 40,
-        intro: [
-          { m: "idle", t: "Vale, ya tengo casi todo el reportaje. Me falta el final, y el final lo decides tú, no yo." },
-          { m: "happy", t: "Si asciendes de categoría antes de que lo cierre, tengo el titular perfecto ya escrito en la cabeza. No te lo puedo decir todavía, da mala suerte." }],
-        snap: (g) => ({ tier: g.tier.id }),
-        check: (g, snap) => g.tier.id > snap.tier },
-      { title: "Portada nacional", final: true,
-        intro: [
-          { m: "happy", t: "SALIÓ. En portada. Con mi nombre. Llevo temblando desde esta mañana y no es solo por el café." },
-          { m: "happy", t: "Gracias por dejarme contar tu historia de cerca todo este tiempo. Lo que viene ahora para ti también lo voy a seguir contando, que no te quede duda." }],
-        introFail: [
-          { m: "idle", t: "El ascenso no llegó a tiempo para cerrar el reportaje como quería, así que lo he adaptado un poco." },
-          { m: "happy", t: "Igualmente ha salido publicado, con otro final, pero igual de sincero. Esta historia todavía no ha terminado, y yo sigo aquí para contarla." }],
-        reward: (g) => { const stats = { ...g.player.stats }; stats.MEN = Math.min(99, stats.MEN + 1);
-          const inv = { ...(g.inventory || {}) }; inv.edicion_especial = (inv.edicion_especial || 0) + 1;
-          return { ...g, player: { ...g.player, stats }, inventory: inv }; } },
-    ],
-  },
   lisa: {
     label: "La apuesta de la campeona",
     npc: "lisa",
@@ -1787,8 +1657,8 @@ const QUESTS = {
         intro: [
           { m: "idle", t: "Tengo un rumor entre manos que llevo semanas siguiendo, y creo que tiene que ver contigo." },
           { m: "happy", t: "Necesito que hables con más gente de la ciudad para confirmar un par de cosas. Cuantos más conozcas, antes ato cabos. Toma, tu periódico, mientras tanto." }],
-        snap: (g) => ({ count: ["metPunky", "metLisa"].filter((k) => g[k]).length }),
-        check: (g, snap) => (["metPunky", "metLisa"].filter((k) => g[k]).length - snap.count) >= 2 },
+        snap: (g) => ({ count: ["metLisa", "metIgor"].filter((k) => g[k]).length }),
+        check: (g, snap) => (["metLisa", "metIgor"].filter((k) => g[k]).length - snap.count) >= 2 },
       { title: "El ingrediente secreto", objective: "Pasa 5 días viniendo a por tu periódico",
         intro: [
           { m: "idle", t: "Vas por buen camino. El rumor se sostiene, pero necesito una cosa más: continuidad." },
@@ -1827,19 +1697,13 @@ const ITEMS = {
   especias_raras: { name: "Especias Raras", icon: "🌶️", kind: "consumable", stat: "NUT", xp: 10,
     desc: "Una mezcla que Igor trae de sus viajes de cocina. Nadie sabe bien qué lleva, pero funciona." },
   amuleto_suerte: { name: "Amuleto de la Suerte", icon: "🍀", kind: "consumable", stat: "random", xp: 15,
-    desc: "Un premio raro de la ruleta de Fortuna. Nadie sabe si de verdad trae suerte, pero por probar..." },
-  camara_vintage: { name: "Cámara Vintage", icon: "📷", kind: "gift", giveTo: "punky",
-    desc: "Una cámara analógica que encontró López revolviendo el almacén del club. Le encantaría a Punky." },
+    desc: "Un premio raro de la ruleta del Casino. Nadie sabe si de verdad trae suerte, pero por probar..." },
   perfume_lujo: { name: "Perfume de Lujo", icon: "🧴", kind: "gift", giveTo: "lisa",
     desc: "Un frasco carísimo que Milly guardaba 'para una ocasión especial'. Le pega mucho a Lisa." },
-  edicion_especial: { name: "Edición Especial", icon: "🗞️", kind: "gift", giveTo: "milly",
-    desc: "Un ejemplar de coleccionista que Punky guardaba desde sus inicios. A Milly le encantaría tenerlo." },
 };
 /* dar un objeto a su destinatario: reacción propia del personaje + el objeto se gasta */
 const ITEM_GIVE_REACTIONS = {
-  punky: { npc: "punky", text: "¡¿Esto es para mí?! Una cámara de verdad, no el móvil de siempre. Le voy a sacar un partido increíble a esto, ya verás." },
   lisa: { npc: "lisa", text: "Vaya... tienes buen gusto para los detalles, para ser sincera. No esperaba esto de ti. Gracias, de verdad." },
-  milly: { npc: "milly", text: "¡NO ME LO PUEDO CREER! Llevo años buscando este ejemplar. Le voy a hacer un hueco de honor en el kiosco, ya verás." },
 };
 
 /* --- CARTAS DE PERSONAJE · galería sin efecto de juego: retrato + bio corta.
@@ -1851,11 +1715,9 @@ const CARDS = [
     bio: "Superfan del Barça con fama de tsundere. Sabe tus estadísticas mejor que tú, aunque jure que 'solo pasaba por aquí'." },
   { npc: "lopez", unlocked: () => true,
     bio: "Capitán del vestuario. El brazalete le queda grande a cualquiera, pero a él le queda perfecto." },
-  { npc: "punky", unlocked: (g) => !!g.metPunky, bio: "Periodista de la Sala de Prensa. Enérgica, curiosa, con una libreta que nunca deja de llenar." },
   { npc: "milly", unlocked: (g) => !!g.metMilly, bio: "Del Kiosco. Te trae el periódico en persona cada día, con más cotilleos de los que pediste." },
   { npc: "lisa", unlocked: (g) => !!g.metLisa, bio: "Futbolista profesional, gestiona patrocinios. Engreída de cara al público, exigente de puertas para adentro." },
   { npc: "igor", unlocked: (g) => !!g.metIgor, bio: "Chef estrella del Restaurante. Trata la nutrición como táctica de fútbol, con datos curiosos siempre a mano." },
-  { npc: "fortuna", unlocked: (g) => !!g.metFortuna, bio: "Croupier del Casino. Misteriosa, coqueta, regenta la ruleta diaria como si conociera el destino de antemano." },
 ];
 
 /* --- EL PERIÓDICO · plantillas con titular y cuerpo, por secciones.
@@ -2767,7 +2629,7 @@ function ZoneScreen({ zone, pendingNpc, onBack, onOpenPaper, game, onSpin, onBuy
       {isCasino && !pendingNpc && (
         <div className="house-room">
           <div className="house-card">
-            <div className="house-title">🎰 Ruleta de Fortuna · 🪙 {game.fichas || 0}</div>
+            <div className="house-title">🎰 Ruleta del Casino · 🪙 {game.fichas || 0}</div>
             {spunToday ? (
               <div style={{ fontSize: 13, color: "#EFEEE3", lineHeight: 1.5 }}>
                 Ya has girado la ruleta hoy.<br />{lastSpinText}<br />Vuelve mañana para otra tirada.</div>
@@ -3965,23 +3827,30 @@ function CardDetail({ npc, game, onClose }) {
   const card = CARDS.find((c) => c.npc === npc);
   const seen = (game.seenMoods || {})[npc] || {};
   const moods = Object.keys(def.arts || {});
+  const defIdx = Math.max(0, moods.indexOf(def.def));
+  const [idx, setIdx] = useState(defIdx);
+  const mood = moods[idx];
+  const isSeen = !!seen[mood];
+  const move = (d) => setIdx((i) => (i + d + moods.length) % moods.length);
   return (
     <div className="overlay" style={{ background: "rgba(5,7,13,.75)", zIndex: 65, alignItems: "flex-end", padding: 0 }} onClick={onClose}>
-      <div className="sheet" style={{ maxHeight: "80vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
-        <div className="ptitle" style={{ fontSize: 16, marginBottom: 4 }}>{def.name}</div>
-        <div style={{ fontSize: 12.5, color: "#6F7563", marginBottom: 14, lineHeight: 1.5 }}>{card ? card.bio : ""}</div>
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
-          {moods.map((mood) => {
-            const isSeen = !!seen[mood];
-            return (
-              <div key={mood} style={{ textAlign: "center" }}>
-                <img src={def.arts[mood]} alt={isSeen ? mood : "silueta"} style={{ width: 100, height: 140, objectFit: "cover",
-                  borderRadius: 12, border: "1.5px solid #16190F", filter: isSeen ? "none" : "brightness(0)" }} />
-                <div style={{ fontSize: 10.5, color: "#9a9e8e", marginTop: 4, textTransform: "uppercase" }}>
-                  {isSeen ? mood : "???"}</div>
-              </div>);
-          })}
+      <div className="sheet" style={{ maxHeight: "82vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+        <div className="ptitle" style={{ fontSize: 16, marginBottom: 12, textAlign: "center" }}>{def.name}</div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+          {moods.length > 1 && (
+            <button className="btn-ghost sm" style={{ borderRadius: "50%", width: 36, height: 36, padding: 0, flexShrink: 0 }}
+              onClick={() => move(-1)} aria-label="Pose anterior">‹</button>)}
+          <div style={{ textAlign: "center" }}>
+            <img src={def.arts[mood]} alt={isSeen ? mood : "silueta"} style={{ width: 180, height: 250, objectFit: "cover",
+              borderRadius: 16, border: "1.5px solid #16190F", filter: isSeen ? "none" : "brightness(0)" }} />
+            <div style={{ fontSize: 11, color: "#9a9e8e", marginTop: 6, textTransform: "uppercase", letterSpacing: 1 }}>
+              {isSeen ? mood : "???"} {moods.length > 1 && `· ${idx + 1}/${moods.length}`}</div>
+          </div>
+          {moods.length > 1 && (
+            <button className="btn-ghost sm" style={{ borderRadius: "50%", width: 36, height: 36, padding: 0, flexShrink: 0 }}
+              onClick={() => move(1)} aria-label="Pose siguiente">›</button>)}
         </div>
+        <div style={{ fontSize: 12.5, color: "#6F7563", marginTop: 14, lineHeight: 1.5, textAlign: "center" }}>{card ? card.bio : ""}</div>
       </div>
     </div>);
 }
@@ -4269,7 +4138,7 @@ export default function App() {
     if (entry.beats) return addScene(g, from, entry.beats.map((b) => ({ m: b.m, t: fillTpl(b.t, ctx) })), { replies: entry.replies, ...extra });
     return addMsg(g, from, fillTpl(entry.t, ctx), { mood: entry.m, replies: entry.replies, ...extra });
   };
-  /* comprueba si alguna zona de la ciudad se acaba de desbloquear (Punky/Lisa)
+  /* comprueba si alguna zona de la ciudad se acaba de desbloquear (Lisa)
      y, si es la primera vez, encola su escena de presentación. Se llama tras cualquier
      acción que pueda mover el requisito: media, goles de carrera o ascenso de categoría. */
   const checkZoneUnlocks = (g) => {
@@ -4501,10 +4370,8 @@ export default function App() {
           else candidates.push(["Elisa Playa", ELISA_PLAYA_POOL]);
         }
         if (out.yunaMet) candidates.push(["Yuna", YUNA_POOL]);
-        if (out.metPunky) candidates.push(["Punky", PUNKY_POOL]);
         if (out.metLisa) candidates.push(["Lisa", LISA_POOL]);
         if (out.metIgor) candidates.push(["Igor", IGOR_POOL]);
-        if (out.metFortuna) candidates.push(["Fortuna", FORTUNA_POOL]);
         candidates.push([null, null]); /* comodín: flavor genérico de vestuario/prensa/agente */
         const [name, pool] = candidates[Math.floor(Math.random() * candidates.length)];
         if (!name) {
@@ -4731,9 +4598,9 @@ export default function App() {
     return { ...g, savedMeals: [...sm, m].slice(-8) };
   }); pushToast("💾 Guardada en comidas frecuentes"); };
   const deleteSavedMeal = (name) => setGame((g) => ({ ...g, savedMeals: (g.savedMeals || []).filter((m) => m.name !== name) }));
-  /* ruleta de Fortuna en el Casino: una tirada gratis al día, +5..20 XP a una stat al azar */
+  /* ruleta del Casino: una tirada gratis al día, +5..20 XP a una stat al azar */
   /* la ruleta tiene 3 premios posibles: XP de una stat (lo normal), fichas del casino
-     (para gastar en la tiendecita de Fortuna) o, muy de vez en cuando, un objeto especial */
+     (para gastar en la tiendecita del Casino) o, muy de vez en cuando, un objeto especial */
   const spinCasino = () => {
     if (game.casinoSpinDay === todayStr()) return; /* ya se ha usado hoy, botón no debería ni estar visible */
     const roll = Math.random();
@@ -4764,7 +4631,7 @@ export default function App() {
     else if (result.kind === "fichas") pushToast(`🎰 ¡+${result.amount} 🪙 fichas!`);
     else pushToast(`🎰 ¡Premio especial: ${ITEMS[result.itemId].name}!`);
   };
-  /* tiendecita de Fortuna: gasta fichas ganadas en la ruleta en un par de objetos fijos */
+  /* tiendecita del Casino: gasta fichas ganadas en la ruleta en un par de objetos fijos */
   const buyShopItem = (itemId, cost) => setGame((g) => {
     if ((g.fichas || 0) < cost) return g;
     const inv = { ...(g.inventory || {}) };

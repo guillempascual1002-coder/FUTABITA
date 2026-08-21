@@ -367,6 +367,12 @@ function sanitizeGame(g) {
      pueden resolver (la variante no existe como pool aparte), así que se descartan sin más
      — es solo una línea ambiental provisional pendiente, no progreso real que se pierda */
   if (out.pendingAppearances) out.pendingAppearances = out.pendingAppearances.filter((p) => p && p.npc);
+  /* reset del sistema de desbloqueo de zonas: antes se abrían automáticamente por
+     estadísticas (OVR, goles, temporada...), ahora solo por eventos narrativos
+     (unlockZone). Cualquier partida que no tenga ya este campo (todas las
+     anteriores a este cambio, incluidas las que tuvieran zonas "desbloqueadas"
+     por el sistema antiguo) arranca de cero con solo Casa + Barrio disponibles. */
+  if (!out.unlockedZones) out.unlockedZones = [...DEFAULT_UNLOCKED_ZONES];
   /* migración al sistema de personajes: la primera vez se crea la cola de diálogos
      y las ofertas que quedaran pendientes en el chat antiguo pasan a Elisa */
   if (out.phase === "main" && out.player) {
@@ -934,9 +940,11 @@ const NPCS = {
       playa: "/images/yuna_playablush.webp" }, def: "idle" },
   /* en Elisa, "angry" es su cara de decepción contenida: para semanas flojas o cuando habla de
      entrenadora estricta. "casual"/"playa"/"gala" son sus tres facetas fuera de servicio. */
-  elisa: { name: "Elisa", color: "#2E6ED6", voice: "/audio/vozchica02.mp3", icon: "/images/elisa_icon.webp",
-    arts: { idle: "/images/Elisa_idle.webp", happy: "/images/Elisa_happy.webp", angry: "/images/Elisa_angry.webp",
-      casual: "/images/elisa_casual.webp", playa: "/images/elisa_playa.webp", gala: "/images/elisa_gala.webp" }, def: "idle" },
+  elisa: { name: "Elisa", color: "#2E6ED6", voice: "/audio/vozchica02.mp3", icon: "/images/elisa/elisa_icon.webp",
+    /* a partir de ahora los assets de Elisa viven en su propia carpeta (public/images/elisa/);
+       el resto de personajes se irá moviendo igual más adelante, personaje a personaje */
+    arts: { idle: "/images/elisa/Elisa_idle.webp", happy: "/images/elisa/Elisa_happy.webp", angry: "/images/elisa/Elisa_angry.webp",
+      casual: "/images/elisa/elisa_casual.webp", playa: "/images/elisa/elisa_playa.webp", gala: "/images/elisa/elisa_gala.webp" }, def: "idle" },
   /* Karla: futbolista pro, gestiona patrocinios. Su "angry" es en realidad ENGREÍDA/chulería,
      no enfado real. "casual"/"playa" son sus dos facetas fuera de servicio. */
   lisa: { name: "Karla", color: "#9C6BD6", voice: "/audio/vozchica02.mp3", icon: "/images/karla_icon.webp",
@@ -1182,43 +1190,61 @@ const mealsLoggedCount = (g) => Object.values(g.logs || {}).reduce((a, l) => a +
    silueta exacta cuando está bloqueada. Los nombres ya están dibujados en el propio
    SVG, así que aquí NO se repite ninguna etiqueta de texto. */
 const CITY_MAP_VB = { x: 36.3, y: 60.2, w: 417.1, h: 720 };
+/* ============================================================
+   DESBLOQUEO DE ZONAS · ya NO depende de estadísticas ni progreso del
+   jugador (OVR, goles, temporada, hábitos, comidas...). Esas estadísticas
+   siguen existiendo y funcionando igual para el resto del juego, solo
+   dejan de tener relación con qué zonas se pueden visitar.
+   El desbloqueo pasa a ser un evento narrativo: cuando una historia lo
+   decida, llamará a unlockZone(g, id). Por ahora nada llama a eso
+   todavía (no se ha diseñado qué historia abre qué zona), así que solo
+   Casa y Barrio están disponibles desde el principio y el resto se queda
+   bloqueado hasta que el sistema de historias las abra más adelante. */
+const DEFAULT_UNLOCKED_ZONES = ["casa", "barrio"];
+const isZoneUnlocked = (g, zoneId) => (g.unlockedZones || DEFAULT_UNLOCKED_ZONES).includes(zoneId);
+const unlockZone = (g, zoneId) => {
+  const cur = g.unlockedZones || DEFAULT_UNLOCKED_ZONES;
+  if (cur.includes(zoneId)) return g;
+  return { ...g, unlockedZones: [...cur, zoneId] };
+};
+const ZONE_LOCKED_MSG = "Esta zona todavía no está disponible.";
 const ZONES = [
   { id: "oficina", kind: "npc", npc: "elisa", label: "Oficina", icon: "🏢", x: 18.62, y: 6.04,
     pts: "52.3 87.7 55.7 137.4 204.8 129.6 204.8 76.2 52.3 87.7",
-    unlocked: () => true },
+    unlocked: (g) => isZoneUnlocked(g, "oficina") },
   { id: "ciudad-dep", kind: "npc", npc: "lopez", label: "Ciudad Deportiva", icon: "🏟️", x: 63.22, y: 30.73,
     pts: "226.9 245 214.2 284.3 257.1 333.4 437.4 333.4 437.4 247.6 226.9 245",
-    unlocked: () => true },
+    unlocked: (g) => isZoneUnlocked(g, "ciudad-dep") },
   { id: "kiosco", kind: "paper", npc: "milly", label: "Kiosco", icon: "📰", x: 69.23, y: 43.44,
     pts: "303.1 345.6 367.9 345.6 356.7 410.5 320.6 406.9 299 383.4 303.1 345.6",
-    unlocked: () => true },
+    unlocked: (g) => isZoneUnlocked(g, "kiosco") },
   /* Tu Casa: sin personaje, es la pantalla de trofeos y estadísticas de tu carrera. Siempre disponible. */
   { id: "casa", kind: "home", npc: null, label: "Tu Casa", icon: "🏠", x: 18.87, y: 44.54,
     pts: "91.1 348.2 163.7 373.2 152.4 429.4 76.8 405.4 91.1 348.2",
-    unlocked: () => true },
+    unlocked: (g) => isZoneUnlocked(g, "casa") },
   /* varios personajes comparten esta zona de calle: la burbuja muestra a quien tenga
      algo pendiente ahora mismo (ver EXTRA_NPCS y CityMap); en reposo, el puntito de siempre */
   { id: "barrio", kind: "npc", npc: "yuna", label: "El Barrio", icon: "🌆", x: 53.16, y: 58.16,
     pts: "217.8 461 217.8 507.5 318.4 500 318.4 465.1 217.8 461",
-    unlocked: (g) => !!g.yunaMet, reqLabel: "Marca tu primer gol" },
+    unlocked: (g) => isZoneUnlocked(g, "barrio") },
   { id: "car", kind: "npc", npc: ["lopez", "lisa"], label: "Centro de Alto Rendimiento", icon: "🏋️", x: 61.35, y: 17.42,
     pts: "230 164.5 230 222 387.9 223.7 383.1 153.5 230 164.5",
-    unlocked: (g) => careerGoals(g) >= 3, reqLabel: "Marca 3 goles en tu carrera" },
+    unlocked: (g) => isZoneUnlocked(g, "car") },
   { id: "prensa", kind: "npc", npc: "milly", label: "Sala de Prensa", icon: "🎙️", x: 23.63, y: 31.90,
     pts: "131.9 245 187.7 293.5 168.3 358.9 91.1 337.4 98.3 259.3 131.9 245",
-    unlocked: (g) => calcOVR(g.player.stats) >= 70, reqLabel: "Alcanza 70 de media" },
+    unlocked: (g) => isZoneUnlocked(g, "prensa") },
   { id: "patro", kind: "npc", npc: "lisa", label: "Zona de Patrocinadores", icon: "🏙️", x: 31.70, y: 81.56,
     pts: "131.2 570.8 86.3 660.7 163.3 715.5 190.8 690.4 214.2 702.1 245.3 669.4 185.9 599.7 131.2 570.8",
-    unlocked: (g) => g.tier.id >= 2, reqLabel: "Asciende a Primera Federación", metFlag: "metLisa", intro: KARLA_INTRO_BEATS },
+    unlocked: (g) => isZoneUnlocked(g, "patro"), metFlag: "metLisa", intro: KARLA_INTRO_BEATS },
   { id: "cantera", kind: "npc", npc: "lopez", label: "Cantera", icon: "🎓", x: 86.33, y: 44.94,
     pts: "377.1 345.6 437.4 343.6 426.6 442.1 363.8 442.1 377.1 345.6",
-    unlocked: (g) => calcOVR(g.player.stats) >= 78, reqLabel: "Alcanza 78 de media" },
+    unlocked: (g) => isZoneUnlocked(g, "cantera") },
   { id: "tienda", kind: "npc", npc: ["yuna", "lopez"], label: "Tienda Oficial", icon: "🛍️", x: 81.25, y: 65.05,
     pts: "342.4 511.6 347 559.6 424.1 552.4 420 507.5 342.4 511.6",
-    unlocked: (g) => g.tier.id >= 3, reqLabel: "Asciende a LaLiga Hypermotion / 2ª europea" },
+    unlocked: (g) => isZoneUnlocked(g, "tienda") },
   { id: "estadio", kind: "npc", npc: ["lopez", "yuna", "elisa"], label: "Gran Estadio", icon: "🏆", x: 74.57, y: 87.82,
     pts: "384.1 634.1 295 657.5 262.9 677.7 290.1 764.2 384.1 764.2 431.1 715.5 384.1 634.1",
-    unlocked: (g) => g.tier.id >= 4, reqLabel: "Asciende a Primera división · media tabla", big: true },
+    unlocked: (g) => isZoneUnlocked(g, "estadio"), big: true },
 ];
 /* home zone de cada personaje: dónde "vive" por defecto si una escena no especifica zona
    explícita (varios personajes están asignados a más de una zona ahora que la zona es
@@ -1256,247 +1282,45 @@ const METRO_MAP_VB = { x: 0, y: 30.02, w: 480, h: 792.72 };
 const METRO_ZONES = [
   { id: "parque", kind: "npc", npc: ["elisa", "lisa"], label: "Parque", icon: "🌳", x: 35.20, y: 18.23,
     pts: "199.15 80.02 81.19 286.08 105.7 333.35 259.66 93.01 199.15 80.02",
-    unlocked: (g) => gymDaysCount(g) >= 5, reqLabel: "Completa 5 días de gym" },
+    unlocked: (g) => isZoneUnlocked(g, "parque") },
   { id: "casino", kind: "npc", npc: "elisa", label: "Casino", icon: "🎰", x: 51.03, y: 43.99,
     pts: "220.6 343.57 206.85 417.61 281.87 429.86 294.89 358.89 220.6 343.57",
-    unlocked: (g) => habitDaysCount(g) >= 20, reqLabel: "Registra hábitos 20 días" },
+    unlocked: (g) => isZoneUnlocked(g, "casino") },
   { id: "enfermeria", kind: "npc", npc: null, label: "Enfermería", icon: "🏥", x: 86.65, y: 22.97,
     pts: "402.89 159.68 353.11 256.96 460.34 286.08 460.34 197.98 402.89 159.68",
-    unlocked: (g) => proteinGoalHits(g) >= 10, reqLabel: "Llega a tu objetivo de proteína 10 veces" },
+    unlocked: (g) => isZoneUnlocked(g, "enfermeria") },
   { id: "playa", kind: "npc", npc: ["elisa", "milly", "lopez", "lisa"], label: "Playa", icon: "🏖️", x: 12.16, y: 49.44,
     pts: "22.21 382.57 22.21 562.57 125.62 399.43 99.57 382.57 22.21 382.57",
-    unlocked: (g) => mealsLoggedCount(g) >= 100, reqLabel: "Registra 100 comidas" },
+    unlocked: (g) => isZoneUnlocked(g, "playa") },
   { id: "atico", kind: "npc", npc: "elisa", label: "Ático de Lujo", icon: "🌇", x: 78.27, y: 63.06,
     pts: "353.11 469.13 347.74 507.48 294.89 602.97 445.02 666.29 460.34 464.53 353.11 469.13",
-    unlocked: (g) => calcOVR(g.player.stats) >= 80, reqLabel: "Alcanza 80 de media" },
+    unlocked: (g) => isZoneUnlocked(g, "atico") },
   { id: "restaurante", kind: "npc", npc: ["igor", "elisa"], label: "Restaurante", icon: "🍽️", x: 63.88, y: 81.68,
     pts: "284.94 620.02 223.66 727.26 294.89 776.28 377.62 688.96 335.49 662.91 344.68 647.24 284.94 620.02",
-    unlocked: (g) => kcalGoalHits(g) >= 5, reqLabel: "Llega a tu objetivo de calorías 5 veces", metFlag: "metIgor", intro: IGOR_INTRO_BEATS },
+    unlocked: (g) => isZoneUnlocked(g, "restaurante"), metFlag: "metIgor", intro: IGOR_INTRO_BEATS },
 ];
 const METRO_EXTRA_NPCS = [];
-/* METRO_QUESTS + QUESTS (más abajo) son la fuente de datos de STORIES, la
-   historia de la Metrópolis para Igor. */
-const METRO_QUESTS = {
-  igor: {
-    label: "El recetario del campeón",
-    npc: "igor",
-    trigger: (g) => !!g.metIgor,
-    stages: [
-      { title: "El primer plato táctico", objective: "Cumple tu objetivo de proteína 5 días",
-        intro: [
-          { m: "idle", t: "Te voy a poner a prueba, pero con hambre, que es como mejor se aprende. Nada de teoría sin más: quiero verlo en el plato." },
-          { m: "idle", t: "Cumple tu objetivo de proteína 5 días. No hace falta que sean seguidos, solo que sumen. Ahí empieza el partido de verdad." }],
-        snap: (g) => ({ count: Object.values(g.logs || {}).filter((l) => (l.prot || 0) >= g.player.goals.protein).length }),
-        check: (g, snap) => Object.values(g.logs || {}).filter((l) => (l.prot || 0) >= g.player.goals.protein).length - snap.count >= 5 },
-      { title: "Consistencia en el marcador", objective: "Registra comidas en 10 días distintos",
-        intro: [
-          { m: "idle", t: "Un plato bueno un solo día no dice nada, eso lo sabe cualquiera. Lo que de verdad forma un cuerpo es la constancia, jornada tras jornada." },
-          { m: "idle", t: "Anota tus comidas en 10 días distintos, aunque sea rápido, aunque no sea perfecto. Yo prefiero mil veces un registro sincero a uno bonito y falso." }],
-        snap: (g) => ({ count: Object.values(g.logs || {}).filter((l) => (l.meals || []).length > 0).length }),
-        check: (g, snap) => Object.values(g.logs || {}).filter((l) => (l.meals || []).length > 0).length - snap.count >= 10 },
-      { title: "La dieta de los grandes", objective: "Cumple tu objetivo de proteína 7 días seguidos", deadlineDays: 30,
-        intro: [
-          { m: "idle", t: "Última prueba, y esta es la gorda: nada de días sueltos. Quiero una racha de verdad, sin fallar ni una jornada." },
-          { m: "idle", t: "Siete días seguidos cumpliendo tu proteína. Como una buena racha de resultados: cuesta empezarla, pero una vez cogida, no se suelta." }],
-        snap: () => ({}),
-        check: (g) => catStreak(g, (l) => (l.prot || 0) >= g.player.goals.protein) >= 7 },
-      { title: "Jugada maestra", final: true,
-        intro: [
-          { m: "happy", t: "Lo has conseguido. Y no me refiero solo a la racha, me refiero a que ahora ya piensas en la comida como una jugada, no como un trámite." },
-          { m: "happy", t: "Eso no se me olvida a un chef fácilmente. Ya formas parte del recetario de los que se lo toman en serio de verdad." }],
-        introFail: [
-          { m: "idle", t: "No llegamos a los siete días seguidos, pero no pasa nada, de verdad. Las rachas buenas a veces tardan varios intentos." },
-          { m: "idle", t: "La cocina, como el fútbol, perdona el fallo si sigues viniendo a entrenar. Aquí sigo, cuando quieras retomarlo." }],
-        reward: (g) => { const stats = { ...g.player.stats }; stats.NUT = Math.min(99, stats.NUT + 1); return { ...g, player: { ...g.player, stats } }; } },
-    ],
-  },
-};
+/* METRO_QUESTS + QUESTS (más abajo) son la fuente de datos de STORIES.
+   Vacías a propósito: las misiones/diálogos anteriores se han retirado
+   para que las historias reales de cada personaje se diseñen desde cero
+   más adelante, sin contenido antiguo de por medio. El motor (toStories,
+   checkStories, QuestPanel) ya está listo para recibir personaje →
+   capítulos → etapas en cuanto se escriban. */
+const METRO_QUESTS = {};
 /* todas las zonas de ambos mapas juntas, solo para resolver "en qué zona estoy"
    sin que importe desde qué mapa se abrió (los id no se repiten entre mapas) */
 const ALL_ZONES = [...ZONES, ...METRO_ZONES];
 
 /* ============================================================
-   MISIONES · historias por entregas, aparte de las frases sueltas.
-   Se guardan en g.quests[npc] = { stage, snap, startDay, done, failed }.
-   Cada etapa: intro (escena al empezarla), objective (texto para el
-   registro), snap (foto del estado al empezar, para medir el progreso),
-   check (si ya se cumplió). La última etapa lleva final:true y no
-   tiene objetivo propio: solo resuelve la historia (con introFail si
-   se cumplió el plazo sin lograrlo).
+   MISIONES · vacías a propósito (ver comentario junto a METRO_QUESTS).
+   Las 4 misiones de 4 etapas que había aquí antes (Elisa, López, Yuna,
+   Karla, Milly) se han retirado por completo: eran contenido narrativo
+   provisional, y la idea es escribir las historias reales desde cero
+   más adelante, sin que este texto interfiera. El motor que las movía
+   (STORIES, toStories, checkStories, QuestPanel) sigue intacto y listo
+   para recibir el contenido nuevo con la misma forma.
    ============================================================ */
-const QUESTS = {
-  elisa: {
-    label: "La apuesta que hizo por ti",
-    npc: "elisa",
-    trigger: (g) => dayDiff(g.signedAt || todayStr(), todayStr()) >= 7,
-    stages: [
-      { title: "La primera duda", objective: "Encadena una racha de 3 días",
-        intro: [
-          { m: "idle", t: "Necesito hablar contigo de algo que todavía no te he contado." },
-          { m: "idle", t: "Hace unas semanas puse tu nombre encima de una mesa importante. En serio, encima de una mesa de las que importan. Ahora necesito que tú sostengas esa apuesta. Empecemos por lo básico: constancia." }],
-        snap: () => ({}),
-        check: (g) => (g.player.streak || 0) >= 3 },
-      { title: "La prueba de fuego", objective: "Gana 2 partidos",
-        intro: [
-          { m: "idle", t: "Bien. Primer paso superado. Ahora viene la parte que no se puede fingir." },
-          { m: "happy", t: "Necesito verte ganar bajo presión, no solo entrenar bien. Gánamelo en el campo, que es donde de verdad se firman los contratos." }],
-        snap: (g) => ({ matchCount: (g.matchHistory || []).length }),
-        check: (g, snap) => (g.matchHistory || []).slice(snap.matchCount).filter((m) => m.res === "V").length >= 2 },
-      { title: "La videollamada", objective: "Supera tu mejor nota de la carrera", deadlineDays: 25,
-        intro: [
-          { m: "idle", t: "Mañana tengo una videollamada que puede cambiar bastante las cosas para ti. No te voy a decir con quién todavía." },
-          { m: "happy", t: "Solo te pido una cosa antes: dame el mejor partido de tu carrera. Necesito enseñarles algo que no se pueda discutir." }] ,
-        snap: (g) => ({ best: g.bestRating || 0 }),
-        check: (g, snap) => (g.bestRating || 0) > snap.best },
-      { title: "El resultado", final: true,
-        intro: [
-          { m: "happy", t: "La llamada fue bien. Muy bien. No puedo darte detalles todavía, pero recuerda este día, porque dentro de un tiempo vas a entender por qué te lo pedí todo esto." },
-          { m: "happy", t: "Gracias por no hacerme quedar como una mentirosa delante de esa gente. Sabía que podía apostar por ti. Ahora sigamos, que esto no ha hecho más que empezar." }],
-        introFail: [
-          { m: "idle", t: "La llamada se enfrió. No pasa nada, estas cosas llevan su tiempo y no siempre dependen de una sola actuación." },
-          { m: "happy", t: "Lo que sí tengo claro es que la apuesta que hice por ti sigue en pie. Vamos a por la siguiente oportunidad, que seguro que llega." }],
-        reward: (g) => { const stats = { ...g.player.stats }; stats.REC = Math.min(99, stats.REC + 1);
-          const inv = { ...(g.inventory || {}) }; inv.libreta_tactica = (inv.libreta_tactica || 0) + 1;
-          return { ...g, player: { ...g.player, stats }, inventory: inv }; } },
-    ],
-  },
-  lopez: {
-    label: "El brazalete",
-    npc: "lopez",
-    trigger: (g) => dayDiff(g.signedAt || todayStr(), todayStr()) >= 14,
-    stages: [
-      { title: "Aprender a escuchar", objective: "Entrena (gym) 4 días distintos",
-        intro: [
-          { m: "idle", t: "Llevo un tiempo fijándome en ti. No de forma rara, tranquilo, es cosa de capitán." },
-          { m: "happy", t: "Creo que tienes madera de liderar este vestuario algún día. Pero eso se gana entrenando duro cuando nadie mira, no con discursos. Demuéstramelo." }],
-        snap: () => ({ today: todayStr() }),
-        check: (g, snap) => Object.entries(g.logs || {}).filter(([d, l]) => l.gym && d >= snap.today).length >= 4 },
-      { title: "Hablar por el grupo", objective: "Encadena una racha de 5 días",
-        intro: [
-          { m: "idle", t: "Bien. Ahora viene lo difícil: la constancia cuando ya nadie te aplaude por currar." },
-          { m: "happy", t: "Un capitán no es el que más grita, es el que más aguanta. Enséñame que puedes sostener el nivel varios días seguidos." }],
-        snap: () => ({}),
-        check: (g) => (g.player.streak || 0) >= 5 },
-      { title: "El día que fallé", objective: "Gana el partido siguiente a una derrota", deadlineDays: 30,
-        intro: [
-          { m: "idle", t: "Te voy a contar algo que no le cuento a cualquiera: mi peor temporada empezó justo después de perder un partido que me hundió." },
-          { m: "happy", t: "Lo que te define no es esa derrota, es lo que haces el domingo siguiente. Cuando pierdas uno, quiero verte responder en el próximo. Ese es el verdadero examen." }],
-        snap: (g) => ({ matchCount: (g.matchHistory || []).length }),
-        check: (g, snap) => {
-          const hist = (g.matchHistory || []).slice(snap.matchCount);
-          for (let i = 0; i < hist.length - 1; i++) if (hist[i].res === "D" && hist[i + 1].res === "V") return true;
-          return false;
-        } },
-      { title: "El relevo", final: true,
-        intro: [
-          { m: "happy", t: "Eso que has hecho, responder así después de un mal día, es exactamente lo que buscaba ver. Algún día, cuando yo cuelgue las botas, este vestuario va a necesitar a alguien así." },
-          { m: "happy", t: "No te prometo el brazalete mañana. Pero apúntate esto: cuando llegue el momento, mi voto ya lo tienes." }],
-        introFail: [
-          { m: "idle", t: "No ha llegado esa reacción todavía, pero tampoco pasa nada, el liderazgo no tiene fecha límite." },
-          { m: "happy", t: "Sigue currando como hasta ahora. Estas cosas se ganan despacio, y tú vas por el buen camino, te lo digo yo." }],
-        reward: (g) => { const stats = { ...g.player.stats }; stats.FUE = Math.min(99, stats.FUE + 1); return { ...g, player: { ...g.player, stats } }; } },
-    ],
-  },
-  yuna: {
-    label: "La bufanda equivocada",
-    npc: "yuna",
-    trigger: (g) => !!g.yunaMet && dayDiff(g.signedAt || todayStr(), todayStr()) >= 10,
-    stages: [
-      { title: "Confesión a medias", objective: "Marca un gol",
-        intro: [
-          { m: "idle", t: "Tengo... una petición. Puramente periodística, que conste. Nada personal." },
-          { m: "angry", t: "Marca un gol pronto, ¿vale? No es que quiera verte celebrar ni nada. Es que necesito material nuevo para mi archivo de seguimiento. ¡ES DOCUMENTACIÓN!" }],
-        snap: (g) => ({ goals: careerGoals(g) }),
-        check: (g, snap) => careerGoals(g) > snap.goals },
-      { title: "El offside emocional", objective: "Gana el derbi",
-        intro: [
-          { m: "idle", t: "Se acerca el derbi y no voy a mentir, estoy más nerviosa de lo normal. Por el Barça, claro. Por nada más." },
-          { m: "angry", t: "Gánalo. Por favor. ...¡Por favor no, por estadística! Por el bien de mi análisis táctico. Nada más. Gánalo y ya está." }],
-        snap: (g) => ({ matchCount: (g.matchHistory || []).length }),
-        check: (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.derbi && m.res === "V") },
-      { title: "La palabra prohibida", objective: "Llega a {streak} de 6 días de racha", deadlineDays: 25,
-        intro: [
-          { m: "idle", t: "Llevo días queriéndote decir una cosa y no me sale. Así que te voy a dar un objetivo en vez de decírtela, que es más fácil." },
-          { m: "angry", t: "Llega a seis días de racha seguidos. Cuando lo hagas... a lo mejor te lo digo. A lo mejor no. Ya veremos cómo estoy ese día." }],
-        snap: () => ({}),
-        check: (g) => (g.player.streak || 0) >= 6 },
-      { title: "Sin rodeos", final: true,
-        intro: [
-          { m: "idle", t: "Lo prometido... vale. Aquí va, sin tsundere, sin excusas de periodista amateur." },
-          { m: "happy", t: "Me alegro muchísimo de haberte conocido. Ya está. Eso era todo. No lo voy a repetir, así que grábatelo bien, porque no vuelve a salir de mi boca así de claro." }],
-        introFail: [
-          { m: "idle", t: "Bueno, no ha llegado el día de la racha larga. Da igual, tampoco tenía tanto preparado que decir." },
-          { m: "angry", t: "N-no pienses que me importa. Es solo que tenía el discurso ya medio escrito y ahora no sé qué hacer con él. Da igual, lo guardo para otra ocasión." }],
-        reward: (g) => { const stats = { ...g.player.stats }; stats.MEN = Math.min(99, stats.MEN + 1); return { ...g, player: { ...g.player, stats } }; } },
-    ],
-  },
-  lisa: {
-    label: "La apuesta de la campeona",
-    npc: "lisa",
-    trigger: (g) => ZONES.find((z) => z.id === "patro").unlocked(g),
-    stages: [
-      { title: "Ponte a mi altura", objective: "Llega a {streak} de 6 días de racha",
-        intro: [
-          { m: "angry", t: "Voy a ponerte un reto, y no porque me importe especialmente cómo te vaya. Es puro interés profesional." },
-          { m: "angry", t: "Seis días de racha seguidos. Si lo consigues, hablamos de patrocinios de verdad. Si no... bueno, seguiremos hablando igual, pero con menos ceros." }],
-        snap: () => ({}),
-        check: (g) => (g.player.streak || 0) >= 6 },
-      { title: "El contrato de verdad", objective: "Alcanza la media de la siguiente categoría",
-        intro: [
-          { m: "idle", t: "Bien. Nada mal. Ahora el reto de verdad, el que decide si esto va en serio." },
-          { m: "angry", t: "Sube tu media hasta lo que pide la siguiente categoría. Un patrocinador de nivel no invierte en potencial, invierte en hechos." }],
-        snap: (g) => ({ need: (TIERS.find((t) => t.id === g.tier.id + 1) || { minOvr: 99 }).minOvr }),
-        check: (g, snap) => calcOVR(g.player.stats) >= snap.need },
-      { title: "El partidazo", objective: "Consigue una nota de 8.5 o más", deadlineDays: 35,
-        intro: [
-          { m: "idle", t: "Ya tengo el contrato prácticamente cerrado. Solo falta un detalle que quieren ver antes de firmar." },
-          { m: "angry", t: "Un partido a tu mejor nivel, delante de la gente correcta. Dame eso y esto está hecho." }],
-        snap: (g) => ({ matchCount: (g.matchHistory || []).length }),
-        check: (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.rating >= 8.5) },
-      { title: "La firma", final: true,
-        intro: [
-          { m: "happy", t: "Firmado. Y no te voy a mentir: me ha costado convencerles, pero al final has hecho tú todo el trabajo por mí." },
-          { m: "happy", t: "Reconozco cuando alguien vale lo que promete. Tú lo vales. No te acostumbres a que te lo diga así de claro, es un caso excepcional." }],
-        introFail: [
-          { m: "angry", t: "No hemos llegado a tiempo para esta oferta concreta, se enfrió. Ya habrá otras, no es el fin del mundo." },
-          { m: "angry", t: "Sigo pensando que vales la pena, que conste. Esto no cambia mi opinión sobre ti, solo el calendario." }],
-        reward: (g) => { const stats = { ...g.player.stats }; stats.FIS = Math.min(99, stats.FIS + 1); return { ...g, player: { ...g.player, stats } }; } },
-    ],
-  },
-  milly: {
-    label: "El rumor del siglo",
-    npc: "milly",
-    trigger: (g) => dayDiff(g.signedAt || todayStr(), todayStr()) >= 21,
-    stages: [
-      { title: "Sigue las migas", objective: "Conoce a 2 personajes más de la ciudad",
-        intro: [
-          { m: "idle", t: "Tengo un rumor entre manos que llevo semanas siguiendo, y creo que tiene que ver contigo." },
-          { m: "happy", t: "Necesito que hables con más gente de la ciudad para confirmar un par de cosas. Cuantos más conozcas, antes ato cabos. Toma, tu periódico, mientras tanto." }],
-        snap: (g) => ({ count: ["metLisa", "metIgor"].filter((k) => g[k]).length }),
-        check: (g, snap) => (["metLisa", "metIgor"].filter((k) => g[k]).length - snap.count) >= 2 },
-      { title: "El ingrediente secreto", objective: "Pasa 5 días viniendo a por tu periódico",
-        intro: [
-          { m: "idle", t: "Vas por buen camino. El rumor se sostiene, pero necesito una cosa más: continuidad." },
-          { m: "happy", t: "Sigue viniendo cada día a por tu periódico, sin faltar, durante unos días. Confía en mí, tiene sentido, ya lo verás." }],
-        snap: () => ({ start: todayStr() }),
-        check: (g, snap) => dayDiff(snap.start, todayStr()) >= 5 },
-      { title: "La confirmación", objective: "Gana la semana del derbi", deadlineDays: 30,
-        intro: [
-          { m: "idle", t: "Última pieza del puzle, y es la gorda: necesito que ganes el derbi. Todo el rumor depende de eso, literalmente." },
-          { m: "happy", t: "No te puedo contar más sin arruinarlo. Gánalo y te cuento todo, te lo prometo por el kiosco entero." }],
-        snap: (g) => ({ matchCount: (g.matchHistory || []).length }),
-        check: (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.derbi && m.res === "V") },
-      { title: "El titular", final: true,
-        intro: [
-          { m: "happy", t: "¡CONFIRMADO! El rumor era que ibas a convertirte en el nombre más comentado de esta ciudad. Y mírate. Lo has hecho tú solito, delante de mis narices." },
-          { m: "periodico", t: "Llevo veinte años en este mostrador y pocas veces me ha dado tanta alegría tener razón en un cotilleo. Toma, este periódico te lo regalo yo." }],
-        introFail: [
-          { m: "idle", t: "El derbi no salió como esperaba, así que el rumor se queda sin confirmar del todo, de momento." },
-          { m: "happy", t: "Pero oye, sigo pensando que algún día vas a dar que hablar en esta ciudad. Los rumores buenos tardan en cumplirse, no en desaparecer." }],
-        reward: (g) => { const stats = { ...g.player.stats }; stats.REC = Math.min(99, stats.REC + 1); return { ...g, player: { ...g.player, stats } }; } },
-    ],
-  },
-};
+const QUESTS = {};
 
 /* ============================================================
    STORIES · infraestructura del nuevo sistema narrativo por capítulos.
@@ -2768,7 +2592,7 @@ function CityMap({ game, onVisit, zones, vb, svgSrc, mapLabel }) {
           para que nunca se corte aunque el candado esté pegado al borde izquierdo o derecho */
         flashZone && (
           <div className="city-req" style={{ top: `calc(${flashZone.y}% + 26px)` }}>
-            {flashZone.kind === "soon" && flashZone.unlocked(game) ? "Próximamente" : flashZone.reqLabel}
+            {flashZone.kind === "soon" && flashZone.unlocked(game) ? "Próximamente" : ZONE_LOCKED_MSG}
           </div>)}
     </div>);
 }
@@ -3975,7 +3799,10 @@ export default function App() {
      en cada render, así que en cuanto se vacía su cola la pantalla pasa sola al cartel
      de "no hay nadie" sin necesidad de un efecto aparte que pueda desincronizarse.
      ALL_ZONES junta las zonas de los dos mapas, así da igual desde cuál se abrió. */
-  const visitedZoneObj = visitedZone ? ALL_ZONES.find((z) => z.id === visitedZone) : null;
+  /* comprobación extra de bloqueo aquí también (no solo en el clic del mapa): una zona
+     bloqueada nunca debe poder "visitarse" aunque algo dejara visitedZone con su id. */
+  const visitedZoneObj = visitedZone && game && isZoneUnlocked(game, visitedZone)
+    ? ALL_ZONES.find((z) => z.id === visitedZone) : null;
   const visitedActiveNpc = visitedZoneObj ? zoneActiveNpc(visitedZoneObj, game ? (game.npcQueue || []) : []) : null;
 
   /* mensajes en 2ª persona -> cola de diálogos NPC; 3ª persona -> artículo del periódico.

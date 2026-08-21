@@ -2986,8 +2986,19 @@ function ZoneScreen({ zone, pendingNpc, onBack, onOpenPaper, game }) {
 
 /* Tu Casa: sin personaje, muestra la vitrina de trofeos (una liga ganada = un trofeo)
    y las estadísticas de partidos de toda tu carrera. */
+/* partidas de antes de que careerLog guardara pos/club/colores como campos propios:
+   solo tenían "text" tipo "1º con UD Alzira · 12 goles · media 7.4", así que lo
+   reconstruimos leyendo esa frase para no perder los trofeos ya ganados */
+const trophyInfo = (c) => {
+  if (c.pos != null) return c;
+  const m = (c.text || "").match(/^(\d+)º con (.+?) ·/);
+  if (!m) return { ...c, pos: null };
+  const club = m[2];
+  const known = [...REGIONAL_POOL, ...TIERS.flatMap((t) => t.clubs)].find((cl) => cl.name === club);
+  return { ...c, pos: +m[1], club, c1: known ? known.c1 : "#3F4433", c2: known ? known.c2 : "#8A8E7C" };
+};
 function HouseRoom({ game }) {
-  const trophies = (game.careerLog || []).filter((c) => c.pos === 1);
+  const trophies = (game.careerLog || []).map(trophyInfo).filter((c) => c.pos === 1);
   const hist = game.matchHistory || [];
   const wins = hist.filter((m) => m.res === "V").length;
   const draws = hist.filter((m) => m.res === "E").length;

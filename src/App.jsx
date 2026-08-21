@@ -287,20 +287,22 @@ function sanitizeGame(g) {
   if (out.savedMeals) out.savedMeals = out.savedMeals.filter((m) => m && Number.isFinite(m.kcal) && Number.isFinite(m.prot));
   /* gym: crear estructura en partidas anteriores al módulo y compactar sesiones antiguas */
   out.gym = pruneGym({ ...emptyGym(), ...(out.gym || {}) });
-  /* Karlos, Mabel, Dino, Yuni, Lili, Cubarsí y Yamal se han quitado del juego (roster
-     recortado a menos personajes, mejor desarrollados): limpia rastros de partidas
-     guardadas antes de cada recorte para que no se quede un aviso de "pendiente"
-     imposible de abrir ni una misión colgada sin poder avanzar */
-  const REMOVED_NPCS = ["mabel", "karlos", "dino", "yuni", "lili", "cubarsi", "yamal"];
+  /* Karlos, Mabel, Dino, Yuni, Lili, Cubarsí, Yamal e Irina se han quitado del juego
+     (roster recortado a menos personajes, mejor desarrollados): limpia rastros de
+     partidas guardadas antes de cada recorte para que no se quede un aviso de
+     "pendiente" imposible de abrir ni una misión colgada sin poder avanzar */
+  const REMOVED_NPCS = ["mabel", "karlos", "dino", "yuni", "lili", "cubarsi", "yamal", "irina"];
   if (out.npcQueue) out.npcQueue = out.npcQueue.filter((e) => !REMOVED_NPCS.includes(e.npc));
   if (out.quests) { const rest = { ...out.quests }; REMOVED_NPCS.forEach((k) => delete rest[k]); out.quests = rest; }
   if (out.questPending) { const rest = { ...out.questPending }; REMOVED_NPCS.forEach((k) => delete rest[k]); out.questPending = rest; }
   if (out.introQueued) {
     const rest = { ...out.introQueued };
     delete rest.metMabel; delete rest.metKarlos; delete rest.metDino; delete rest.metYuni;
-    delete rest.metLili; delete rest.metCubarsi; delete rest.metYamal;
+    delete rest.metLili; delete rest.metCubarsi; delete rest.metYamal; delete rest.metIrina;
     out.introQueued = rest;
   }
+  if (out.inventory) { const inv = { ...out.inventory }; delete inv.pulsera_vieja_escuela; out.inventory = inv; }
+  if (out.seenMoods) { const rest = { ...out.seenMoods }; REMOVED_NPCS.forEach((k) => delete rest[k]); out.seenMoods = rest; }
   /* migración al sistema de personajes: la primera vez se crea la cola de diálogos
      y las ofertas que quedaran pendientes en el chat antiguo pasan a Elisa */
   if (out.phase === "main" && out.player) {
@@ -491,7 +493,7 @@ const COND = {
   win: (c) => c.win, loss: (c) => c.loss, kgUp: (c) => c.kgUp, derbiSoon: (c) => c.derbiSoon,
   /* memoria cruzada entre personajes y callbacks de decisiones */
   metPunky: (c) => c.metPunky, metLisa: (c) => c.metLisa, metMilly: (c) => c.metMilly,
-  metYuna: (c) => c.metYuna, metIrina: (c) => c.metIrina, metIgor: (c) => c.metIgor,
+  metYuna: (c) => c.metYuna, metIgor: (c) => c.metIgor,
   metFortuna: (c) => c.metFortuna,
   punkyMote: (c) => c.punkyMote, lisaTilin: (c) => c.lisaTilin, millySecret: (c) => c.millySecret,
 };
@@ -737,7 +739,7 @@ function flavorCtx(g) {
   /* memoria cruzada: a quién conoces ya, para que los personajes se mencionen entre ellos
      y para pequeños "callbacks" a decisiones concretas que tomaste en otras conversaciones */
   c.metPunky = !!g.metPunky; c.metLisa = !!g.metLisa; c.metMilly = !!g.metMilly;
-  c.metYuna = !!g.yunaMet; c.metIrina = !!g.metIrina; c.metIgor = !!g.metIgor;
+  c.metYuna = !!g.yunaMet; c.metIgor = !!g.metIgor;
   c.metFortuna = !!g.metFortuna;
   c.punkyMote = !!g.punkyMote; c.lisaTilin = !!g.lisaTilin; c.millySecret = !!g.millySecret;
   return c;
@@ -877,11 +879,6 @@ const NPCS = {
   /* Milly: la del Kiosco, te trae el periódico en persona cada día. Alegre, cotilla, algo dramática. Sin angry. */
   milly: { name: "Milly", color: "#C97A2E", voice: "/audio/vozchica01.mp3", icon: "/images/milly_icon.webp",
     arts: { idle: "/images/milly_idle.webp", happy: "/images/milly_happy.webp" }, def: "idle" },
-  /* Irina: jugadora de élite, la encuentras en la Tienda Oficial. Chulería teatral en el campo,
-     torpe y vergonzosa en cuanto la elogian de verdad. Su "happy" es en realidad el sonrojo/torpeza,
-     no alegría pura. Sin angry: su armadura es la seguridad, no el enfado. */
-  irina: { name: "Irina", color: "#C8102E", voice: "/audio/vozchica02.mp3", icon: "/images/irina_icon.webp",
-    arts: { idle: "/images/irina_idle.webp", happy: "/images/irina_happy.webp" }, def: "idle" },
   /* Igor: chef estrella del Restaurante (Metrópolis). Grande, carismático, trata la nutrición
      como táctica de fútbol. Sin happy ni angry: solo hay retrato idle. */
   igor: { name: "Igor", color: "#B5651D", voice: "/audio/vozchico01.mp3", icon: "/images/igor_icon.webp",
@@ -896,7 +893,6 @@ const senderToNpc = (from) => {
   if (from === "Punky") return "punky";
   if (from === "Lisa") return "lisa";
   if (from === "Milly") return "milly";
-  if (from === "Irina") return "irina";
   if (from === "Igor") return "igor";
   if (from === "Fortuna") return "fortuna";
   if (from === "Elisa Casual") return "elisa_casual";
@@ -1063,9 +1059,6 @@ const YUNA_POOL = [
     { t: "Gracias, Yuna, de verdad", m: "angry", r: ["N-no hace falta que lo digas así de sincero, quedamos en que era un favor sin importancia. Pero... de nada.",
       "¡No te acostumbres! Fue un acto puntual de generosidad excepcional. Único e irrepetible."] },
     { t: "¿Seguro que no la hiciste para mí?", m: "angry", r: ["¡P-por supuesto que no! Yo... e-en fin, da igual. Úsala o no la uses, allá tú. Grosero."] }] },
-  { t: "Estaba ordenando cosas viejas del Barça en casa y encontré esto. No sé por qué, pero algo me dice que no es mío. ¿Te suena?", replies: [
-    { t: "Me la quedo, gracias", m: "happy", giveItem: "pulsera_vieja_escuela", r: ["N-no es que me diera pena tirarla ni nada. Simplemente... me pareció que debía volver a su sitio. Ya está. No le des más vueltas."] },
-    { t: "No sé de quién será", m: "idle", r: ["Ya, yo tampoco lo sé del todo. Pero la voy a guardar por si acaso. Uno nunca sabe."] }] },
 ];
 
 /* --- ELISA · tu mánager: ánimo, despachos y fichajes.
@@ -1324,43 +1317,6 @@ const MILLY_POOL = [
     { t: "Mejor guárdalo tú", m: "idle", r: ["Ya, tienes razón, a saber cuándo lo voy a usar. Toma tu periódico, anda, que se hace tarde."] }] },
 ];
 
-/* --- IRINA · jugadora de élite, la encuentras en la Tienda Oficial. Chulería teatral y
-   provocadora dentro del campo; torpe y vergonzosa fuera, sobre todo si la elogian de
-   verdad. Su "happy" es en realidad el sonrojo/la torpeza escapándose, no alegría pura.
-   Sin angry: su armadura es la seguridad, no el enfado. --- */
-const IRINA_INTRO_BEATS = [
-  { m: "idle", t: "¿Qué miras? ¿Nunca has visto a alguien buscar algo en una tienda? ...Ah, espera. Tú eres el nuevo del que habla todo el mundo. Irina. Un placer, supongo." },
-  { m: "happy", t: "N-no estaba buscando nada importante, ¿vale? Nada que tenga que ver con... da igual, olvídalo. ¿Tú qué haces aquí, tienes tiempo libre o algo?" },
-];
-const IRINA_POOL = [
-  { w: "win", t: "Buen partido el de ayer. No te acostumbres a que te lo diga así, sin pullas de por medio. Hoy vengo generosa, disfrútalo mientras dure." },
-  { w: "loss", beats: [
-    { m: "idle", t: "Vi lo de ayer. No voy a hacer sangre, tranquilo, hoy no me apetece." },
-    { m: "happy", t: "...Vale, sí que me apetece un poco, pero me estoy conteniendo. Considéralo un regalo. No esperes que se repita." }] },
-  { t: "Te voy a hacer una pregunta directa: ¿te doy miedo cuando salto al campo, o solo un poco de respeto?", replies: [
-    { t: "Un poco de las dos cosas", m: "idle", r: ["Buena respuesta. Sincera. Me gusta más que la típica chulería fingida que sueltan los que de verdad tienen miedo.",
-      "Así me gusta, con la cabeza clara. El día que dejes de tenerme respeto, ahí sí que tendrás un problema."] },
-    { t: "Ninguna, la verdad", m: "happy", r: ["JA. Qué gracioso. Vale, un día de estos te voy a dejar sentado en el campo solo para que rectifiques esa respuesta.",
-      "Mira tú qué valiente. Me gusta el descaro, aunque el campo suele bajar los humos rápido."] }] },
-  { w: "hot", t: "{streak} días seguidos a este nivel. Vale, lo reconozco: impresiona un poco. Solo un poco. No te vengas arriba, que luego hay que aguantarte." },
-  { beats: [
-    { m: "idle", t: "La gente se cree que lo mío en el campo es fácil, que nací así de segura." },
-    { m: "happy", t: "N-no es verdad, ¿eh? Bueno, olvida que he dicho eso. Cambiemos de tema, anda, mira qué interesante esta vitrina de aquí." }] },
-  { w: "benched", t: "¿Banquillo? A mí también me ha tocado, aunque no lo cuente mucho. Levántate rápido de esa silla mental, que ahí no se gana nada." },
-  { t: "Pregunta indiscreta, porque hoy tengo el día curioso: ¿tú también entrenabas obsesivamente de pequeño, o te salió todo fácil?", replies: [
-    { t: "Obsesivamente, sin descanso", m: "happy", r: ["Entonces lo entiendes. Yo... llevo desde muy pequeña con la etiqueta de 'la próxima gran estrella' encima. Pesa más de lo que parece desde fuera.",
-      "Vaya, no me lo esperaba de ti. Puede que tengamos más en común de lo que me gustaría admitir."] },
-    { t: "La verdad, bastante fácil", m: "idle", r: ["Suertudo. A mí nadie me regaló nada, cada control lo repetí mil veces hasta que salió bien. Pero bueno, cada camino es distinto."] }] },
-  { w: "scorer", t: "{goals} goles ya. No está mal, para ser sincera. Vigila que no se te suba a la cabeza, que luego hay que bajar a los que se lo creen demasiado. Yo me ofrezco encantada." },
-  { w: "derbiSoon", t: "Con lo del {derbiRival} esta semana no pienso darte ningún consejo gratis, que luego me lo agradeces demasiado y me da vergüenza. Gánalo tú solito." },
-  { t: "Última cosa, y esta va en serio, aunque no se me note en la cara: ¿alguna vez sientes que no estás a la altura de lo que la gente espera de ti?", replies: [
-    { t: "Constantemente, si te soy sincero", m: "idle", r: ["...Yo también. Todo el rato, en realidad. No sé por qué te lo cuento a ti, con lo poco que te conozco. Olvídalo, anda, di que no he dicho nada."] },
-    { t: "Casi nunca, la verdad", m: "happy", r: ["Qué envidia me das, en serio. Yo cargo con eso desde que tengo memoria. Bueno, ya está, se acabó la parte sentimental del día, no te acostumbres."] }] },
-  { beats: [
-    { m: "idle", t: "Sigo sin encontrar el modelo exacto de lo que busco en esta tienda. Llevo semanas viniendo." },
-    { m: "happy", t: "No, no te voy a contar qué es. Es... personal. Muy personal. Deja de mirarme así, que me pones nerviosa." }] },
-];
-
 /* --- IGOR · chef estrella del Restaurante (Metrópolis). Grande, carismático, trata la
    nutrición como si fuera táctica de fútbol. Muy informativo: datos curiosos de comida
    y recetas de verdad, contados sin ponerse técnico. Sin happy ni angry: solo idle. --- */
@@ -1546,9 +1502,9 @@ const ZONES = [
   { id: "cantera", kind: "npc", npc: null, label: "Cantera", icon: "🎓", x: 86.33, y: 44.94,
     pts: "377.1 345.6 437.4 343.6 426.6 442.1 363.8 442.1 377.1 345.6",
     unlocked: (g) => calcOVR(g.player.stats) >= 78, reqLabel: "Alcanza 78 de media" },
-  { id: "tienda", kind: "npc", npc: "irina", label: "Tienda Oficial", icon: "🛍️", x: 81.25, y: 65.05,
+  { id: "tienda", kind: "npc", npc: null, label: "Tienda Oficial", icon: "🛍️", x: 81.25, y: 65.05,
     pts: "342.4 511.6 347 559.6 424.1 552.4 420 507.5 342.4 511.6",
-    unlocked: (g) => g.tier.id >= 3, reqLabel: "Asciende a LaLiga Hypermotion / 2ª europea", metFlag: "metIrina", intro: IRINA_INTRO_BEATS },
+    unlocked: (g) => g.tier.id >= 3, reqLabel: "Asciende a LaLiga Hypermotion / 2ª europea" },
   { id: "estadio", kind: "npc", npc: null, label: "Gran Estadio", icon: "🏆", x: 74.57, y: 87.82,
     pts: "384.1 634.1 295 657.5 262.9 677.7 290.1 764.2 384.1 764.2 431.1 715.5 384.1 634.1",
     unlocked: (g) => g.tier.id >= 4, reqLabel: "Asciende a Primera división · media tabla", big: true },
@@ -1831,8 +1787,8 @@ const QUESTS = {
         intro: [
           { m: "idle", t: "Tengo un rumor entre manos que llevo semanas siguiendo, y creo que tiene que ver contigo." },
           { m: "happy", t: "Necesito que hables con más gente de la ciudad para confirmar un par de cosas. Cuantos más conozcas, antes ato cabos. Toma, tu periódico, mientras tanto." }],
-        snap: (g) => ({ count: ["metPunky", "metLisa", "metIrina"].filter((k) => g[k]).length }),
-        check: (g, snap) => (["metPunky", "metLisa", "metIrina"].filter((k) => g[k]).length - snap.count) >= 2 },
+        snap: (g) => ({ count: ["metPunky", "metLisa"].filter((k) => g[k]).length }),
+        check: (g, snap) => (["metPunky", "metLisa"].filter((k) => g[k]).length - snap.count) >= 2 },
       { title: "El ingrediente secreto", objective: "Pasa 5 días viniendo a por tu periódico",
         intro: [
           { m: "idle", t: "Vas por buen camino. El rumor se sostiene, pero necesito una cosa más: continuidad." },
@@ -1853,39 +1809,6 @@ const QUESTS = {
           { m: "idle", t: "El derbi no salió como esperaba, así que el rumor se queda sin confirmar del todo, de momento." },
           { m: "happy", t: "Pero oye, sigo pensando que algún día vas a dar que hablar en esta ciudad. Los rumores buenos tardan en cumplirse, no en desaparecer." }],
         reward: (g) => { const stats = { ...g.player.stats }; stats.REC = Math.min(99, stats.REC + 1); return { ...g, player: { ...g.player, stats } }; } },
-    ],
-  },
-  irina: {
-    label: "El par que faltaba",
-    npc: "irina",
-    trigger: (g) => !!g.metIrina && dayDiff(g.signedAt || todayStr(), todayStr()) >= 25,
-    stages: [
-      { title: "La talla exacta", objective: "Sube tu media +2 puntos",
-        intro: [
-          { m: "idle", t: "Sigo sin encontrar el modelo exacto. Da igual, no es asunto tuyo. ¿Qué miras?" },
-          { m: "happy", t: "...Vale, perdona, no debería pagarlo contigo. Es solo que llevo semanas buscando algo y me está sacando de quicio. Oye, mejórate tú también, ¿no? A ver si así dejamos de hablar solo de mis dramas de tienda." }],
-        snap: (g) => ({ ovr: calcOVR(g.player.stats) }),
-        check: (g, snap) => calcOVR(g.player.stats) >= snap.ovr + 2 },
-      { title: "Provocación en serio", objective: "Gana 3 partidos",
-        intro: [
-          { m: "idle", t: "Te voy a proponer algo, a ver si estás a la altura. Gánate tres partidos... no hace falta que sean seguidos, no soy tan estricta. Solo demuéstrame que no eres flor de un día." },
-          { m: "happy", t: "Y no, no es que me importe especialmente cómo te vaya. Es pura curiosidad deportiva. ...Vale, un poco sí me importa. No se lo digas a nadie." }],
-        snap: (g) => ({ matchCount: (g.matchHistory || []).length }),
-        check: (g, snap) => (g.matchHistory || []).slice(snap.matchCount).filter((m) => m.res === "V").length >= 3 },
-      { title: "La confesión de la tienda", objective: "Encadena una racha de 6 días", deadlineDays: 30,
-        intro: [
-          { m: "idle", t: "Te voy a contar algo que no le cuento a cualquiera, así que no te acostumbres a esta versión mía." },
-          { m: "happy", t: "Lo que busco en la tienda son mis primeras botas, el modelo exacto de mi primer torneo importante. Las perdí hace años y desde entonces siento que me falta algo si no las tengo cerca. Suena ridículo dicho en voz alta. Bueno, ahora demuéstrame algo tú: seis días de racha seguidos, sin fallar." }],
-        snap: () => ({}),
-        check: (g) => (g.player.streak || 0) >= 6 },
-      { title: "El par que faltaba", final: true,
-        intro: [
-          { m: "happy", t: "Las encontré. Por fin. No te voy a mentir, casi se me escapa una lágrima en medio de la tienda, menos mal que no había nadie más mirando. Bueno, tú sí, pero cuentas como nadie." },
-          { m: "happy", t: "Gracias por aguantar mis dramas de tienda estas semanas. Eres de los pocos que no se ha reído de mí por esto. Eso... cuenta más de lo que te voy a admitir en voz alta." }],
-        introFail: [
-          { m: "idle", t: "Sigo sin encontrar el par exacto. A veces pienso que ya no existen en ningún sitio." },
-          { m: "happy", t: "Pero gracias por escucharme con esto igualmente. No mucha gente aguanta que le hable de un par de botas viejas durante semanas." }],
-        reward: (g) => { const stats = { ...g.player.stats }; stats.NUT = Math.min(99, stats.NUT + 1); return { ...g, player: { ...g.player, stats } }; } },
     ],
   },
 };
@@ -1911,15 +1834,12 @@ const ITEMS = {
     desc: "Un frasco carísimo que Milly guardaba 'para una ocasión especial'. Le pega mucho a Lisa." },
   edicion_especial: { name: "Edición Especial", icon: "🗞️", kind: "gift", giveTo: "milly",
     desc: "Un ejemplar de coleccionista que Punky guardaba desde sus inicios. A Milly le encantaría tenerlo." },
-  pulsera_vieja_escuela: { name: "Pulsera Vieja Escuela", icon: "📿", kind: "gift", giveTo: "irina",
-    desc: "Una pulsera desgastada que Yuna encontró entre sus cosas del Barça. Algo le dice que es de Irina." },
 };
 /* dar un objeto a su destinatario: reacción propia del personaje + el objeto se gasta */
 const ITEM_GIVE_REACTIONS = {
   punky: { npc: "punky", text: "¡¿Esto es para mí?! Una cámara de verdad, no el móvil de siempre. Le voy a sacar un partido increíble a esto, ya verás." },
   lisa: { npc: "lisa", text: "Vaya... tienes buen gusto para los detalles, para ser sincera. No esperaba esto de ti. Gracias, de verdad." },
   milly: { npc: "milly", text: "¡NO ME LO PUEDO CREER! Llevo años buscando este ejemplar. Le voy a hacer un hueco de honor en el kiosco, ya verás." },
-  irina: { npc: "irina", text: "Espera... ¿de dónde has sacado esto? Da igual, no lo preguntes. Gracias. En serio. No sabes lo que significa para mí." },
 };
 
 /* --- CARTAS DE PERSONAJE · galería sin efecto de juego: retrato + bio corta.
@@ -1934,7 +1854,6 @@ const CARDS = [
   { npc: "punky", unlocked: (g) => !!g.metPunky, bio: "Periodista de la Sala de Prensa. Enérgica, curiosa, con una libreta que nunca deja de llenar." },
   { npc: "milly", unlocked: (g) => !!g.metMilly, bio: "Del Kiosco. Te trae el periódico en persona cada día, con más cotilleos de los que pediste." },
   { npc: "lisa", unlocked: (g) => !!g.metLisa, bio: "Futbolista profesional, gestiona patrocinios. Engreída de cara al público, exigente de puertas para adentro." },
-  { npc: "irina", unlocked: (g) => !!g.metIrina, bio: "Jugadora de élite. Chulería teatral en el campo, torpeza sincera en cuanto alguien la elogia de verdad." },
   { npc: "igor", unlocked: (g) => !!g.metIgor, bio: "Chef estrella del Restaurante. Trata la nutrición como táctica de fútbol, con datos curiosos siempre a mano." },
   { npc: "fortuna", unlocked: (g) => !!g.metFortuna, bio: "Croupier del Casino. Misteriosa, coqueta, regenta la ruleta diaria como si conociera el destino de antemano." },
 ];
@@ -4350,7 +4269,7 @@ export default function App() {
     if (entry.beats) return addScene(g, from, entry.beats.map((b) => ({ m: b.m, t: fillTpl(b.t, ctx) })), { replies: entry.replies, ...extra });
     return addMsg(g, from, fillTpl(entry.t, ctx), { mood: entry.m, replies: entry.replies, ...extra });
   };
-  /* comprueba si alguna zona de la ciudad se acaba de desbloquear (Punky/Lisa/Irina)
+  /* comprueba si alguna zona de la ciudad se acaba de desbloquear (Punky/Lisa)
      y, si es la primera vez, encola su escena de presentación. Se llama tras cualquier
      acción que pueda mover el requisito: media, goles de carrera o ascenso de categoría. */
   const checkZoneUnlocks = (g) => {
@@ -4584,7 +4503,6 @@ export default function App() {
         if (out.yunaMet) candidates.push(["Yuna", YUNA_POOL]);
         if (out.metPunky) candidates.push(["Punky", PUNKY_POOL]);
         if (out.metLisa) candidates.push(["Lisa", LISA_POOL]);
-        if (out.metIrina) candidates.push(["Irina", IRINA_POOL]);
         if (out.metIgor) candidates.push(["Igor", IGOR_POOL]);
         if (out.metFortuna) candidates.push(["Fortuna", FORTUNA_POOL]);
         candidates.push([null, null]); /* comodín: flavor genérico de vestuario/prensa/agente */

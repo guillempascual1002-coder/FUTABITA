@@ -935,9 +935,14 @@ const NPCS = {
      sonrojo/enfado. "barcelona" es su lado fan sin disimulo, para cuando habla del Barça en sí.
      "playa" reservada, sin usar todavía en ninguna escena. */
   yuna: { name: "Yuna", color: "#D4537E", voice: "/audio/vozchica01.mp3", icon: "/images/yuna/yuna_icon.webp",
+    /* playa/playablush: mismo arte de outfit (no hay pose "playa" neutra por separado
+       todavía) — se mantienen como moods distintos en los diálogos para cuando exista una
+       imagen propia de cada una, pero hoy comparten archivo en vez de mezclar con un
+       mood de uniforme, que rompería la regla de outfits del documento de Yuna. */
     arts: { idle: "/images/yuna/Yuna_idle.webp", happy: "/images/yuna/Yuna_happy.webp", angry: "/images/yuna/Yuna_angry.webp",
       preocupada: "/images/yuna/yuna_preocupada.webp", barcelona: "/images/yuna/yuna_barcelona.webp",
-      playa: "/images/yuna/yuna_playablush.webp" }, def: "idle" },
+      blush: "/images/yuna/Yuna_blush.webp", celosa: "/images/yuna/yuna_celosa.webp", enamorada: "/images/yuna/yuna_enamorada.webp",
+      playa: "/images/yuna/yuna_playablush.webp", playablush: "/images/yuna/yuna_playablush.webp" }, def: "idle" },
   /* en Elisa, "angry" es su cara de decepción contenida: para semanas flojas o cuando habla de
      entrenadora estricta. "casual"/"playa"/"gala" son sus tres facetas fuera de servicio. */
   elisa: { name: "Elisa", color: "#2E6ED6", voice: "/audio/vozchica02.mp3", icon: "/images/elisa/elisa_icon.webp",
@@ -1092,15 +1097,16 @@ function hushVoices() {
    ni una línea, por si sirve de referencia de tono al diseñar las
    historias definitivas.
    ============================================================ */
-const YUNA_INTRO_BEATS = [
-  { m: "idle", t: "¿Tú eres el nuevo del {club}, no? ...Yo pasaba por aquí. Soy Yuna. Fan del Barça, para que lo sepas: MI equipo juega en el Camp Nou. El tuyo es... aceptable." },
-  { m: "angry", t: "P-pero has marcado, así que... bien. Supongo. ¡No pienses que he venido a verte a TI! Solo pasaba. Por aquí. Casualmente." },
-];
-/* AMBIENTE PLACEHOLDER — sustituir cuando se escriba la historia real de Yuna */
+/* la escena de primer encuentro de Yuna ya no vive aquí suelta: es el prólogo de
+   YUNA_STORY (chapter.trigger espera careerGoals(g) > 0), su "capítulo 0" real. */
+/* relleno genérico entre capítulos de su historia real (ver YUNA_STORY): sin referencias
+   a objetos/momentos concretos de la campaña (bufanda, foto, playa...), que ya tienen su
+   propia escena dedicada — esto es solo para que no desaparezca semanas entre capítulo y
+   capítulo mientras el jugador cumple el objetivo de turno. */
 const AMBIENT_YUNA = [
   { beats: [
-    { m: "idle", t: "Oye. Esto es tuyo. Y no me mires así, que es solo lana sobrante." },
-    { m: "angry", t: "Es una bufanda del {club}. Sobraba lana del Barça, ¿vale? No la hice pensando en ti. ...Es tu talla, por cierto." }] },
+    { m: "idle", t: "He mirado el calendario de {league}. Por curiosidad estadística, que conste." },
+    { m: "angry", t: "¡No es que esté pendiente de cuándo jugáis! Solo llevo la cuenta de los resultados." }] },
   { beats: [
     { m: "idle", t: "Alguien del insti dijo hoy que 'te sigo demasiado' y le contesté que soy analista deportiva." },
     { m: "angry", t: "Luego me pasé la tarde roja. ¡Por el enfado! Solo por eso. No por otra cosa." }] },
@@ -1237,7 +1243,10 @@ const ZONES = [
     pts: "303.1 345.6 367.9 345.6 356.7 410.5 320.6 406.9 299 383.4 303.1 345.6",
     unlocked: (g) => isZoneUnlocked(g, "kiosco") },
   /* Tu Casa: sin personaje, es la pantalla de trofeos y estadísticas de tu carrera. Siempre disponible. */
-  { id: "casa", kind: "home", npc: null, label: "Tu Casa", icon: "🏠", x: 18.87, y: 44.54,
+  /* npc: "yuna" — casa sigue siendo la pantalla de trofeos (HouseRoom) por defecto, pero
+     ahora también admite una escena de personaje encima (ver ZoneScreen: isHome no excluye
+     ya pendingNpc), para las escenas de intimidad emocional de su campaña en Casa del jugador */
+  { id: "casa", kind: "home", npc: "yuna", label: "Tu Casa", icon: "🏠", x: 18.87, y: 44.54,
     pts: "91.1 348.2 163.7 373.2 152.4 429.4 76.8 405.4 91.1 348.2",
     unlocked: (g) => isZoneUnlocked(g, "casa") },
   /* varios personajes comparten esta zona de calle: la burbuja muestra a quien tenga
@@ -1298,7 +1307,7 @@ const EXTRA_NPCS = [];
    480 792.72, sobre el lienzo original de 480x822.74. */
 const METRO_MAP_VB = { x: 0, y: 30.02, w: 480, h: 792.72 };
 const METRO_ZONES = [
-  { id: "parque", kind: "npc", npc: ["elisa", "lisa", "milly"], label: "Parque", icon: "🌳", x: 35.20, y: 18.23,
+  { id: "parque", kind: "npc", npc: ["elisa", "lisa", "milly", "yuna"], label: "Parque", icon: "🌳", x: 35.20, y: 18.23,
     pts: "199.15 80.02 81.19 286.08 105.7 333.35 259.66 93.01 199.15 80.02",
     unlocked: (g) => isZoneUnlocked(g, "parque") },
   { id: "casino", kind: "npc", npc: "elisa", label: "Casino", icon: "🎰", x: 51.03, y: 43.99,
@@ -1307,7 +1316,7 @@ const METRO_ZONES = [
   { id: "enfermeria", kind: "npc", npc: ["elisa", "milly"], label: "Enfermería", icon: "🏥", x: 86.65, y: 22.97,
     pts: "402.89 159.68 353.11 256.96 460.34 286.08 460.34 197.98 402.89 159.68",
     unlocked: (g) => isZoneUnlocked(g, "enfermeria") },
-  { id: "playa", kind: "npc", npc: ["elisa", "milly", "lopez", "lisa"], label: "Playa", icon: "🏖️", x: 12.16, y: 49.44,
+  { id: "playa", kind: "npc", npc: ["elisa", "milly", "lopez", "lisa", "yuna"], label: "Playa", icon: "🏖️", x: 12.16, y: 49.44,
     pts: "22.21 382.57 22.21 562.57 125.62 399.43 99.57 382.57 22.21 382.57",
     unlocked: (g) => isZoneUnlocked(g, "playa") },
   { id: "atico", kind: "npc", npc: "elisa", label: "Ático de Lujo", icon: "🌇", x: 78.27, y: 63.06,
@@ -1880,13 +1889,288 @@ const MILLY_STORY = {
   }],
 };
 
+/* ============================================================
+   YUNA · tercera campaña completa, romance. Prólogo + 15 capítulos +
+   final + epílogo. A diferencia de Elisa/Milly, su capítulo NO arranca
+   de inmediato: el trigger exige el primer gol de carrera (así lo pide
+   el documento — "la primera aparición ocurre tras el primer gol").
+
+   Capítulo 5 ("La pregunta incómoda") es la primera escena de historia
+   con respuesta de varias opciones: se apoya en el mismo mecanismo de
+   "replies" que ya usan las respuestas sueltas de chat (opt.setFlag),
+   solo que ahora checkStories también lo reenvía desde la etapa (ver
+   enterStage/checkStories más abajo) — las tres opciones convergen y
+   marcan el mismo flag, así el motor no necesita saber cuál se eligió
+   para poder avanzar de etapa.
+
+   playa/playablush comparten el mismo archivo (no existe todavía una
+   pose "playa" neutra aparte de la vulnerable): se mantienen como
+   moods distintos en el guion para el día que haya arte propio de cada
+   una, en vez de mezclar con un mood de uniforme normal — eso sí
+   rompería la regla de outfits del documento. */
+const YUNA_STORY = {
+  npc: "yuna",
+  chapters: [{
+    id: "cap1",
+    title: "La historia de Yuna",
+    trigger: (g) => careerGoals(g) > 0,
+    stages: [
+      /* PRÓLOGO — El primer gol */
+      { title: "El primer gol", zone: "barrio",
+        objective: "Marca tu primer gol de carrera.",
+        intro: [
+          { m: "idle", t: "¿Tú eres el nuevo de {club}, no?" },
+          { m: "idle", t: "No pongas esa cara. No te estaba esperando." },
+          { m: "barcelona", t: "Bueno, primero: soy del Barça. Mucho. Para que quede claro." },
+          { m: "idle", t: "Segundo: he visto tu gol." },
+          { m: "angry", t: "Y ha estado bien. Bastante bien. Pero no te emociones. No he venido por ti." },
+        ],
+        setFlags: ["yunaMet"],
+        snap: () => ({}),
+        check: (g) => careerGoals(g) > 0 },
+      /* CAPÍTULO 1 — Motivos estadísticos */
+      { title: "Motivos estadísticos", zone: "barrio",
+        objective: "Juega un partido y consigue una victoria o un gol.",
+        intro: [
+          { m: "idle", t: "He estado mirando tus números." },
+          { m: "idle", t: "Goles, minutos, rendimiento... cosas normales." },
+          { m: "idle", t: "¿Vas a jugar el próximo partido o solo vas a hacerme mirar estadísticas viejas?" },
+        ],
+        setFlags: ["yunaStoryStarted"],
+        snap: (g) => ({ matchCount: (g.matchHistory || []).length, goals: careerGoals(g) }),
+        check: (g, snap) => (g.matchHistory || []).length > snap.matchCount &&
+          ((g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") || careerGoals(g) > snap.goals) },
+      /* CAPÍTULO 2 — La tienda */
+      { title: "La tienda", zone: "tienda",
+        objective: "Consigue una victoria.",
+        intro: [
+          { m: "barcelona", t: "No digas nada." },
+          { m: "barcelona", t: "Estoy comparando materiales." },
+          { m: "angry", t: "¡No estoy comprando nada para ti!" },
+          { m: "blush", t: "Aunque... si hubiera algo que te gustara, podría haberlo comprado por casualidad." },
+          { m: "angry", t: "¡Por casualidad!" },
+        ],
+        snap: (g) => ({ matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") },
+      /* CAPÍTULO 3 — La bufanda equivocada */
+      { title: "La bufanda equivocada", zone: "tienda",
+        objective: "Consigue 3 días de objetivos cumplidos y un gol.",
+        intro: [
+          { m: "idle", t: "Toma." },
+          { m: "blush", t: "Es una bufanda." },
+          { m: "angry", t: "Y no significa nada." },
+          { m: "idle", t: "Había una de más." },
+          { m: "blush", t: "Y pensé que... bueno, que te vendría bien." },
+          { m: "angry", t: "¡No la hice pensando en ti ni nada parecido!" },
+        ],
+        setFlags: ["yunaFirstGift"],
+        snap: (g) => ({ since: todayStr(), goals: careerGoals(g) }),
+        check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3 && careerGoals(g) > snap.goals },
+      /* CAPÍTULO 4 — El Barça y tú */
+      { title: "El Barça y tú", zone: "parque",
+        objective: "Completa una racha de 3 días y gana un partido.",
+        intro: [
+          { m: "barcelona", t: "¿Sabes qué me gusta del Barça?" },
+          { m: "barcelona", t: "Que para mí no son solo resultados." },
+          { m: "idle", t: "Hay partidos que recuerdo por dónde estaba, con quién estaba, qué estaba haciendo." },
+          { m: "blush", t: "Supongo que... algún día podría pasarme lo mismo con otras cosas." },
+          { m: "angry", t: "No he dicho que contigo." },
+        ],
+        snap: (g) => ({ matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => (g.player.streak || 0) >= 3 && (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") },
+      /* CAPÍTULO 5 — La pregunta incómoda (única etapa con réplicas: las tres convergen).
+         "replies" va en la propia etapa (no en el beat): checkStories lo reenvía como
+         extra de addScene, que solo lo aplica a la ÚLTIMA frase de la escena. */
+      { title: "La pregunta incómoda", zone: "barrio",
+        objective: "Responde a la pregunta de Yuna.",
+        intro: [
+          { m: "idle", t: "Tengo una pregunta hipotética." },
+          { m: "blush", t: "Si alguien te siguiera mucho, viera tus partidos, se acordara de tus estadísticas..." },
+          { m: "angry", t: "...¿te parecería raro?" },
+        ],
+        replies: [
+          { t: "Me parecería bonito.", m: "blush", r: ["¿B-bonito? Bueno... quizá no sea tan mala idea seguirte entonces."], setFlag: "yunaCh5Answered" },
+          { t: "Me daría un poco de miedo.", m: "angry", r: ["¡Exacto! Eso mismo pensaba yo. Era una pregunta hipotética."], setFlag: "yunaCh5Answered" },
+          { t: "Depende de quién fuera.", m: "blush", r: ["Ah... ¿y si fuera alguien que conoces?"], setFlag: "yunaCh5Answered" },
+        ],
+        snap: () => ({}),
+        check: (g) => !!g.yunaCh5Answered },
+      /* CAPÍTULO 6 — El estadio */
+      { title: "El estadio", zone: "estadio",
+        objective: "Gana el partido o consigue una contribución de gol.",
+        intro: [
+          { m: "barcelona", t: "¡Mira ese estadio!" },
+          { m: "barcelona", t: "Vale, esto sí es importante." },
+          { m: "happy", t: "No pienso fingir que me da igual." },
+          { m: "blush", t: "Es... bonito estar aquí contigo." },
+          { m: "angry", t: "¡Como experiencia futbolística! Eso quería decir." },
+        ],
+        setFlags: ["yunaCampNou"],
+        snap: (g) => ({ matchCount: (g.matchHistory || []).length, goals: careerGoals(g), assists: careerAssists(g) }),
+        check: (g, snap) => {
+          const ms = (g.matchHistory || []).slice(snap.matchCount);
+          return ms.some((m) => m.res === "V") || careerGoals(g) > snap.goals || careerAssists(g) > snap.assists;
+        } },
+      /* CAPÍTULO 7 — La foto */
+      { title: "La foto", zone: "estadio",
+        objective: "Completa un partido.",
+        intro: [
+          { m: "happy", t: "Espera." },
+          { m: "blush", t: "¿Nos hacemos una foto?" },
+          { m: "angry", t: "¡Para mí! Quiero decir, para recordar el partido." },
+          { m: "blush", t: "No voy a enseñársela a nadie." },
+          { m: "happy", t: "Bueno... quizá a una persona." },
+        ],
+        setFlags: ["yunaPhoto"],
+        snap: (g) => ({ matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => (g.matchHistory || []).length > snap.matchCount },
+      /* CAPÍTULO 8 — Celos */
+      { title: "Celos", zone: "parque",
+        objective: "Consigue una victoria y completa 4 días de objetivos.",
+        intro: [
+          { m: "celosa", t: "¿Quién era?" },
+          { m: "idle", t: "No me interesa." },
+          { m: "celosa", t: "Bueno, sí me interesa un poco." },
+          { m: "angry", t: "Pero no porque esté celosa." },
+          { m: "celosa", t: "Solo quería saber quién era." },
+        ],
+        setFlags: ["yunaJealous", "yunaCrush"],
+        snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 4 &&
+          (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") },
+      /* CAPÍTULO 9 — Lo que no digo */
+      { title: "Lo que no digo", zone: "casa",
+        objective: "Completa un hito de carrera y una racha de 5 días.",
+        intro: [
+          { m: "blush", t: "Esto es raro." },
+          { m: "idle", t: "No suelo venir a casa de alguien así." },
+          { m: "preocupada", t: "Pero quería hablar contigo sin que hubiera gente alrededor." },
+          { m: "blush", t: "Últimamente me pongo nerviosa contigo por cosas que antes no me ponían nerviosa." },
+          { m: "angry", t: "Y no sé qué hacer con eso." },
+        ],
+        setFlags: ["yunaConfessionReady"],
+        snap: (g) => ({ tierId: g.tier.id, seasonNum: g.season.num }),
+        check: (g, snap) => (g.player.streak || 0) >= 5 && (g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum) },
+      /* CAPÍTULO 10 — Una tarde sin fútbol */
+      { title: "Una tarde sin fútbol", zone: "playa",
+        objective: "Completa un hito de carrera y una victoria.",
+        intro: [
+          { m: "playa", t: "No te acostumbres a verme así." },
+          { m: "playa", t: "Hoy no quiero hablar de goles." },
+          { m: "playablush", t: "Quiero que tengamos una tarde normal." },
+          { m: "playablush", t: "Sin estadísticas. Sin excusas." },
+          { m: "playablush", t: "Solo tú y yo." },
+        ],
+        setFlags: ["yunaDate"],
+        snap: (g) => ({ tierId: g.tier.id, seasonNum: g.season.num, matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => (g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum) &&
+          (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") },
+      /* CAPÍTULO 11 — La segunda bufanda */
+      { title: "La segunda bufanda", zone: "tienda",
+        objective: "Mejora tu OVR.",
+        intro: [
+          { m: "idle", t: "He encontrado otra cosa." },
+          { m: "blush", t: "Y esta vez no voy a decir que sobraba." },
+          { m: "angry", t: "Porque sería una mentira bastante mala." },
+          { m: "blush", t: "La he visto y he pensado en ti." },
+          { m: "angry", t: "Ya está. Lo he dicho. ¿Contento?" },
+        ],
+        snap: (g) => ({ ovr: calcOVR(g.player.stats) }),
+        check: (g, snap) => calcOVR(g.player.stats) > snap.ovr },
+      /* CAPÍTULO 12 — La discusión */
+      { title: "La discusión", zone: "barrio",
+        objective: "Completa 3 días de objetivos y gana el siguiente partido.",
+        intro: [
+          { m: "angry", t: "Últimamente no tienes tiempo para nada." },
+          { m: "preocupada", t: "Ya sé que tu carrera es importante." },
+          { m: "preocupada", t: "Pero a veces siento que yo solo existo cuando tienes un hueco." },
+          { m: "angry", t: "¡Y no quiero sentirme así!" },
+          { m: "blush", t: "Porque me importas demasiado." },
+        ],
+        snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3 &&
+          (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") },
+      /* CAPÍTULO 13 — Sin excusas */
+      { title: "Sin excusas", zone: "parque",
+        objective: "Completa el hito de carrera y mantén una racha de 6 días.",
+        intro: [
+          { m: "blush", t: "Tengo algo que decirte." },
+          { m: "idle", t: "Y esta vez no es sobre el Barça." },
+          { m: "blush", t: "Me gustas." },
+          { m: "angry", t: "Mucho." },
+          { m: "blush", t: "Y me da vergüenza decirlo." },
+          { m: "enamorada", t: "Pero ya no quiero fingir que no." },
+        ],
+        setFlags: ["yunaRelationship"],
+        snap: (g) => ({ tierId: g.tier.id, seasonNum: g.season.num }),
+        check: (g, snap) => (g.player.streak || 0) >= 6 && (g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum) },
+      /* CAPÍTULO 14 — Juntos */
+      { title: "Juntos", zone: "casa",
+        objective: "Completa un hito de carrera y una victoria.",
+        intro: [
+          { m: "enamorada", t: "Es raro decir 'mi novio' y que seas tú." },
+          { m: "blush", t: "Todavía me da vergüenza." },
+          { m: "enamorada", t: "Pero me gusta." },
+          { m: "happy", t: "Mucho." },
+          { m: "enamorada", t: "Y no pienso volver a esconderme detrás de una bufanda." },
+        ],
+        snap: (g) => ({ tierId: g.tier.id, seasonNum: g.season.num, matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => (g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum) &&
+          (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") },
+      /* CAPÍTULO 15 — El recuerdo */
+      { title: "El recuerdo", zone: "estadio",
+        objective: "Supera tu mejor OVR o nota y consigue una victoria.",
+        intro: [
+          { m: "happy", t: "¿Te acuerdas de esta?" },
+          { m: "blush", t: "Mira qué cara tenía." },
+          { m: "enamorada", t: "Estaba intentando convencerte de que aquella foto no significaba nada." },
+          { m: "happy", t: "Qué vergüenza." },
+          { m: "enamorada", t: "Ahora ya no tengo ninguna excusa." },
+        ],
+        snap: (g) => ({ ovr: calcOVR(g.player.stats), bestRating: g.bestRating || 0, matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => (calcOVR(g.player.stats) > snap.ovr || (g.bestRating || 0) > snap.bestRating) &&
+          (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") },
+      /* FINAL — Por una vez, sin excusas */
+      { title: "Por una vez, sin excusas", zone: "estadio",
+        objective: "Alcanza el nivel de élite.",
+        intro: [
+          { m: "barcelona", t: "Vale. Lo admito." },
+          { m: "happy", t: "Sigo siendo la fan número uno del Barça." },
+          { m: "enamorada", t: "Pero también soy la persona que estuvo contigo cuando todo esto empezó." },
+          { m: "enamorada", t: "Y quiero seguir estando cuando veamos hasta dónde llegas." },
+          { m: "blush", t: "No me hagas repetirlo." },
+          { m: "enamorada", t: "Te quiero." },
+        ],
+        snap: () => ({}),
+        check: (g) => g.tier.id >= TIERS[TIERS.length - 1].id },
+      /* EPÍLOGO — La bufanda (última etapa: final:true, entrega el pin al entrar aquí) */
+      { title: "La bufanda", zone: "casa", final: true,
+        intro: [
+          { m: "enamorada", t: "¿Todavía guardas la bufanda?" },
+          { m: "blush", t: "La que supuestamente 'sobraba'." },
+          { m: "happy", t: "Qué mentira más mala." },
+          { m: "enamorada", t: "Pero funcionó." },
+          { m: "enamorada", t: "Así que supongo que no me arrepiento." },
+        ],
+        setFlags: ["yunaStoryComplete", "yunaPinEarned"],
+        reward: (g) => {
+          const stats = { ...g.player.stats };
+          stats.MEN = Math.min(99, stats.MEN + 1);
+          const inv = { ...(g.inventory || {}) };
+          inv.yuna_pin = (inv.yuna_pin || 0) + 1;
+          return { ...g, player: { ...g.player, stats }, inventory: inv };
+        } },
+    ],
+  }],
+};
+
 /* separadas por mapa (para el registro de misiones de cada uno) y también fusionadas
    (para el motor, al que no le importa desde qué mapa se desbloqueó cada historia).
-   Las historias de Elisa y Milly se añaden a los dos registros porque sus escenas se
-   reparten entre zonas de La Ciudad y de La Metrópolis: así el panel de Misiones las
+   Las historias de Elisa, Milly y Yuna se añaden a los dos registros porque sus escenas
+   se reparten entre zonas de La Ciudad y de La Metrópolis: así el panel de Misiones las
    muestra estés donde estés, no solo desde el mapa donde tocara desbloquearlas. */
-const STORIES_CIUDAD = { ...toStories(QUESTS), elisa: ELISA_STORY, milly: MILLY_STORY };
-const STORIES_METRO = { ...toStories(METRO_QUESTS), elisa: ELISA_STORY, milly: MILLY_STORY };
+const STORIES_CIUDAD = { ...toStories(QUESTS), elisa: ELISA_STORY, milly: MILLY_STORY, yuna: YUNA_STORY };
+const STORIES_METRO = { ...toStories(METRO_QUESTS), elisa: ELISA_STORY, milly: MILLY_STORY, yuna: YUNA_STORY };
 const STORIES = { ...STORIES_CIUDAD, ...STORIES_METRO };
 
 /* ============================================================
@@ -1912,6 +2196,8 @@ const ITEMS = {
     desc: "El pin que te dio Elisa al cierre de vuestra historia. No se usa ni se regala: es un recuerdo de todo el camino." },
   milly_pin: { name: "Pin de Milly", icon: "📌", img: "/images/objects/milly_pin.webp", kind: "keepsake",
     desc: "El pin que te dio Milly al publicar su gran reportaje. No se usa ni se regala: es un recuerdo de todo el camino." },
+  yuna_pin: { name: "Pin de Yuna", icon: "📌", img: "/images/objects/yuna_pin.webp", kind: "keepsake",
+    desc: "El pin que te dio Yuna cuando por fin dejó de esconderse detrás de las excusas. No se usa ni se regala: es un recuerdo de todo el camino." },
 };
 /* dar un objeto a su destinatario: reacción propia del personaje + el objeto se gasta */
 const ITEM_GIVE_REACTIONS = {
@@ -4504,7 +4790,7 @@ export default function App() {
         const state = { chapter: chapterIdx, stage: 0, snap: s0.snap ? s0.snap(out) : {}, startDay: todayStr() };
         out = enterStage(out, s0);
         out = addScene(out, NPCS[def.npc].name, s0.intro.map((b) => ({ m: b.m, t: fillTpl(b.t, flavorCtx(out)) })),
-          { zone: s0.zone, applyOnRead: { story: { key, state }, flags: s0.setFlags } });
+          { zone: s0.zone, replies: s0.replies, applyOnRead: { story: { key, state }, flags: s0.setFlags } });
         pending[key] = true;
         return;
       }
@@ -4526,7 +4812,7 @@ export default function App() {
       const beats = failed && next.introFail ? next.introFail : next.intro;
       out = enterStage(out, next);
       out = addScene(out, NPCS[def.npc].name, beats.map((b) => ({ m: b.m, t: fillTpl(b.t, flavorCtx(out)) })),
-        { zone: next.zone, applyOnRead: { story: { key, state }, flags: next.setFlags } });
+        { zone: next.zone, replies: next.replies, applyOnRead: { story: { key, state }, flags: next.setFlags } });
       pending[key] = true;
       if (chapterDone && next.reward && !failed) out = next.reward(out);
     });
@@ -4565,10 +4851,15 @@ export default function App() {
     const e = q.find((x) => x.id === id);
     if (!e || !e.replies || !e.replies[idx]) return g;
     const opt = e.replies[idx];
+    /* si la escena con réplicas es de una historia (ver checkStories: replies puede ir
+       en la última frase junto a applyOnRead), confirmar aquí el progreso guardado en esa
+       frase — si no, se perdía en cuanto el jugador elegía una opción, porque la entrada
+       original se descarta a continuación y la respuesta nueva no lleva applyOnRead. */
+    let out = applyOnRead(g, e.applyOnRead);
     /* la réplica del personaje entra al frente de la cola: responde al momento,
        con su propia expresión (por defecto "happy" si la opción no especifica otra) */
     const resp = { id: Date.now() + Math.random(), npc: e.npc, mood: opt.m || "happy", text: pick(opt.r) };
-    let out = { ...g, npcQueue: [resp, ...q.filter((x) => x.id !== id)] };
+    out = { ...out, npcQueue: [resp, ...q.filter((x) => x.id !== id)] };
     /* algunas respuestas dejan una marca que otro personaje puede recordar más adelante
        (p.ej. le cuentas un secreto a Milly y luego Yuna "se entera" por su cuenta) */
     if (opt.setFlag) out[opt.setFlag] = true;
@@ -4835,13 +5126,9 @@ export default function App() {
       /* la crónica abre el periódico del día */
       const cr = cronicaDe(g, m);
       out = addMsg(out, pick(PRESS), cr.b, { h: cr.h, main: true, sec: "CRÓNICA" });
-      /* Yuna: aparece por primera vez tras marcar tu primer gol de la carrera. Su reacción
-         inmediata post-partido (win/loss/benched) dependía del pool grande ya retirado;
-         pendiente de reintroducirse como parte de su historia real (ver STORIES). */
-      if (!g.yunaMet && (m.myGoals || 0) > 0) {
-        out.yunaMet = true;
-        out = addScene(out, "Yuna", YUNA_INTRO_BEATS.map((b) => ({ m: b.m, t: fillTpl(b.t, flavorCtx(out)) })));
-      }
+      /* la primera aparición de Yuna (justo tras tu primer gol de carrera) ya la gestiona
+         su propia historia (ver YUNA_STORY: chapter.trigger espera careerGoals(g) > 0),
+         que se evalúa al final de esta misma función vía checkStories. */
       const cap = (g.captain || "Capitán") + " · Capitán";
       if (!m.benched && m.rating >= 8.5 && Math.random() < 0.6) {
         out = addMsg(out, cap, pick([

@@ -5192,8 +5192,8 @@ function StyleTag() {
       .zone-paper-btn { border:1.5px solid #CDF546; cursor:pointer; font-family:'Oswald',sans-serif;
         letter-spacing:1px; font-size:14px; }
       /* --- Tu Casa: vitrina de trofeos + estadísticas de carrera --- */
-      .house-room { position:fixed; left:50%; bottom:8%; transform:translateX(-50%); z-index:2;
-        width:88%; max-width:360px; max-height:70vh; overflow-y:auto; display:flex; flex-direction:column; gap:10px; }
+      .house-room { position:fixed; left:50%; bottom:90px; transform:translateX(-50%); z-index:2;
+        width:88%; max-width:360px; max-height:60vh; overflow-y:auto; display:flex; flex-direction:column; gap:10px; }
       .house-card { background:rgba(16,18,8,.85); border:1.5px solid rgba(239,238,227,.25); border-radius:16px; padding:14px; }
       .house-title { color:#CDF546; font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:1px; margin-bottom:10px; }
       .house-trophies { display:flex; flex-wrap:wrap; gap:12px; }

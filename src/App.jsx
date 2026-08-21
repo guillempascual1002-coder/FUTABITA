@@ -870,7 +870,8 @@ const NPCS = {
      sonrojo/enfado. "barcelona" es su lado fan sin disimulo, para cuando habla del Barça en sí. */
   yuna: { name: "Yuna", color: "#D4537E", voice: "/audio/vozchica01.mp3", icon: "/images/yuna_icon.webp",
     arts: { idle: "/images/Yuna_Idle.webp", happy: "/images/Yuna_happy.webp", angry: "/images/Yuna_angry.webp",
-      preocupada: "/images/yuna_preocupada.webp", barcelona: "/images/yuna_barcelona.webp" }, def: "idle" },
+      preocupada: "/images/yuna_preocupada.webp", barcelona: "/images/yuna_barcelona.webp",
+      playa: "/images/yuna_playablush.webp" /* sin usar todavía, reservada para su futura historia */ }, def: "idle" },
   /* en Elisa, "angry" es su cara de decepción contenida: para semanas flojas o cuando habla de entrenadora estricta */
   elisa: { name: "Elisa", color: "#2E6ED6", voice: "/audio/vozchica02.mp3", icon: "/images/elisa_icon.webp",
     arts: { idle: "/images/Elisa_idle.webp", happy: "/images/Elisa_happy.webp", angry: "/images/Elisa_angry.webp" }, def: "idle" },

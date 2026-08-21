@@ -1709,7 +1709,7 @@ const ITEM_GIVE_REACTIONS = {
 /* --- CARTAS DE PERSONAJE · galería sin efecto de juego: retrato + bio corta.
    Se desbloquean solas al conocer a cada uno (mismos flags que ya existen). --- */
 const CARDS = [
-  { npc: "elisa", unlocked: () => true,
+  { npc: "elisa", unlocked: () => true, variants: [["elisa_casual", "casual"], ["elisa_playa", "playa"]],
     bio: "Mánager y entrenadora. Dura en el despacho, blanda cuando cree que nadie mira. Siempre tiene un plan, aunque no siempre lo comparta." },
   { npc: "yuna", unlocked: (g) => !!g.yunaMet,
     bio: "Superfan del Barça con fama de tsundere. Sabe tus estadísticas mejor que tú, aunque jure que 'solo pasaba por aquí'." },
@@ -3825,28 +3825,35 @@ function BackupPanel({ getBackup, onRestore }) {
 function CardDetail({ npc, game, onClose }) {
   const def = NPCS[npc];
   const card = CARDS.find((c) => c.npc === npc);
-  const seen = (game.seenMoods || {})[npc] || {};
-  const moods = Object.keys(def.arts || {});
-  const defIdx = Math.max(0, moods.indexOf(def.def));
+  const seenMoods = game.seenMoods || {};
+  /* algunas cartas (p.ej. Elisa) reúnen poses de varios npc distintos: la propia y sus
+     variantes "fuera de servicio" en la Metrópolis (elisa_casual, elisa_playa...), que
+     son npc aparte solo para poder encolarlas en su zona sin mezclar mensajes */
+  const poses = [
+    ...Object.keys(def.arts || {}).map((mood) => ({ npcKey: npc, mood, label: mood })),
+    ...((card && card.variants) || []).flatMap(([npcKey, label]) =>
+      Object.keys((NPCS[npcKey] || {}).arts || {}).map((mood) => ({ npcKey, mood, label }))),
+  ];
+  const defIdx = Math.max(0, poses.findIndex((p) => p.npcKey === npc && p.mood === def.def));
   const [idx, setIdx] = useState(defIdx);
-  const mood = moods[idx];
-  const isSeen = !!seen[mood];
-  const move = (d) => setIdx((i) => (i + d + moods.length) % moods.length);
+  const pose = poses[idx];
+  const isSeen = !!(seenMoods[pose.npcKey] || {})[pose.mood];
+  const move = (d) => setIdx((i) => (i + d + poses.length) % poses.length);
   return (
     <div className="overlay" style={{ background: "rgba(5,7,13,.75)", zIndex: 65, alignItems: "flex-end", padding: 0 }} onClick={onClose}>
       <div className="sheet" style={{ maxHeight: "82vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
         <div className="ptitle" style={{ fontSize: 16, marginBottom: 12, textAlign: "center" }}>{def.name}</div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
-          {moods.length > 1 && (
+          {poses.length > 1 && (
             <button className="btn-ghost sm" style={{ borderRadius: "50%", width: 36, height: 36, padding: 0, flexShrink: 0 }}
               onClick={() => move(-1)} aria-label="Pose anterior">‹</button>)}
           <div style={{ textAlign: "center" }}>
-            <img src={def.arts[mood]} alt={isSeen ? mood : "silueta"} style={{ width: 180, height: 250, objectFit: "cover",
+            <img src={NPCS[pose.npcKey].arts[pose.mood]} alt={isSeen ? pose.label : "silueta"} style={{ width: 180, height: 250, objectFit: "cover",
               borderRadius: 16, border: "1.5px solid #16190F", filter: isSeen ? "none" : "brightness(0)" }} />
             <div style={{ fontSize: 11, color: "#9a9e8e", marginTop: 6, textTransform: "uppercase", letterSpacing: 1 }}>
-              {isSeen ? mood : "???"} {moods.length > 1 && `· ${idx + 1}/${moods.length}`}</div>
+              {isSeen ? pose.label : "???"} {poses.length > 1 && `· ${idx + 1}/${poses.length}`}</div>
           </div>
-          {moods.length > 1 && (
+          {poses.length > 1 && (
             <button className="btn-ghost sm" style={{ borderRadius: "50%", width: 36, height: 36, padding: 0, flexShrink: 0 }}
               onClick={() => move(1)} aria-label="Pose siguiente">›</button>)}
         </div>
@@ -3857,13 +3864,12 @@ function CardDetail({ npc, game, onClose }) {
 
 /* ---------- PERFIL / OBJETIVOS ---------- */
 function ProfileTab({ game, photo, onWeight, onPhoto, onRemovePhoto, crest, onCrest, onRemoveCrest,
-  crestScale, onCrestScale, onGoals, getBackup, onRestore, haptics, onHaptics, voices, onVoices }) {
+  crestScale, onCrestScale, onGoals, getBackup, onRestore, haptics, onHaptics, voices, onVoices, onOpenCard }) {
   const p = game.player;
   const [kg, setKg] = useState("");
   const [edit, setEdit] = useState(false);
   const [newHabit, setNewHabit] = useState("");
   const [g, setG] = useState({ ...p.goals, gymDays: [...p.goals.gymDays] });
-  const [openCard, setOpenCard] = useState(null); /* npc de la carta abierta en la galería */
   /* redimensiona una imagen subida y devuelve un dataURL, para foto o escudo.
      forcePng: el escudo se guarda siempre en PNG para conservar la transparencia (el JPEG la rellenaría de blanco) */
   const processImg = (e, cb, max = 420, forcePng = false) => {
@@ -4020,7 +4026,7 @@ function ProfileTab({ game, photo, onWeight, onPhoto, onRemovePhoto, crest, onCr
             const npc = NPCS[c.npc];
             const on = c.unlocked(game);
             return (
-              <button key={c.npc} onClick={() => on && setOpenCard(c.npc)} disabled={!on}
+              <button key={c.npc} onClick={() => on && onOpenCard(c.npc)} disabled={!on}
                 style={{ background: "#F0EFE5", borderRadius: 12, padding: "10px 6px", textAlign: "center",
                   border: "none", cursor: on ? "pointer" : "default" }}>
                 {on ? (
@@ -4037,7 +4043,6 @@ function ProfileTab({ game, photo, onWeight, onPhoto, onRemovePhoto, crest, onCr
           })}
         </div>
       </div>
-      {openCard && <CardDetail npc={openCard} game={game} onClose={() => setOpenCard(null)} />}
       <div className="panel">
         <div className="ptitle">⚙️ Ajustes</div>
         <button className={"chip big" + (haptics ? " on" : "")} onClick={() => onHaptics(!haptics)}>
@@ -4083,6 +4088,7 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [visitedZone, setVisitedZone] = useState(null); // qué zona de la Ciudad estás visitando ahora mismo
   const [showPaper, setShowPaper] = useState(false); // periódico abierto como ventana modal desde el Kiosco
+  const [openCard, setOpenCard] = useState(null); // npc de la carta de personaje abierta en la galería
   const [showQuests, setShowQuests] = useState(false); // registro de misiones
   const [showInventory, setShowInventory] = useState(false); // objetos coleccionables
   const [activeMap, setActiveMap] = useState("ciudad"); // "ciudad" o "metropoli": qué mapa se ve en la pestaña Ciudad
@@ -4882,7 +4888,7 @@ export default function App() {
             {tab === "me" && <ProfileTab game={game} photo={photo} onWeight={addWeight} onPhoto={savePhoto} onRemovePhoto={removePhoto}
               crest={crest} onCrest={saveCrest} onRemoveCrest={removeCrest} crestScale={crestScale} onCrestScale={saveCrestScale}
               onGoals={setGoals} getBackup={getBackup} onRestore={restoreBackup} haptics={haptics} onHaptics={setHapticsPref}
-              voices={voicesOn} onVoices={setVoicesPref} />}
+              voices={voicesOn} onVoices={setVoicesPref} onOpenCard={setOpenCard} />}
           </div>
           <nav className="tabbar">
             {[["home", "🏠", "Inicio"], ["log", "📝", "Registro"], ["gym", "🏋️", "Gym"], ["league", "🏆", "Liga"], ["chat", "🏙️", "Ciudad"], ["me", "👤", "Yo"]].map(([id, ic, lb]) => (
@@ -4896,6 +4902,10 @@ export default function App() {
           </nav>
         </>
       )}
+      {/* carta de personaje: overlay a nivel de App (fuera de .tab-in), por el mismo motivo
+          que el diálogo de personaje más abajo: el contenedor de pestañas anima un transform
+          y eso rompe position:fixed en los hijos si se dibuja dentro de él. */}
+      {openCard && <CardDetail npc={openCard} game={game} onClose={() => setOpenCard(null)} />}
       {/* visitar una zona: fondo a toda pantalla + flecha para volver */}
       {tab === "chat" && visitedZoneObj && (
         <ZoneScreen zone={visitedZoneObj} pendingNpc={visitedActiveNpc} game={game}

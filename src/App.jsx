@@ -131,7 +131,7 @@ const calcOVR = (stats) => Math.round(STAT_KEYS.reduce((s, k) => s + stats[k] * 
 const xpToNext = (v) => Math.round(36 + Math.max(0, v - 58) * 10);
 /* multiplicador de XP por racha: +2% por día de racha, techo +20% (racha 10+).
    Tolera streak undefined (partidas antiguas) tratándolo como 0. */
-const streakMultOf = (s) => 1 + Math.min(s || 0, 25) * 0.02;
+const streakMultOf = (s) => 1 + Math.min(s || 0, 25) * 0.03;
 
 /* haptics: vibración sutil en hitos. Activada por defecto, interruptor en Yo.
    El flag lo sincroniza App con la preferencia guardada. */
@@ -3343,7 +3343,7 @@ function CalendarView({ game, photo, onClose, onAddNote, onDelNote, onEditDay })
 
 /* ---------- REGISTRO DIARIO ---------- */
 
-function LogTab({ game, log, onLog, logDate, onDate, onCloseDay, savedMeals, onSaveMeal, onUseSaved,
+function LogTab({ game, log, onLog, logDate, onDate, onCloseDay, savedMeals, onSaveMeal, onUseSaved, onDeleteSaved,
   notify, onGoGym, onAddNote, onDelNote }) {
   const sesionesHoy = ((game.gym && game.gym.sessions) || []).filter((s) => s.d === logDate);
   const [meal, setMeal] = useState("");
@@ -3472,8 +3472,12 @@ function LogTab({ game, log, onLog, logDate, onDate, onCloseDay, savedMeals, onS
         {smSorted.length > 0 && (
           <div className="chips" style={{ marginBottom: 10 }}>
             {smSorted.map((m, i) => (
-              <button key={i} className="chip" onClick={() => addSaved(m)}>
-                {m.name === starName ? "⭐ " : ""}{m.name} · {m.kcal}kcal</button>))}
+              <span key={i} className="chip chip-fav">
+                <button className="chip-fav-btn" onClick={() => addSaved(m)}>
+                  {m.name === starName ? "⭐ " : ""}{m.name} · {m.kcal}kcal</button>
+                <button className="chip-fav-del" aria-label={`Quitar ${m.name} de favoritos`}
+                  onClick={(e) => { e.stopPropagation(); onDeleteSaved(m.name); }}>✕</button>
+              </span>))}
           </div>)}
         <div style={{ display: "flex", gap: 6 }}>
           <input className="inp" style={{ flex: 1, marginBottom: 0 }} value={meal} placeholder='ej. "2 huevos, arroz y un batido"'
@@ -4785,6 +4789,7 @@ export default function App() {
     if (sm.some((x) => x.name === m.name)) return g;
     return { ...g, savedMeals: [...sm, m].slice(-8) };
   }); pushToast("💾 Guardada en comidas frecuentes"); };
+  const deleteSavedMeal = (name) => setGame((g) => ({ ...g, savedMeals: (g.savedMeals || []).filter((m) => m.name !== name) }));
   const addWeight = (kg) => { setGame((g) => {
     const p = g.player;
     const stats = { ...p.stats }, xp = { ...p.xp };
@@ -4989,6 +4994,7 @@ export default function App() {
               log={(game.logs && game.logs[todayStr()]) || EMPTY_LOG()} />}
             {tab === "log" && <LogTab game={game} log={activeLog} onLog={setActiveLog} logDate={logDate} onDate={setLogDate}
               onCloseDay={closePendingDay} savedMeals={game.savedMeals || []} onSaveMeal={saveMeal} onUseSaved={useSavedMeal}
+              onDeleteSaved={deleteSavedMeal}
               notify={pushToast} onGoGym={() => setTab("gym")} onAddNote={addNote} onDelNote={delNote} />}
             {tab === "gym" && <GymTab game={game} api={gymApi} notify={pushToast} />}
             {tab === "league" && <LeagueTab game={game} onPlayMatch={playMatch} crest={crest} crestScale={crestScale} />}
@@ -5097,6 +5103,11 @@ function StyleTag() {
         border-radius:20px; padding:7px 13px; font-size:12.5px; font-family:'Barlow',sans-serif; cursor:pointer; }
       .chip.big { padding:10px 15px; font-size:13.5px; }
       .chip.on { background:#16190F; border-color:#16190F; color:#CDF546; font-weight:600; }
+      .chip-fav { display:flex; align-items:stretch; padding:0; overflow:hidden; }
+      .chip-fav-btn { background:none; border:none; color:inherit; font:inherit; cursor:pointer; padding:7px 6px 7px 13px; }
+      .chip-fav-del { background:none; border:none; border-left:1.5px solid rgba(20,23,14,.16); color:#9a9e8e;
+        font-size:11px; padding:7px 10px; cursor:pointer; line-height:1; }
+      .chip-fav-del:hover { color:#E14B4B; }
       .btn-gold { display:block; width:100%; background:#CDF546; color:#16190F;
         border:1.5px solid #16190F; border-radius:16px; padding:14px; font-family:'Oswald',sans-serif; font-size:15px; letter-spacing:2px;
         font-weight:600; cursor:pointer; box-shadow:0 4px 0 #16190F; }

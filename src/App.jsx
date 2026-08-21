@@ -484,7 +484,7 @@ const COND = {
   /* memoria cruzada entre personajes y callbacks de decisiones */
   metDino: (c) => c.metDino, metPunky: (c) => c.metPunky, metLisa: (c) => c.metLisa,
   metYuni: (c) => c.metYuni, metMilly: (c) => c.metMilly, metYuna: (c) => c.metYuna,
-  metLili: (c) => c.metLili,
+  metLili: (c) => c.metLili, metCubarsi: (c) => c.metCubarsi, metYamal: (c) => c.metYamal,
   dinoTip: (c) => c.dinoTip, punkyMote: (c) => c.punkyMote, lisaTilin: (c) => c.lisaTilin,
   yuniTrain: (c) => c.yuniTrain, millySecret: (c) => c.millySecret,
   liliBouquet: (c) => c.liliBouquet,
@@ -732,7 +732,7 @@ function flavorCtx(g) {
      y para pequeños "callbacks" a decisiones concretas que tomaste en otras conversaciones */
   c.metDino = !!g.metDino; c.metPunky = !!g.metPunky; c.metLisa = !!g.metLisa;
   c.metYuni = !!g.metYuni; c.metMilly = !!g.metMilly; c.metYuna = !!g.yunaMet;
-  c.metLili = !!g.metLili;
+  c.metLili = !!g.metLili; c.metCubarsi = !!g.metCubarsi; c.metYamal = !!g.metYamal;
   c.dinoTip = !!g.dinoTip; c.punkyMote = !!g.punkyMote; c.lisaTilin = !!g.lisaTilin;
   c.yuniTrain = !!g.yuniTrain; c.millySecret = !!g.millySecret;
   c.liliBouquet = !!g.liliBouquet;
@@ -872,6 +872,13 @@ const NPCS = {
   /* Lili: florista, dulce y observadora. Su "angry" es en realidad PREOCUPACIÓN, no enfado. */
   lili: { name: "Lili", color: "#D65C8C", voice: "/audio/vozchica01.mp3", icon: "/images/lili_icon.webp",
     arts: { idle: "/images/lili_idle.webp", happy: "/images/lili_happy.webp", angry: "/images/lili_angry.webp" }, def: "idle" },
+  /* Cubarsí: central del FC Barcelona, se cruza contigo en el Centro de Alto Rendimiento.
+     Serio, maduro para su edad, cero postureo. Sin angry. */
+  cubarsi: { name: "Cubarsí", color: "#1D4E9E", voice: "/audio/vozchico01.mp3", icon: "/images/cubarsi_icon.webp",
+    arts: { idle: "/images/cubarsi_idle.webp", happy: "/images/cubarsi_happy.webp" }, def: "idle" },
+  /* Yamal: estrella joven, aparece en el Gran Estadio dando la bienvenida a Primera. Cercano, confiado. Sin happy ni angry: solo hay retrato idle. */
+  yamal: { name: "Yamal", color: "#F2C500", voice: "/audio/vozchico02.mp3", icon: "/images/yamal_icon.webp",
+    arts: { idle: "/images/yamal_idle.webp" }, def: "idle" },
 };
 const senderToNpc = (from) => {
   if (from === "Entrenador" || from === "Tu agente" || from === "Elisa") return "elisa";
@@ -882,6 +889,8 @@ const senderToNpc = (from) => {
   if (from === "Yuni") return "yuni";
   if (from === "Milly") return "milly";
   if (from === "Lili") return "lili";
+  if (from === "Cubarsí") return "cubarsi";
+  if (from === "Yamal") return "yamal";
   if (from === "López" || from.includes("Capitán") || from.includes("· Vestuario")) return "lopez";
   return null; /* prensa/afición/redes/club -> periódico */
 };
@@ -1023,6 +1032,12 @@ const YUNA_POOL = [
   { beats: [
     { m: "idle", t: "El Barça empató ayer y estoy oficialmente de luto." },
     { m: "angry", t: "Así que hoy no tengo energía para fingir que tu equipo no me interesa. Mañana volvemos a la normalidad, no te acostumbres." }] },
+  { w: "metCubarsi", beats: [
+    { m: "idle", t: "Me han dicho que entrenas cerca de Cubarsí. CUBARSÍ. En el Centro de Alto Rendimiento. Como si tal cosa." },
+    { m: "angry", t: "¡No es que me muera de envidia! Es información relevante para mi análisis. Aunque... si algún día te presenta al vestuario, avísame con tiempo. Por si acaso. Sin presión." }] },
+  { w: "metYamal", beats: [
+    { m: "idle", t: "Yamal. YAMAL te ha hablado a TI en el estadio. Llevo desde que me lo dijiste sin poder concentrarme en clase." },
+    { m: "angry", t: "¡No estoy flipando! Es una noticia deportiva relevante, nada más. ...Pero como consigas que me firme algo, te perdono absolutamente todo lo que hayas hecho mal en tu vida." }] },
   /* --- conversaciones más largas, con respuestas --- */
   { m: "idle", t: "Oye... tengo una duda. PURAMENTE táctica, para mi análisis, nada personal. ¿Prefieres jugar en casa, con tu gente, o fuera, sin presión?", replies: [
     { t: "En casa, con mi gente", r: ["Ah. Lógico. La grada empuja distinto cuando es la tuya... aunque la del Barça sigue siendo mejor, que conste.",
@@ -1455,6 +1470,75 @@ const LILI_POOL = [
   { t: "Llevo la floristería sola desde hace un tiempo. Al principio me daba miedo, ahora ya no tanto. Supongo que hasta las personas florecemos tarde, ¿no crees?" },
 ];
 
+/* --- CUBARSÍ · central del FC Barcelona, entrena en el Centro de Alto Rendimiento
+   cuando el filial tiene descanso. Serio, maduro para su edad, cero postureo. Sin angry. --- */
+const CUBARSI_INTRO_BEATS = [
+  { m: "idle", t: "Hola. Perdona, estaba terminando unos ejercicios de core, ni te he visto entrar. Cubarsí, encantado. Vengo aquí cuando el filial tiene descanso, las máquinas están libres y nadie molesta." },
+  { m: "happy", t: "Me han hablado de ti en el vestuario, ¿sabes? Dicen que curras en serio. Eso me gusta más que cualquier estadística. Aquí nos vamos a ver, seguro." },
+];
+const CUBARSI_POOL = [
+  { w: "hot", t: "{streak} días seguidos sin fallar ni uno. Eso, en el fútbol de verdad, vale más que un golazo puntual. Yo intento hacer lo mismo, aunque nadie me vea entrenar aquí a estas horas." },
+  { beats: [
+    { m: "idle", t: "La gente cree que lo mío es fácil porque empecé joven." },
+    { m: "idle", t: "No lo es. Solo aprendí pronto a no quejarme del proceso. Eso sí te lo puedo enseñar, si quieres." }] },
+  { w: "win", t: "Buen partido el tuyo. No hace falta que te diga mucho más, se notaba en cómo defendías el resultado en el último tramo. Eso no se entrena en dos días." },
+  { w: "loss", beats: [
+    { m: "idle", t: "Vi el resultado de ayer. No voy a decirte ninguna frase hecha, esas no sirven de mucho." },
+    { m: "idle", t: "Solo esto: al día siguiente vuelves a entrenar igual que si hubieras ganado. Así es como yo lo llevo." }] },
+  { t: "Te voy a hacer una pregunta directa, sin rodeos: ¿te pesa la presión, o te da igual lo que se diga fuera?", replies: [
+    { t: "Me pesa, aunque no lo enseñe", m: "idle", r: ["Sincero. Yo también la siento, para que lo sepas, aunque en las entrevistas diga otra cosa. No pasa nada por sentirla, lo malo es dejar que decida por ti.",
+      "Gracias por decirlo así, sin más. La mayoría prefiere fingir que no le afecta nada."] },
+    { t: "La verdad, bastante poco", m: "happy", r: ["Ojalá se me diera tan bien a mí ese filtro. Te envidio un poco, en serio.",
+      "Eso es un don, no todo el mundo lo tiene a estas alturas de carrera. Cuídalo."] }] },
+  { w: "benched", t: "Suplente hoy, ¿no? A mí también me ha tocado, más de una vez. Lo raro no es sentarse en el banquillo, lo raro es cómo vuelves de él. Ese es el examen de verdad." },
+  { w: "scorer", t: "{goals} goles y sigues entrenando aquí como si no tuvieras ninguno. Eso dice más de ti que cualquier número, para mí." },
+  { w: "derbiSoon", t: "Con lo del {derbiRival} esta semana he estado revisando vídeo extra por mi cuenta. Nadie me lo ha pedido. Simplemente así es como me preparo yo para lo que de verdad importa." },
+  { w: "metDino", beats: [
+    { m: "idle", t: "Coincido con tu preparador, Dino, casi cada semana en estas máquinas." },
+    { m: "idle", t: "Al principio me daban un poco de miedo tantas gráficas suyas. Ahora ya casi las entiendo. Casi." }] },
+  { t: "Curiosidad que llevo tiempo con ganas de preguntarte: ¿qué harías si mañana dejaras de poder jugar?", replies: [
+    { t: "No lo sé, no quiero pensarlo", m: "idle", r: ["Lo entiendo, yo tampoco quiero. Pero pensarlo un poco a veces te hace valorar más el hoy. Solo eso."] },
+    { t: "Seguiría cerca del fútbol, como sea", m: "happy", r: ["Esa respuesta dice mucho de ti. Yo pienso lo mismo, aunque suene raro decirlo tan joven."] }] },
+  { beats: [
+    { m: "idle", t: "Me preguntan mucho si me pesa jugar tan joven en un sitio tan grande." },
+    { m: "happy", t: "Y la verdad es que no. Lo que pesa es no currártelo. Eso sí que no lo soporto, ni en mí ni en nadie." }] },
+  { t: "Última cosa, y prometo que no es del todo inocente la pregunta: ¿alguna vez cambiarías de club solo por dinero, sin más?", replies: [
+    { t: "No, jugaría donde soy feliz", m: "happy", r: ["Esa es la respuesta correcta. Ojalá coincidamos en el mismo sitio algún día, hablando en serio."] },
+    { t: "No lo descarto, es mi trabajo", m: "idle", r: ["Entiendo el argumento, aunque no lo comparta del todo. Cada uno lleva la carrera como puede."] }] },
+];
+
+/* --- YAMAL · estrella joven, da la bienvenida en el Gran Estadio al llegar a Primera.
+   Cercano, confiado, sin postureo de superestrella. Sin angry. --- */
+const YAMAL_INTRO_BEATS = [
+  { m: "happy", t: "¡Eh, tú! Bienvenido a Primera de verdad, no al cuento de las categorías de abajo. Yamal, un placer. Aquí todo el mundo mira, así que prepárate." },
+  { m: "happy", t: "Me acuerdo de mi primer partido aquí arriba, hermano. Los nervios se pasan rápido si juegas como sabes jugar. Nos vemos por el estadio, seguro." },
+];
+const YAMAL_POOL = [
+  { w: "win", t: "¡Así se hace! Buen partido, en serio. Se nota cuando alguien juega sin miedo, y hoy tú no tenías ni un poquito." },
+  { w: "loss", beats: [
+    { m: "idle", t: "Vi el resultado de ayer. Un día malo no dice nada de ti, tranquilo." },
+    { m: "happy", t: "Lo que dice de verdad es cómo vuelves al campo el lunes. Y tú siempre vuelves fuerte, eso ya lo sé." }] },
+  { w: "hot", t: "{streak} días a tope, sin bajar el ritmo ni un poco. Así es como se llega arriba de verdad, créeme, yo también curro así aunque no se note tanto en redes." },
+  { t: "Pregunta random: ¿celebración de gol ya pensada, o improvisas en el momento?", replies: [
+    { t: "La tengo pensada", m: "happy", r: ["¡Eso me gusta! Un buen festejo también es parte del espectáculo, no me digas que no.",
+      "Prepárala bien entonces, que cuando marques aquí arriba te va a ver medio país."] },
+    { t: "Improviso siempre", m: "idle", r: ["Eso también tiene su punto, la verdad, lo espontáneo siempre queda mejor en cámara.",
+      "Respeto total. Yo tampoco planifico nada, sale lo que sale y punto."] }] },
+  { w: "benched", t: "¿Banquillo hoy? A mí también me ha tocado, no creas que no. Lo importante es estar listo cuando te toque entrar, ni un segundo dormido." },
+  { w: "scorer", t: "{goals} goles ya. Vas que te sales, en serio. Sigue así y va a haber que hacerte hueco fijo en las conversaciones de aquí arriba." },
+  { beats: [
+    { m: "happy", t: "La gente cree que aquí arriba todo es fácil porque se ve bonito por la tele." },
+    { m: "idle", t: "Y no, hermano. Se curra muchísimo más de lo que parece. Pero también se disfruta el doble, eso también es verdad." }] },
+  { w: "derbiSoon", t: "Con lo del {derbiRival} esta semana el ambiente ya se nota diferente por todos lados. Estos partidos son de otro nivel, prepárate para algo que no has vivido igual antes." },
+  { t: "¿Te digo la verdad? Cuando llegué aquí arriba también flipaba un poco cada vez que entraba al campo. ¿A ti también te pasa, o ya se te ha pasado?", replies: [
+    { t: "Sí, todavía me impresiona", m: "idle", r: ["Normal, hermano, y ojalá no se te pase nunca del todo. Esa sensación es la que te recuerda por qué merece la pena todo esto."] },
+    { t: "Ya me lo tomo con calma", m: "happy", r: ["Eso también está bien, cada uno lo lleva a su manera. Yo todavía me emociono, no te voy a mentir."] }] },
+  { beats: [
+    { m: "happy", t: "Un día de estos jugamos juntos de verdad, no solo hablando aquí en el túnel del estadio." },
+    { m: "happy", t: "Tú sigue así de fino y vas a acabar aquí antes de lo que piensas. Yo ya te veo con la camiseta puesta, en serio." }] },
+  { w: "seasonStart", t: "Nueva temporada, nuevas ganas. Aquí arriba cada año se sube un poco más el nivel, así que prepárate para lo que viene." },
+];
+
 /* goles a lo largo de TODA la carrera (todas las temporadas), para el hito del Centro de Alto Rendimiento */
 const careerGoals = (g) => (g.matchHistory || []).reduce((a, m) => a + (m.myGoals || 0), 0);
 
@@ -1486,7 +1570,7 @@ const ZONES = [
      algo pendiente ahora mismo (ver EXTRA_NPCS y CityMap); en reposo, el puntito de siempre */
   { id: "barrio", kind: "npc", npc: ["yuna", "lili"], label: "El Barrio", icon: "🌆", x: 57.83, y: 52.92,
     unlocked: (g) => !!g.yunaMet, reqLabel: "Gánate tu primera victoria" },
-  { id: "car", kind: "npc", npc: "dino", label: "Centro de Alto Rendimiento", icon: "🏋️", x: 63.19, y: 21.84,
+  { id: "car", kind: "npc", npc: ["dino", "cubarsi"], label: "Centro de Alto Rendimiento", icon: "🏋️", x: 63.19, y: 21.84,
     pts: "434.69 136.71 434.69 194.24 592.65 195.94 587.89 125.73 434.69 136.71",
     unlocked: (g) => careerGoals(g) >= 3, reqLabel: "Marca 3 goles en tu carrera", metFlag: "metDino", intro: DINO_INTRO_BEATS },
   { id: "prensa", kind: "npc", npc: "punky", label: "Sala de Prensa", icon: "🎙️", x: 27.28, y: 35.54,
@@ -1501,9 +1585,9 @@ const ZONES = [
   { id: "tienda", kind: "soon", npc: null, label: "Tienda Oficial", icon: "🛍️", x: 82.14, y: 66.90,
     pts: "547.12 483.77 551.72 531.77 628.82 524.62 624.74 479.69 547.12 483.77",
     unlocked: (g) => g.tier.id >= 3, reqLabel: "Asciende a LaLiga Hypermotion / 2ª europea" },
-  { id: "estadio", kind: "soon", npc: null, label: "Gran Estadio", icon: "🏆", x: 75.80, y: 88.46,
+  { id: "estadio", kind: "npc", npc: "yamal", label: "Gran Estadio", icon: "🏆", x: 75.80, y: 88.46,
     pts: "588.81 606.32 499.76 629.73 467.63 649.9 494.8 736.45 588.81 736.45 635.81 687.73 588.81 606.32",
-    unlocked: (g) => g.tier.id >= 4, reqLabel: "Asciende a Primera división · media tabla", big: true },
+    unlocked: (g) => g.tier.id >= 4, reqLabel: "Asciende a Primera división · media tabla", metFlag: "metYamal", intro: YAMAL_INTRO_BEATS, big: true },
 ];
 /* una zona puede tener uno o varios personajes asignados (p.ej. El Barrio) */
 const zoneNpcList = (z) => (Array.isArray(z.npc) ? z.npc : z.npc ? [z.npc] : []);
@@ -1521,6 +1605,8 @@ const zonePending = (z, game) => {
 const EXTRA_NPCS = [
   { npc: "lili", metFlag: "metLili", intro: LILI_INTRO_BEATS,
     unlocked: (g) => !!g.yunaMet },
+  { npc: "cubarsi", metFlag: "metCubarsi", intro: CUBARSI_INTRO_BEATS,
+    unlocked: (g) => careerGoals(g) >= 3 },
 ];
 
 /* ============================================================
@@ -1840,6 +1926,77 @@ const QUESTS = {
           { m: "angry", t: "No hemos llegado a esos siete días seguidos, pero no pasa nada, de verdad." },
           { m: "idle", t: "Las plantas más bonitas suelen ser las que más tardan en florecer. Yo sigo aquí, con tu ramo a medio hacer, esperando el momento." }],
         reward: (g) => { const stats = { ...g.player.stats }; stats.RES = Math.min(99, stats.RES + 1); return { ...g, player: { ...g.player, stats } }; } },
+    ],
+  },
+  cubarsi: {
+    label: "Codo con codo",
+    npc: "cubarsi",
+    trigger: (g) => !!g.metCubarsi && g.club.name === "FC Barcelona",
+    stages: [
+      { title: "El primer entrenamiento", objective: "Consigue nota 7+ en un partido",
+        intro: [
+          { m: "happy", t: "No me lo puedo creer del todo todavía. Vamos a ser compañeros de verdad, no solo dos tíos hablando en un gimnasio vacío." },
+          { m: "idle", t: "Primer partido oficial juntos: sal y demuestra que esto no ha sido casualidad. Nota alta, nada de nervios. Yo confío en ti, y aquí eso pesa." }],
+        snap: (g) => ({ matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.rating >= 7) },
+      { title: "Ganarse el vestuario", objective: "Sé titular en 3 partidos seguidos",
+        intro: [
+          { m: "idle", t: "Aquí nadie te regala el sitio, ni a mí me lo regalaron. Pero cuando te lo ganas, se nota en cómo te miran los de siempre." },
+          { m: "happy", t: "Mantente de titular tres partidos seguidos. Después de eso ya no eres 'el fichaje', eres uno más. Créeme, lo sé por experiencia." }],
+        snap: (g) => ({ matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => {
+          const hist = (g.matchHistory || []).slice(snap.matchCount);
+          let run = 0, best = 0;
+          for (const m of hist) { if (!m.benched) { run++; best = Math.max(best, run); } else run = 0; }
+          return best >= 3;
+        } },
+      { title: "El derbi de verdad", objective: "Gana el derbi", deadlineDays: 30,
+        intro: [
+          { m: "idle", t: "Aquí los derbis no son como en cualquier sitio. Se viven distinto, se juegan distinto. Vas a entender lo que te digo en cuanto salte el pitido inicial." },
+          { m: "happy", t: "Gánalo conmigo al lado. Llevo queriendo vivir esto contigo desde aquellas tardes en el centro de alto rendimiento, cuando ni te imaginabas que acabaríamos aquí." }],
+        snap: (g) => ({ matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.derbi && m.res === "V") },
+      { title: "Compañeros de verdad", final: true,
+        intro: [
+          { m: "happy", t: "Lo conseguimos. Y pensar que todo empezó con un preparador nervioso presentándote a un central random en un gimnasio medio vacío." },
+          { m: "happy", t: "Ya no somos 'el chaval de la ciudad' y 'el de La Masia'. Ahora somos compañeros de vestuario, del mismo escudo. Me alegro muchísimo de que esto haya acabado así." }],
+        introFail: [
+          { m: "idle", t: "El derbi no salió redondo, pero da igual. Lo importante ya pasó: estamos aquí, juntos, en el mismo equipo." },
+          { m: "happy", t: "Habrá más derbis. Lo que no cambia es que empezamos esto en un gimnasio vacío y ahora compartimos vestuario de verdad. Eso ya es la victoria más importante." }],
+        reward: (g) => { const stats = { ...g.player.stats }; stats.RES = Math.min(99, stats.RES + 1); return { ...g, player: { ...g.player, stats } }; } },
+    ],
+  },
+  yamal: {
+    label: "De la grada al campo",
+    npc: "yamal",
+    trigger: (g) => !!g.metYamal && g.club.name === "FC Barcelona",
+    stages: [
+      { title: "El primer vestuario grande", objective: "Marca o da una asistencia",
+        intro: [
+          { m: "happy", t: "¡Al fin, hermano! Te dije que algún día jugaríamos juntos de verdad y aquí estamos. Bienvenido al vestuario más grande que vas a pisar." },
+          { m: "happy", t: "Para el primer partido no hace falta que hagas magia, solo que participes en un gol, el que sea. Asistencia, gol, me da igual. Solo deja tu huella ya." }],
+        snap: (g) => ({ matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => (m.myGoals || 0) > 0 || (m.myAssists || 0) > 0) },
+      { title: "El ritmo de aquí arriba", objective: "Marca o asiste en 3 partidos distintos",
+        intro: [
+          { m: "idle", t: "Un golazo suelto está bien, pero aquí lo que de verdad importa es la regularidad. Eso es lo que separa al que brilla un día del que se queda para siempre." },
+          { m: "happy", t: "Participa en gol en tres partidos distintos. Sin prisa, pero sin parar. Ya sabes cómo va esto." }],
+        snap: (g) => ({ matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => (g.matchHistory || []).slice(snap.matchCount).filter((m) => (m.myGoals || 0) > 0 || (m.myAssists || 0) > 0).length >= 3 },
+      { title: "El derbi grande de verdad", objective: "Gana el derbi", deadlineDays: 30,
+        intro: [
+          { m: "happy", t: "Ahora viene el partido de verdad, el que se siente distinto a todos los demás. Aquí no hay margen para relajarse ni un segundo." },
+          { m: "idle", t: "Gánalo. No hace falta que digas nada después, con ganarlo ya está dicho todo lo que hay que decir." }],
+        snap: (g) => ({ matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.derbi && m.res === "V") },
+      { title: "De la grada al campo, juntos", final: true,
+        intro: [
+          { m: "happy", t: "¿Te acuerdas de aquella charla en el túnel del estadio, cuando todavía ni jugabas aquí arriba? Mírate ahora." },
+          { m: "happy", t: "Esto es justo lo que te dije que iba a pasar. Bienvenido de verdad a esto, hermano. Ahora sí, ya eres de aquí." }],
+        introFail: [
+          { m: "idle", t: "El derbi no salió como queríamos, pero tranquilo, aquí van a venir muchos más." },
+          { m: "happy", t: "Lo que no cambia es dónde estás ahora mismo. Sigues siendo de aquí, pase lo que pase con un resultado." }],
+        reward: (g) => { const stats = { ...g.player.stats }; stats.FUE = Math.min(99, stats.FUE + 1); return { ...g, player: { ...g.player, stats } }; } },
     ],
   },
 };
@@ -4261,6 +4418,8 @@ export default function App() {
         if (out.metLisa) candidates.push(["Lisa", LISA_POOL]);
         if (out.metYuni) candidates.push(["Yuni", YUNI_POOL]);
         if (out.metLili) candidates.push(["Lili", LILI_POOL]);
+        if (out.metCubarsi) candidates.push(["Cubarsí", CUBARSI_POOL]);
+        if (out.metYamal) candidates.push(["Yamal", YAMAL_POOL]);
         candidates.push([null, null]); /* comodín: flavor genérico de vestuario/prensa/agente */
         const [name, pool] = candidates[Math.floor(Math.random() * candidates.length)];
         if (!name) {

@@ -1645,6 +1645,18 @@ const ELISA_ESTADIO_POOL = [
     { m: "happy", t: "Pero como persona que ha estado contigo desde el primer día, déjame decirte que estoy muy orgullosa de lo que hemos construido." }] },
 ];
 
+/* nombre de sender -> pool, para poder guardar solo el nombre elegido en
+   pendingAppearances (serializable) y recuperar su pool de diálogo al soltarlo */
+const POOL_BY_NAME = {
+  "López": LOPEZ_POOL, "Elisa": ELISA_POOL, "Yuna": YUNA_POOL, "Karla": KARLA_POOL, "Igor": IGOR_POOL,
+  "Elisa Casual": ELISA_CASUAL_POOL, "Elisa Playa": ELISA_PLAYA_POOL, "Elisa Gala": ELISA_GALA_POOL,
+  "Karla Casual": KARLA_CASUAL_POOL, "Karla Playa": KARLA_PLAYA_POOL,
+  "Milly Playa": MILLY_PLAYA_POOL, "Milly Prensa": MILLY_PRENSA_POOL,
+  "López Playa": LOPEZ_PLAYA_POOL, "López Entreno": LOPEZ_CAR_POOL, "Karla Entreno": KARLA_CAR_POOL,
+  "López Cantera": LOPEZ_CANTERA_POOL, "Yuna Tienda": YUNA_TIENDA_POOL, "López Tienda": LOPEZ_TIENDA_POOL,
+  "López Estadio": LOPEZ_ESTADIO_POOL, "Yuna Estadio": YUNA_ESTADIO_POOL, "Elisa Estadio": ELISA_ESTADIO_POOL,
+};
+
 /* goles a lo largo de TODA la carrera (todas las temporadas), para el hito del Centro de Alto Rendimiento */
 const careerGoals = (g) => (g.matchHistory || []).reduce((a, m) => a + (m.myGoals || 0), 0);
 /* hitos de constancia para desbloquear las zonas de La Metrópolis, contados sobre TODO el historial de logs */
@@ -4441,6 +4453,26 @@ export default function App() {
     if (entry.beats) return addScene(g, from, entry.beats.map((b) => ({ m: b.m, t: fillTpl(b.t, ctx) })), { replies: entry.replies, ...extra });
     return addMsg(g, from, fillTpl(entry.t, ctx), { mood: entry.m, replies: entry.replies, ...extra });
   };
+  /* suelta las visitas de personajes cuya hora ya ha pasado (ver pendingAppearances en
+     processNewDays): se llama en cada carga de la app, no solo una vez al día, para que
+     cada vez que entres haya opción de encontrarte a alguien nuevo en vez de recibirlas
+     todas de golpe la primera vez que abres la app ese día. */
+  const releaseDuePending = (g) => {
+    const pending = g.pendingAppearances || [];
+    if (!pending.length) return g;
+    const now = Date.now();
+    const due = pending.filter((p) => p.dueAt <= now);
+    if (!due.length) return g;
+    let out = { ...g, pendingAppearances: pending.filter((p) => p.dueAt > now) };
+    const ctx = flavorCtx(out);
+    due.forEach((p) => {
+      const pool = POOL_BY_NAME[p.name];
+      if (!pool) return;
+      const filtered = pool.filter((y) => !y.w || (COND[y.w] && COND[y.w](ctx)));
+      if (filtered.length) out = playPoolEntry(out, p.name, filtered[Math.floor(Math.random() * filtered.length)], ctx);
+    });
+    return out;
+  };
   /* comprueba si alguna zona de la ciudad se acaba de desbloquear (Karla)
      y, si es la primera vez, encola su escena de presentación. Se llama tras cualquier
      acción que pueda mover el requisito: media, goles de carrera o ascenso de categoría. */
@@ -4698,14 +4730,23 @@ export default function App() {
         const names = Object.keys(roster);
         const shuffled = [...names].sort(() => Math.random() - 0.5);
         const target = Math.min(names.length, 3 + Math.floor(Math.random() * 2)); /* 3 o 4 personajes hoy */
-        shuffled.slice(0, target).forEach((key) => {
+        /* no se encolan ya mismo: se reparten a lo largo del día (ver releaseDuePending),
+           para que cada vez que abras la app haya opción de encontrarte a alguien nuevo
+           en vez de recibir las 3-4 visitas de golpe al primer vistazo del día */
+        const now = Date.now();
+        const endOfDay = new Date(); endOfDay.setHours(23, 30, 0, 0);
+        const windowMs = Math.max(30 * 60 * 1000, endOfDay.getTime() - now);
+        const picks = shuffled.slice(0, target).map((key) => {
           const variants = roster[key];
-          const [name, pool] = variants[Math.floor(Math.random() * variants.length)];
-          const p = pool.filter((y) => !y.w || (COND[y.w] && COND[y.w](c)));
-          if (p.length) out = playPoolEntry(out, name, p[Math.floor(Math.random() * p.length)], c);
+          return variants[Math.floor(Math.random() * variants.length)][0]; /* nombre elegido */
         });
+        const pending = picks
+          .map((name) => ({ name, dueAt: Math.round(now + Math.random() * windowMs) }))
+          .sort((a, b) => a.dueAt - b.dueAt);
+        out.pendingAppearances = [...(out.pendingAppearances || []), ...pending];
       }
     }
+    out = releaseDuePending(out);
     return checkQuests(checkZoneUnlocks(out));
   }
 

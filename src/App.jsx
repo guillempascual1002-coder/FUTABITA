@@ -876,9 +876,20 @@ const NPCS = {
      vacaciones" en la Metrópolis a la vez (ver processNewDays). Solo idle. */
   elisa_playa: { name: "Elisa", color: "#2E6ED6", voice: "/audio/vozchica02.mp3", icon: "/images/elisa_icon.webp",
     arts: { idle: "/images/elisa_playa.webp" }, def: "idle" },
-  /* Lisa: futbolista pro, gestiona patrocinios. Su "angry" es en realidad ENGREÍDA/chulería, no enfado real. */
-  lisa: { name: "Lisa", color: "#9C6BD6", voice: "/audio/vozchica02.mp3", icon: "/images/lisa_icon.webp",
-    arts: { idle: "/images/lisa_idle.webp", happy: "/images/lisa_happy.webp", angry: "/images/lisa_angry.webp" }, def: "idle" },
+  /* Elisa "de gala": tercera variante fuera de servicio, de comensal elegante en el Ático de
+     Lujo, el Casino o el Restaurante. Igual que casual/playa, nunca coincide con las otras dos. */
+  elisa_gala: { name: "Elisa", color: "#2E6ED6", voice: "/audio/vozchica02.mp3", icon: "/images/elisa_icon.webp",
+    arts: { idle: "/images/elisa_gala.webp" }, def: "idle" },
+  /* Karla: futbolista pro, gestiona patrocinios. Su "angry" es en realidad ENGREÍDA/chulería, no enfado real. */
+  lisa: { name: "Karla", color: "#9C6BD6", voice: "/audio/vozchica02.mp3", icon: "/images/karla_icon.webp",
+    arts: { idle: "/images/karla_idle.webp", happy: "/images/karla_happy.webp", angry: "/images/karla_ego.webp" }, def: "idle" },
+  /* Karla "fuera de servicio": igual que Elisa, dos variantes (casual y playa) que nunca
+     coinciden entre sí el mismo día. Npc separado del principal solo para encolarla ahí sin
+     mezclar mensajes con los de patrocinios. Solo idle. */
+  karla_casual: { name: "Karla", color: "#9C6BD6", voice: "/audio/vozchica02.mp3", icon: "/images/karla_icon.webp",
+    arts: { idle: "/images/karla_casual.webp" }, def: "idle" },
+  karla_playa: { name: "Karla", color: "#9C6BD6", voice: "/audio/vozchica02.mp3", icon: "/images/karla_icon.webp",
+    arts: { idle: "/images/karla_playa.webp" }, def: "idle" },
   /* Milly: la del Kiosco, te trae el periódico en persona cada día. Alegre, cotilla, algo dramática. Sin angry.
      "periodico" es su pose sujetando el periódico: se usa en el instante exacto de la entrega, no como mood genérico. */
   milly: { name: "Milly", color: "#C97A2E", voice: "/audio/vozchica01.mp3", icon: "/images/milly_icon.webp",
@@ -898,11 +909,14 @@ const NPCS = {
 const senderToNpc = (from) => {
   if (from === "Entrenador" || from === "Tu agente" || from === "Elisa") return "elisa";
   if (from === "Yuna") return "yuna";
-  if (from === "Lisa") return "lisa";
+  if (from === "Karla") return "lisa";
   if (from === "Milly") return "milly";
   if (from === "Igor") return "igor";
   if (from === "Elisa Casual") return "elisa_casual";
   if (from === "Elisa Playa") return "elisa_playa";
+  if (from === "Elisa Gala") return "elisa_gala";
+  if (from === "Karla Casual") return "karla_casual";
+  if (from === "Karla Playa") return "karla_playa";
   if (from === "Milly Playa") return "milly_playa";
   if (from === "López Playa") return "lopez_playa";
   if (from === "López" || from.includes("Capitán") || from.includes("· Vestuario")) return "lopez";
@@ -1167,7 +1181,7 @@ const LOPEZ_POOL = [
     { t: "Un poco abrumado, si te soy sincero", m: "idle", r: ["Normal, novato. A todos nos pasó. Cualquier cosa que necesites, aquí me tienes, para eso está el brazalete.",
       "Gracias por decirlo claro. Eso también es de valientes. Cuenta conmigo para lo que haga falta."] }] },
   { w: "metLisa", beats: [
-    { m: "idle", t: "Me crucé con Lisa el otro día. Esa mujer entra en una sala y automáticamente sube el nivel de exigencia general." },
+    { m: "idle", t: "Me crucé con Karla el otro día. Esa mujer entra en una sala y automáticamente sube el nivel de exigencia general." },
     { m: "happy", t: "Un poco intimidante, sí. Pero de las que te hacen mejor solo con estar cerca. Aprovéchala." }] },
   { beats: [
     { m: "idle", t: "Llevo de capitán aquí más temporadas de las que me gustaría admitir en público." },
@@ -1175,13 +1189,13 @@ const LOPEZ_POOL = [
   { w: "seasonEnd", t: "Se acaba otra temporada, {season}. No sé tú, pero yo siempre me pongo un poco sentimental estos días. Buen año el nuestro, pase lo que pase en las últimas jornadas." },
 ];
 
-/* --- LISA · futbolista pro de la liga femenina, gestiona patrocinios.
+/* --- KARLA · futbolista pro de la liga femenina, gestiona patrocinios.
    Su "angry" es en realidad ENGREÍDA: superioridad, ego, chulería — nunca enfado real. --- */
-const LISA_INTRO_BEATS = [
-  { m: "idle", t: "Así que tú eres el nombre nuevo del que hablan por aquí. Lisa. Sí, esa Lisa, la de la liga femenina, por si no lo tenías claro." },
+const KARLA_INTRO_BEATS = [
+  { m: "idle", t: "Así que tú eres el nombre nuevo del que hablan por aquí. Karla. Sí, esa Karla, la de la liga femenina, por si no lo tenías claro." },
   { m: "angry", t: "No te voy a mentir, he visto partidos peores tuyos que buenos. Pero algo tienes. Voy a mover unos contactos por ti. No te acostumbres, no lo hago con cualquiera." },
 ];
-const LISA_POOL = [
+const KARLA_POOL = [
   { m: "angry", t: "¿Sabes cuántos patrocinadores me llaman a mí directamente sin que yo mueva un dedo? Bastantes. A ti todavía no. Pero para eso estoy yo aquí, haciendo de niñera de tu carrera." },
   { w: "good", beats: [
     { m: "idle", t: "He estado mirando tu progresión estas últimas semanas. Con más atención de la que admitiría en público." },
@@ -1258,10 +1272,10 @@ const MILLY_POOL = [
     { t: "Cuéntamelo", m: "happy", r: ["Que el presidente ficha un delfín entrenado como amuleto de la suerte. Un DELFÍN. La ciudad no tiene ni piscina olímpica, para que veas el nivel del rumor. Toma tu periódico.",
       "Que el campo se va a mudar de sitio piedra a piedra, como en las películas. Ni te cuento quién me lo dijo, con toda la seriedad del mundo. Aquí tienes el periódico."] },
     { t: "Mejor no, ya tengo suficiente caos", m: "periodico", r: ["Sabia decisión, la verdad, hay días que hasta a mí me supera. Toma tu periódico, hoy viene tranquilito, lo prometo."] }] },
-  { w: "metLisa", t: "Esa futbolista, Lisa, entró una vez al kiosco y preguntó si tenía la prensa deportiva internacional. Le dije que sí por no quedar mal. No la tenía. Toma, tu periódico de hoy, este si lo tengo seguro." },
+  { w: "metLisa", t: "Esa futbolista, Karla, entró una vez al kiosco y preguntó si tenía la prensa deportiva internacional. Le dije que sí por no quedar mal. No la tenía. Toma, tu periódico de hoy, este si lo tengo seguro." },
   { w: "seasonEnd", t: "Se acaba la temporada {season} y no sabes lo que voy a echar de menos nuestra charla de las mañanas. Bueno, la próxima empieza pronto, así que tampoco te libras de mí. Toma, tu último periódico de esta campaña." },
   { t: "Tengo un frasco de perfume carísimo que me regalaron y no uso nunca, se me queda grande para el kiosco. ¿Se lo doy a alguien que le pegue más?", replies: [
-    { t: "A Lisa le encajaría perfecto", m: "happy", giveItem: "perfume_lujo", r: ["¡Genial elección! Toma, dáselo tú de mi parte. Y de paso, toma tu periódico de hoy, que casi se me olvida."] },
+    { t: "A Karla le encajaría perfecto", m: "happy", giveItem: "perfume_lujo", r: ["¡Genial elección! Toma, dáselo tú de mi parte. Y de paso, toma tu periódico de hoy, que casi se me olvida."] },
     { t: "Mejor guárdalo tú", m: "periodico", r: ["Ya, tienes razón, a saber cuándo lo voy a usar. Toma tu periódico, anda, que se hace tarde."] }] },
 ];
 
@@ -1368,6 +1382,29 @@ const ELISA_PLAYA_POOL = [
     { m: "happy", t: "Pues aquí me tienes, prueba viviente. Ni cara de decepción contenida ni nada parecido, te lo prometo por hoy." }] },
 ];
 
+/* --- ELISA DE GALA · tercera variante fuera de servicio, de comensal elegante en el Ático
+   de Lujo, el Casino o el Restaurante. Nunca coincide con ELISA_CASUAL_POOL ni
+   ELISA_PLAYA_POOL (ver la exclusión en processNewDays). Solo idle. --- */
+const ELISA_GALA_POOL = [
+  { beats: [
+    { m: "idle", t: "No, no he venido a hablar de tu contrato. He venido a cenar, que también tengo derecho de vez en cuando." },
+    { m: "happy", t: "Así que, por una noche, olvídate de que soy tu mánager. Esta noche solo soy una clienta más con buen gusto para los sitios." }] },
+  { w: "win", t: "Me enteré del resultado a mitad de la cena, entre plato y plato. Brindé a tu salud sin que nadie de la mesa supiera muy bien por qué sonreía tanto." },
+  { t: "Pregunta fuera de horario, nada de despacho: ¿mesa junto a la ventana o rincón discreto?", replies: [
+    { t: "Rincón discreto, sin duda", m: "happy", r: ["Buena elección. Se ve mejor la sala entera desde ahí, y se te ve menos a ti. Ventaja doble."] },
+    { t: "Junto a la ventana, que me vean", m: "idle", r: ["JA, típico de alguien que también quiere protagonismo en el campo. Lo respeto, la verdad."] }] },
+  { w: "loss", beats: [
+    { m: "idle", t: "Me enteré de lo de ayer justo antes de sentarme a la mesa. No te voy a soltar el sermón aquí, con las copas ya servidas." },
+    { m: "happy", t: "Esta noche toca mesa buena, mantel bueno y no pensar en el marcador. Mañana, oficina otra vez." }] },
+  { beats: [
+    { m: "idle", t: "¿Sabes lo raro que es para mí vestirme así? En el despacho vivo de traje serio y zapato plano." },
+    { m: "happy", t: "Esta noche me apetecía recordar que también sé arreglarme para algo que no sea una negociación. Que quede entre nosotros." }] },
+  { w: "hot", t: "{streak} días de racha, y yo aquí de mesa en mesa sin hablar de trabajo con nadie. Cuando vuelva al despacho seguro que ya me lo cuentan todo igual." },
+  { t: "Confesión que no pienso repetir en horario de oficina: a veces me pregunto si podría acostumbrarme a esta vida de mantel largo.", replies: [
+    { t: "Te la mereces de vez en cuando", m: "happy", r: ["Gracias. Aunque, siendo sincera, a la tercera cena ya echo de menos tener algo que gestionar. Soy un caso perdido."] },
+    { t: "Prefiero verte de mánager, la verdad", m: "idle", r: ["Interesante. No sé si tomármelo como cumplido o como que te doy más trabajo del que crees."] }] },
+];
+
 /* --- MILLY "FUERA DE SERVICIO" · la misma Milly, de vacaciones en la Playa de la
    Metrópolis, sin el mostrador del Kiosco de por medio. Solo idle: aquí no hay
    periódico que entregar, así que tampoco su pose "periodico". --- */
@@ -1405,6 +1442,45 @@ const LOPEZ_PLAYA_POOL = [
     { m: "idle", t: "¿Sabes lo raro que es para mí estar callado más de cinco minutos seguidos? En el vestuario no paro." },
     { m: "idle", t: "Aquí llevo media hora mirando al mar sin decir nada y no me está sentando nada mal, la verdad. Debería probarlo más." }] },
   { w: "hot", t: "{streak} días de racha y yo aquí desconectado del todo. Cuando vuelva al vestuario seguro que ya se han inventado tres leyendas distintas sobre cómo lo has conseguido." },
+];
+
+/* --- KARLA "FUERA DE SERVICIO" · su versión de entreno libre en el Parque de la
+   Metrópolis, sin patrocinadores de por medio. Sigue siendo ella: engreída incluso
+   de vacaciones. Nunca coincide con KARLA_PLAYA_POOL. Solo idle. --- */
+const KARLA_CASUAL_POOL = [
+  { beats: [
+    { m: "idle", t: "No, no vengo a hablarte de contratos. Vengo a entrenar por gusto, algo que tú deberías probar de vez en cuando." },
+    { m: "angry", t: "Aunque, viéndolo bien, hasta entrenando por diversión soy mejor que la mayoría entrenando en serio. Es lo que hay." }] },
+  { w: "win", t: "Me enteré del resultado a mitad de mi sesión. Ni levanté el ritmo, para que veas lo poco que me sorprende que ganes cuando yo te llevo vigilado." },
+  { t: "Pregunta sin despacho de por medio: ¿entrenas mejor solo o acompañado?", replies: [
+    { t: "Solo, me concentro más", m: "idle", r: ["Sensato. Aunque acompañada de mí seguro que rindes mejor todavía, que conste."] },
+    { t: "Acompañado, me exige más", m: "angry", r: ["Buena respuesta, aunque sospecho que lo dices porque te gustaría que te acompañara yo."] }] },
+  { w: "loss", beats: [
+    { m: "idle", t: "Me enteré de lo de ayer. Aquí en el parque no te voy a montar el numerito de mánager decepcionada." },
+    { m: "idle", t: "Solo te digo que mañana vuelvo a exigirte como siempre. Hoy, ni yo tengo ganas de hablar de fracasos." }] },
+  { beats: [
+    { m: "idle", t: "¿Sabes lo raro que es para mí entrenar sin que nadie me grabe ni me pida fotos?" },
+    { m: "angry", t: "Aquí soy solo una futbolista más corriendo por el parque. Bueno, la más elegante corriendo por el parque, pero eso ya lo sabes." }] },
+  { w: "hot", t: "{streak} días de racha y yo aquí sudando la mía sin que nadie me lo agradezca. Al menos tú tienes la decencia de mantener el nivel, algo es algo." },
+];
+
+/* --- KARLA EN LA PLAYA · su otra variante fuera de servicio, de vacaciones de verdad.
+   Nunca coincide con KARLA_CASUAL_POOL (ver la exclusión en processNewDays). Solo idle. --- */
+const KARLA_PLAYA_POOL = [
+  { beats: [
+    { m: "idle", t: "No, tranquilo, no vengo a hablarte de patrocinios. Vengo a tomar el sol, que hasta yo necesito descansar de vez en cuando." },
+    { m: "angry", t: "Aunque, siendo sincera, hasta de vacaciones estoy más en forma que la mayoría de la gente currando. Ventajas de ser quien soy." }] },
+  { w: "win", t: "Me enteré del resultado tirada aquí, con las gafas de sol puestas. Ni me inmuté, para que veas la poca sorpresa que me da que ganes teniéndome a mí de mánager." },
+  { t: "Pregunta de playa, sin cifras de por medio: ¿mar o piscina?", replies: [
+    { t: "Mar, sin dudarlo", m: "idle", r: ["Buena respuesta. Aunque la piscina de mi ático te dejaría con la boca abierta, que lo sepas."] },
+    { t: "Piscina, controlo mejor", m: "angry", r: ["JA, típico de alguien que también querría controlarlo todo, como yo. Empezamos a parecernos, cuidado."] }] },
+  { w: "loss", beats: [
+    { m: "idle", t: "Me enteré de lo de ayer, sí. Pero aquí, de vacaciones, ni yo tengo ganas de montarte un discurso." },
+    { m: "idle", t: "Mañana vuelvo a exigirte lo de siempre. Hoy toca playa y nada más." }] },
+  { beats: [
+    { m: "idle", t: "¿Sabes lo raro que es para mí no tener ni un contrato que revisar en el móvil ahora mismo?" },
+    { m: "angry", t: "Es un descanso, aunque no pienso acostumbrarme. Alguien tiene que seguir siendo la más ambiciosa de los dos." }] },
+  { w: "hot", t: "{streak} días de racha y yo aquí sin mirar ni una estadística. Cuando vuelva seguro que ya me lo cuentan todo igual, para eso tengo contactos en todas partes." },
 ];
 
 /* goles a lo largo de TODA la carrera (todas las temporadas), para el hito del Centro de Alto Rendimiento */
@@ -1456,7 +1532,7 @@ const ZONES = [
     unlocked: (g) => calcOVR(g.player.stats) >= 70, reqLabel: "Alcanza 70 de media" },
   { id: "patro", kind: "npc", npc: "lisa", label: "Zona de Patrocinadores", icon: "🏙️", x: 31.70, y: 81.56,
     pts: "131.2 570.8 86.3 660.7 163.3 715.5 190.8 690.4 214.2 702.1 245.3 669.4 185.9 599.7 131.2 570.8",
-    unlocked: (g) => g.tier.id >= 2, reqLabel: "Asciende a Primera Federación", metFlag: "metLisa", intro: LISA_INTRO_BEATS },
+    unlocked: (g) => g.tier.id >= 2, reqLabel: "Asciende a Primera Federación", metFlag: "metLisa", intro: KARLA_INTRO_BEATS },
   { id: "cantera", kind: "npc", npc: null, label: "Cantera", icon: "🎓", x: 86.33, y: 44.94,
     pts: "377.1 345.6 437.4 343.6 426.6 442.1 363.8 442.1 377.1 345.6",
     unlocked: (g) => calcOVR(g.player.stats) >= 78, reqLabel: "Alcanza 78 de media" },
@@ -1494,22 +1570,22 @@ const EXTRA_NPCS = [];
    480 792.72, sobre el lienzo original de 480x822.74. */
 const METRO_MAP_VB = { x: 0, y: 30.02, w: 480, h: 792.72 };
 const METRO_ZONES = [
-  { id: "parque", kind: "npc", npc: "elisa_casual", label: "Parque", icon: "🌳", x: 35.20, y: 18.23,
+  { id: "parque", kind: "npc", npc: ["elisa_casual", "karla_casual"], label: "Parque", icon: "🌳", x: 35.20, y: 18.23,
     pts: "199.15 80.02 81.19 286.08 105.7 333.35 259.66 93.01 199.15 80.02",
     unlocked: (g) => gymDaysCount(g) >= 5, reqLabel: "Completa 5 días de gym" },
-  { id: "casino", kind: "npc", npc: null, label: "Casino", icon: "🎰", x: 51.03, y: 43.99,
+  { id: "casino", kind: "npc", npc: "elisa_gala", label: "Casino", icon: "🎰", x: 51.03, y: 43.99,
     pts: "220.6 343.57 206.85 417.61 281.87 429.86 294.89 358.89 220.6 343.57",
     unlocked: (g) => habitDaysCount(g) >= 20, reqLabel: "Registra hábitos 20 días" },
   { id: "enfermeria", kind: "npc", npc: null, label: "Enfermería", icon: "🏥", x: 86.65, y: 22.97,
     pts: "402.89 159.68 353.11 256.96 460.34 286.08 460.34 197.98 402.89 159.68",
     unlocked: (g) => proteinGoalHits(g) >= 10, reqLabel: "Llega a tu objetivo de proteína 10 veces" },
-  { id: "playa", kind: "npc", npc: ["elisa_playa", "milly_playa", "lopez_playa"], label: "Playa", icon: "🏖️", x: 12.16, y: 49.44,
+  { id: "playa", kind: "npc", npc: ["elisa_playa", "milly_playa", "lopez_playa", "karla_playa"], label: "Playa", icon: "🏖️", x: 12.16, y: 49.44,
     pts: "22.21 382.57 22.21 562.57 125.62 399.43 99.57 382.57 22.21 382.57",
     unlocked: (g) => mealsLoggedCount(g) >= 100, reqLabel: "Registra 100 comidas" },
-  { id: "atico", kind: "npc", npc: null, label: "Ático de Lujo", icon: "🌇", x: 78.27, y: 63.06,
+  { id: "atico", kind: "npc", npc: "elisa_gala", label: "Ático de Lujo", icon: "🌇", x: 78.27, y: 63.06,
     pts: "353.11 469.13 347.74 507.48 294.89 602.97 445.02 666.29 460.34 464.53 353.11 469.13",
     unlocked: (g) => calcOVR(g.player.stats) >= 80, reqLabel: "Alcanza 80 de media" },
-  { id: "restaurante", kind: "npc", npc: ["igor", "elisa_casual"], label: "Restaurante", icon: "🍽️", x: 63.88, y: 81.68,
+  { id: "restaurante", kind: "npc", npc: ["igor", "elisa_casual", "elisa_gala"], label: "Restaurante", icon: "🍽️", x: 63.88, y: 81.68,
     pts: "284.94 620.02 223.66 727.26 294.89 776.28 377.62 688.96 335.49 662.91 344.68 647.24 284.94 620.02",
     unlocked: (g) => kcalGoalHits(g) >= 5, reqLabel: "Llega a tu objetivo de calorías 5 veces", metFlag: "metIgor", intro: IGOR_INTRO_BEATS },
 ];
@@ -1752,7 +1828,7 @@ const ITEMS = {
   amuleto_suerte: { name: "Amuleto de la Suerte", icon: "🍀", kind: "consumable", stat: "random", xp: 15,
     desc: "Un premio raro de la ruleta del Casino. Nadie sabe si de verdad trae suerte, pero por probar..." },
   perfume_lujo: { name: "Perfume de Lujo", icon: "🧴", kind: "gift", giveTo: "lisa",
-    desc: "Un frasco carísimo que Milly guardaba 'para una ocasión especial'. Le pega mucho a Lisa." },
+    desc: "Un frasco carísimo que Milly guardaba 'para una ocasión especial'. Le pega mucho a Karla." },
 };
 /* dar un objeto a su destinatario: reacción propia del personaje + el objeto se gasta */
 const ITEM_GIVE_REACTIONS = {
@@ -1762,7 +1838,7 @@ const ITEM_GIVE_REACTIONS = {
 /* --- CARTAS DE PERSONAJE · galería sin efecto de juego: retrato + bio corta.
    Se desbloquean solas al conocer a cada uno (mismos flags que ya existen). --- */
 const CARDS = [
-  { npc: "elisa", unlocked: () => true, variants: [["elisa_casual", "casual"], ["elisa_playa", "playa"]],
+  { npc: "elisa", unlocked: () => true, variants: [["elisa_casual", "casual"], ["elisa_playa", "playa"], ["elisa_gala", "gala"]],
     bio: "Mánager y entrenadora. Dura en el despacho, blanda cuando cree que nadie mira. Siempre tiene un plan, aunque no siempre lo comparta." },
   { npc: "yuna", unlocked: (g) => !!g.yunaMet,
     bio: "Superfan del Barça con fama de tsundere. Sabe tus estadísticas mejor que tú, aunque jure que 'solo pasaba por aquí'." },
@@ -1770,7 +1846,8 @@ const CARDS = [
     bio: "Capitán del vestuario. El brazalete le queda grande a cualquiera, pero a él le queda perfecto." },
   { npc: "milly", unlocked: (g) => !!g.metMilly, variants: [["milly_playa", "playa"]],
     bio: "Del Kiosco. Te trae el periódico en persona cada día, con más cotilleos de los que pediste." },
-  { npc: "lisa", unlocked: (g) => !!g.metLisa, bio: "Futbolista profesional, gestiona patrocinios. Engreída de cara al público, exigente de puertas para adentro." },
+  { npc: "lisa", unlocked: (g) => !!g.metLisa, variants: [["karla_casual", "casual"], ["karla_playa", "playa"]],
+    bio: "Futbolista profesional, gestiona patrocinios. Engreída de cara al público, exigente de puertas para adentro." },
   { npc: "igor", unlocked: (g) => !!g.metIgor, bio: "Chef estrella del Restaurante. Trata la nutrición como táctica de fútbol, con datos curiosos siempre a mano." },
 ];
 
@@ -4198,7 +4275,7 @@ export default function App() {
     if (entry.beats) return addScene(g, from, entry.beats.map((b) => ({ m: b.m, t: fillTpl(b.t, ctx) })), { replies: entry.replies, ...extra });
     return addMsg(g, from, fillTpl(entry.t, ctx), { mood: entry.m, replies: entry.replies, ...extra });
   };
-  /* comprueba si alguna zona de la ciudad se acaba de desbloquear (Lisa)
+  /* comprueba si alguna zona de la ciudad se acaba de desbloquear (Karla)
      y, si es la primera vez, encola su escena de presentación. Se llama tras cualquier
      acción que pueda mover el requisito: media, goles de carrera o ascenso de categoría. */
   const checkZoneUnlocks = (g) => {
@@ -4422,21 +4499,32 @@ export default function App() {
       if (Math.random() < 0.6) {
         const candidates = [["López", LOPEZ_POOL], ["Elisa", ELISA_POOL]];
         /* Elisa "de vacaciones" en la Metrópolis: solo puede estar en un sitio a la vez
-           (Parque/Restaurante O Playa, nunca las dos), así que si ya tiene una aparición
-           casual pendiente de leer bajo cualquiera de los dos npc, no se le añade otra hoy */
-        const elisaMetroPending = (out.npcQueue || []).some((e) => e.npc === "elisa_casual" || e.npc === "elisa_playa");
+           (Parque/Restaurante, Playa o Ático/Casino/Restaurante de gala, nunca dos a la
+           vez), así que si ya tiene una aparición casual pendiente de leer bajo cualquiera
+           de sus tres npc, no se le añade otra hoy */
+        const elisaMetroPending = (out.npcQueue || []).some((e) => e.npc === "elisa_casual" || e.npc === "elisa_playa" || e.npc === "elisa_gala");
         if (!elisaMetroPending) {
-          if (Math.random() < 0.5) candidates.push(["Elisa Casual", ELISA_CASUAL_POOL]);
-          else candidates.push(["Elisa Playa", ELISA_PLAYA_POOL]);
+          const r = Math.random();
+          if (r < 1 / 3) candidates.push(["Elisa Casual", ELISA_CASUAL_POOL]);
+          else if (r < 2 / 3) candidates.push(["Elisa Playa", ELISA_PLAYA_POOL]);
+          else candidates.push(["Elisa Gala", ELISA_GALA_POOL]);
         }
         if (out.yunaMet) candidates.push(["Yuna", YUNA_POOL]);
-        if (out.metLisa) candidates.push(["Lisa", LISA_POOL]);
+        if (out.metLisa) candidates.push(["Karla", KARLA_POOL]);
         if (out.metIgor) candidates.push(["Igor", IGOR_POOL]);
-        /* Milly y López "fuera de servicio" en la Playa: a diferencia de Elisa, cada uno
-           solo tiene esa única variante (no comparten sitio con otra suya), así que no
+        /* Milly y López "fuera de servicio" en la Playa: a diferencia de Elisa y Karla, cada
+           uno solo tiene esa única variante (no comparten sitio con otra suya), así que no
            necesitan la comprobación de exclusividad, solo estar ya conocidos */
         if (out.metMilly) candidates.push(["Milly Playa", MILLY_PLAYA_POOL]);
         candidates.push(["López Playa", LOPEZ_PLAYA_POOL]);
+        /* Karla "fuera de servicio": igual que Elisa, Parque O Playa, nunca las dos a la vez */
+        if (out.metLisa) {
+          const karlaMetroPending = (out.npcQueue || []).some((e) => e.npc === "karla_casual" || e.npc === "karla_playa");
+          if (!karlaMetroPending) {
+            if (Math.random() < 0.5) candidates.push(["Karla Casual", KARLA_CASUAL_POOL]);
+            else candidates.push(["Karla Playa", KARLA_PLAYA_POOL]);
+          }
+        }
         candidates.push([null, null]); /* comodín: flavor genérico de vestuario/prensa/agente */
         const [name, pool] = candidates[Math.floor(Math.random() * candidates.length)];
         if (!name) {

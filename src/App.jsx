@@ -2985,6 +2985,53 @@ function QuestPanel({ game, onClose, questsRegistry }) {
     </div>);
 }
 
+/* Inventario: burbuja propia junto a Misiones y Viajar. Objetos consumibles (Usar → XP
+   a una stat) y de regalo (Regalar a su personaje → reacción propia + se gasta). */
+function InventoryPanel({ game, onClose, onUseItem, onGiveItem }) {
+  const [openItem, setOpenItem] = useState(null);
+  const inv = Object.entries(game.inventory || {}).filter(([, qty]) => qty > 0);
+  return (
+    <div className="overlay" style={{ background: "rgba(5,7,13,.75)", zIndex: 65, alignItems: "flex-end", padding: 0 }} onClick={onClose}>
+      <div className="sheet" style={{ maxHeight: "78vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+        <div className="ptitle" style={{ fontSize: 16, marginBottom: 14 }}>🎒 INVENTARIO</div>
+        {inv.length === 0 && (
+          <div className="empty"><span className="em-ico">🎒</span>
+            Todavía no tienes ningún objeto.<br />Los consigues completando misiones, en regalos sueltos de la ciudad o en la tienda del Casino.</div>)}
+        {inv.map(([id, qty]) => {
+          const it = ITEMS[id];
+          if (!it) return null;
+          const isOpen = openItem === id;
+          const recipient = it.kind === "gift" ? CARDS.find((c) => c.npc === it.giveTo) : null;
+          const canGive = recipient && recipient.unlocked(game);
+          return (
+            <div key={id} className="panel" style={{ padding: 0, overflow: "hidden" }}>
+              <button style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "12px 14px",
+                background: "none", border: "none", cursor: "pointer", textAlign: "left" }}
+                onClick={() => setOpenItem(isOpen ? null : id)}>
+                <span style={{ fontSize: 22 }}>{it.icon}</span>
+                <span style={{ flex: 1, fontSize: 13, color: "#26291D" }}>{it.name}</span>
+                <span style={{ fontSize: 12, color: "#6F7563", fontFamily: "'Oswald',sans-serif" }}>×{qty}</span>
+              </button>
+              {isOpen && (
+                <div style={{ padding: "0 14px 14px" }}>
+                  <div style={{ fontSize: 12, color: "#4A4E3F", lineHeight: 1.5, marginBottom: 10 }}>{it.desc}</div>
+                  {it.kind === "consumable" && (
+                    <button className="btn-gold sm" style={{ width: "100%" }} onClick={() => { onUseItem(id); setOpenItem(null); }}>
+                      Usar · +{it.xp} XP {it.stat === "random" ? "(stat al azar)" : it.stat}</button>)}
+                  {it.kind === "gift" && (
+                    canGive ? (
+                      <button className="btn-gold sm" style={{ width: "100%" }} onClick={() => { onGiveItem(id); setOpenItem(null); }}>
+                        Regalar a {NPCS[it.giveTo].name}</button>
+                    ) : (
+                      <div style={{ fontSize: 11.5, color: "#9a9e8e" }}>Todavía no conoces a {NPCS[it.giveTo].name} para dárselo.</div>
+                    ))}
+                </div>)}
+            </div>);
+        })}
+      </div>
+    </div>);
+}
+
 /* ---------- LA CIUDAD · mapa de zonas con desbloqueo progresivo ---------- */
 function CityMap({ game, onVisit, zones, vb, svgSrc, mapLabel }) {
   const npcQueue = game.npcQueue || [];
@@ -3991,16 +4038,44 @@ function BackupPanel({ getBackup, onRestore }) {
   );
 }
 
+/* Detalle de una carta de personaje: bio + todas sus poses. Las que ya has visto en
+   conversación se ven de verdad; las que no, salen en silueta (misma imagen, en negro),
+   para dar pistas de que existen sin desvelarlas del todo. */
+function CardDetail({ npc, game, onClose }) {
+  const def = NPCS[npc];
+  const card = CARDS.find((c) => c.npc === npc);
+  const seen = (game.seenMoods || {})[npc] || {};
+  const moods = Object.keys(def.arts || {});
+  return (
+    <div className="overlay" style={{ background: "rgba(5,7,13,.75)", zIndex: 65, alignItems: "flex-end", padding: 0 }} onClick={onClose}>
+      <div className="sheet" style={{ maxHeight: "80vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+        <div className="ptitle" style={{ fontSize: 16, marginBottom: 4 }}>{def.name}</div>
+        <div style={{ fontSize: 12.5, color: "#6F7563", marginBottom: 14, lineHeight: 1.5 }}>{card ? card.bio : ""}</div>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
+          {moods.map((mood) => {
+            const isSeen = !!seen[mood];
+            return (
+              <div key={mood} style={{ textAlign: "center" }}>
+                <img src={def.arts[mood]} alt={isSeen ? mood : "silueta"} style={{ width: 100, height: 140, objectFit: "cover",
+                  borderRadius: 12, border: "1.5px solid #16190F", filter: isSeen ? "none" : "brightness(0)" }} />
+                <div style={{ fontSize: 10.5, color: "#9a9e8e", marginTop: 4, textTransform: "uppercase" }}>
+                  {isSeen ? mood : "???"}</div>
+              </div>);
+          })}
+        </div>
+      </div>
+    </div>);
+}
+
 /* ---------- PERFIL / OBJETIVOS ---------- */
 function ProfileTab({ game, photo, onWeight, onPhoto, onRemovePhoto, crest, onCrest, onRemoveCrest,
-  crestScale, onCrestScale, onGoals, getBackup, onRestore, haptics, onHaptics, voices, onVoices,
-  onUseItem, onGiveItem }) {
+  crestScale, onCrestScale, onGoals, getBackup, onRestore, haptics, onHaptics, voices, onVoices }) {
   const p = game.player;
   const [kg, setKg] = useState("");
   const [edit, setEdit] = useState(false);
   const [newHabit, setNewHabit] = useState("");
   const [g, setG] = useState({ ...p.goals, gymDays: [...p.goals.gymDays] });
-  const [openItem, setOpenItem] = useState(null); /* id del objeto abierto en el inventario */
+  const [openCard, setOpenCard] = useState(null); /* npc de la carta abierta en la galería */
   /* redimensiona una imagen subida y devuelve un dataURL, para foto o escudo.
      forcePng: el escudo se guarda siempre en PNG para conservar la transparencia (el JPEG la rellenaría de blanco) */
   const processImg = (e, cb, max = 420, forcePng = false) => {
@@ -4151,53 +4226,15 @@ function ProfileTab({ game, photo, onWeight, onPhoto, onRemovePhoto, crest, onCr
         })()}
       </div>
       <div className="panel">
-        <div className="ptitle">🎒 Inventario</div>
-        {(() => {
-          const inv = Object.entries(game.inventory || {}).filter(([, qty]) => qty > 0);
-          if (!inv.length) return (
-            <div className="empty"><span className="em-ico">🎒</span>
-              Todavía no tienes ningún objeto.<br />Los consigues completando misiones, en regalos sueltos de la ciudad o en la tienda del Casino.</div>);
-          return inv.map(([id, qty]) => {
-            const it = ITEMS[id];
-            if (!it) return null;
-            const isOpen = openItem === id;
-            const recipient = it.kind === "gift" ? CARDS.find((c) => c.npc === it.giveTo) : null;
-            const canGive = recipient && recipient.unlocked(game);
-            return (
-              <div key={id} style={{ marginBottom: 8, background: "#F0EFE5", borderRadius: 12, overflow: "hidden" }}>
-                <button style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "10px 12px",
-                  background: "none", border: "none", cursor: "pointer", textAlign: "left" }}
-                  onClick={() => setOpenItem(isOpen ? null : id)}>
-                  <span style={{ fontSize: 22 }}>{it.icon}</span>
-                  <span style={{ flex: 1, fontSize: 13, color: "#26291D" }}>{it.name}</span>
-                  <span style={{ fontSize: 12, color: "#6F7563", fontFamily: "'Oswald',sans-serif" }}>×{qty}</span>
-                </button>
-                {isOpen && (
-                  <div style={{ padding: "0 12px 12px" }}>
-                    <div style={{ fontSize: 12, color: "#4A4E3F", lineHeight: 1.5, marginBottom: 10 }}>{it.desc}</div>
-                    {it.kind === "consumable" && (
-                      <button className="btn-gold sm" style={{ width: "100%" }} onClick={() => { onUseItem(id); setOpenItem(null); }}>
-                        Usar · +{it.xp} XP {it.stat === "random" ? "(stat al azar)" : it.stat}</button>)}
-                    {it.kind === "gift" && (
-                      canGive ? (
-                        <button className="btn-gold sm" style={{ width: "100%" }} onClick={() => { onGiveItem(id); setOpenItem(null); }}>
-                          Regalar a {NPCS[it.giveTo].name}</button>
-                      ) : (
-                        <div style={{ fontSize: 11.5, color: "#9a9e8e" }}>Todavía no conoces a {NPCS[it.giveTo].name} para dárselo.</div>
-                      ))}
-                  </div>)}
-              </div>);
-          });
-        })()}
-      </div>
-      <div className="panel">
         <div className="ptitle">🃏 Cartas de personaje</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
           {CARDS.map((c) => {
             const npc = NPCS[c.npc];
             const on = c.unlocked(game);
             return (
-              <div key={c.npc} style={{ background: "#F0EFE5", borderRadius: 12, padding: "10px 6px", textAlign: "center" }}>
+              <button key={c.npc} onClick={() => on && setOpenCard(c.npc)} disabled={!on}
+                style={{ background: "#F0EFE5", borderRadius: 12, padding: "10px 6px", textAlign: "center",
+                  border: "none", cursor: on ? "pointer" : "default" }}>
                 {on ? (
                   <img src={npc.icon} alt={npc.name} style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover",
                     border: "1.5px solid #16190F" }} />
@@ -4208,10 +4245,11 @@ function ProfileTab({ game, photo, onWeight, onPhoto, onRemovePhoto, crest, onCr
                 <div style={{ fontSize: 11, fontFamily: "'Oswald',sans-serif", marginTop: 6, color: on ? "#26291D" : "#9a9e8e" }}>
                   {on ? npc.name : "???"}</div>
                 {on && <div style={{ fontSize: 9.5, color: "#6F7563", lineHeight: 1.35, marginTop: 3 }}>{c.bio}</div>}
-              </div>);
+              </button>);
           })}
         </div>
       </div>
+      {openCard && <CardDetail npc={openCard} game={game} onClose={() => setOpenCard(null)} />}
       <div className="panel">
         <div className="ptitle">⚙️ Ajustes</div>
         <button className={"chip big" + (haptics ? " on" : "")} onClick={() => onHaptics(!haptics)}>
@@ -4258,13 +4296,14 @@ export default function App() {
   const [visitedZone, setVisitedZone] = useState(null); // qué zona de la Ciudad estás visitando ahora mismo
   const [showPaper, setShowPaper] = useState(false); // periódico abierto como ventana modal desde el Kiosco
   const [showQuests, setShowQuests] = useState(false); // registro de misiones
+  const [showInventory, setShowInventory] = useState(false); // objetos coleccionables
   const [activeMap, setActiveMap] = useState("ciudad"); // "ciudad" o "metropoli": qué mapa se ve en la pestaña Ciudad
   const saveTimer = useRef();
 
   const pushToast = (t) => { setToast(t); setTimeout(() => setToast(null), 3200); };
   /* como el periódico: al salir de la pestaña Ciudad, cualquier visita/periódico/registro abierto se cierra,
      y se vuelve al mapa de La Ciudad para no dejarte "perdido" en la Metrópolis la próxima vez que entres */
-  useEffect(() => { if (tab !== "chat") { setVisitedZone(null); setShowPaper(false); setShowQuests(false); setActiveMap("ciudad"); } }, [tab]);
+  useEffect(() => { if (tab !== "chat") { setVisitedZone(null); setShowPaper(false); setShowQuests(false); setShowInventory(false); setActiveMap("ciudad"); } }, [tab]);
   /* quién tiene algo pendiente en la zona que estás visitando ahora: se recalcula solo
      en cada render, así que en cuanto se vacía su cola la pantalla pasa sola al cartel
      de "no hay nadie" sin necesidad de un efecto aparte que pueda desincronizarse.
@@ -4382,7 +4421,14 @@ export default function App() {
   /* cola de diálogos: avanzar, elegir respuesta, resolver oferta */
   const advanceNpc = (id) => setGame((g) => {
     const e = (g.npcQueue || []).find((x) => x.id === id);
-    const out = applyOnRead(g, e && e.applyOnRead);
+    let out = applyOnRead(g, e && e.applyOnRead);
+    /* marca esa pose como "ya vista" para la carta de personaje, en cuanto el jugador
+       de verdad lee el mensaje (no al encolarlo, para que la silueta sea sincera) */
+    if (e && e.npc && e.mood) {
+      const seen = { ...(out.seenMoods || {}) };
+      seen[e.npc] = { ...(seen[e.npc] || {}), [e.mood]: true };
+      out = { ...out, seenMoods: seen };
+    }
     return { ...out, npcQueue: (out.npcQueue || []).filter((x) => x.id !== id) };
   });
   const answerChoice = (id, idx) => setGame((g) => {
@@ -5051,7 +5097,7 @@ export default function App() {
             {tab === "me" && <ProfileTab game={game} photo={photo} onWeight={addWeight} onPhoto={savePhoto} onRemovePhoto={removePhoto}
               crest={crest} onCrest={saveCrest} onRemoveCrest={removeCrest} crestScale={crestScale} onCrestScale={saveCrestScale}
               onGoals={setGoals} getBackup={getBackup} onRestore={restoreBackup} haptics={haptics} onHaptics={setHapticsPref}
-              voices={voicesOn} onVoices={setVoicesPref} onUseItem={useItem} onGiveItem={giveItemTo} />}
+              voices={voicesOn} onVoices={setVoicesPref} />}
           </div>
           <nav className="tabbar">
             {[["home", "🏠", "Inicio"], ["log", "📝", "Registro"], ["gym", "🏋️", "Gym"], ["league", "🏆", "Liga"], ["chat", "🏙️", "Ciudad"], ["me", "👤", "Yo"]].map(([id, ic, lb]) => (
@@ -5082,6 +5128,7 @@ export default function App() {
       {tab === "chat" && !visitedZone && !showPaper && (
         <div className="quest-fab-wrap">
           <button className="quest-fab" onClick={() => setShowQuests(true)} aria-label="Misiones">📜</button>
+          <button className="quest-fab" onClick={() => setShowInventory(true)} aria-label="Inventario">🎒</button>
           <button className="quest-fab" onClick={() => setActiveMap(activeMap === "ciudad" ? "metropoli" : "ciudad")}
             aria-label={activeMap === "ciudad" ? "Viajar a la Metrópolis" : "Volver a La Ciudad"}>
             {activeMap === "ciudad" ? "🌆" : "🏙️"}</button>
@@ -5089,6 +5136,8 @@ export default function App() {
       {tab === "chat" && showQuests && (
         <QuestPanel game={game} onClose={() => setShowQuests(false)}
           questsRegistry={activeMap === "ciudad" ? QUESTS : METRO_QUESTS} />)}
+      {tab === "chat" && showInventory && (
+        <InventoryPanel game={game} onClose={() => setShowInventory(false)} onUseItem={useItem} onGiveItem={giveItemTo} />)}
       {game.pendingSummary && !liveMatch && (
         <div className="overlay" style={{ background: "radial-gradient(ellipse at 50% 0%, #0E3320, #05070d 75%)", overflowY: "auto" }}>
           <div className="pop-in" style={{ width: "100%", maxWidth: 340, padding: "30px 0" }}>

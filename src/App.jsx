@@ -963,9 +963,21 @@ const NPCS = {
       suave: "/images/elisa/elisa_suave.webp" }, def: "idle" },
   /* Karla: futbolista pro, gestiona patrocinios. Su "angry" es en realidad ENGREÍDA/chulería,
      no enfado real. "casual"/"playa" son sus dos facetas fuera de servicio. */
+  /* set de moods reconstruido para KARLA_STORY (los archivos idle/happy/angry/casual
+     antiguos ya no existen, sustituidos por este set más rico organizado por outfit):
+     gala_* (Casino/eventos VIP), negociadora/profesional/molesta/orgullosa (profesional,
+     Patrocinadores/Prensa), personal_orgullosa/preocupada/vulnerable (Ático/Casa, íntimo),
+     playa (outfit único). No hay "idle" ni "happy" sueltos: def cae en "profesional". Dos
+     sustituciones documentadas donde el guion pide un mood sin asset propio fuera de gala:
+     [ego] en zona no-gala → "negociadora" (asertiva/confiada, más cercano a la chulería
+     de ego sin mezclar el outfit de gala); [happy]/[serio] sueltos → "profesional". */
   lisa: { name: "Karla", color: "#9C6BD6", voice: "/audio/vozchica02.mp3", icon: "/images/karla/karla_icon.webp",
-    arts: { idle: "/images/karla/karla_idle.webp", happy: "/images/karla/karla_happy.webp", angry: "/images/karla/karla_ego.webp",
-      casual: "/images/karla/karla_casual.webp", playa: "/images/karla/karla_playa.webp" }, def: "idle" },
+    arts: { gala_idle: "/images/karla/karla_gala_idle.webp", gala_ego: "/images/karla/karla_gala_ego.webp",
+      gala_happy: "/images/karla/karla_gala_happy.webp", gala_vulnerable: "/images/karla/karla_gala_vulnerable.webp",
+      negociadora: "/images/karla/karla_negociadora.webp", profesional: "/images/karla/karla_profesional.webp",
+      molesta: "/images/karla/karla_molesta.webp", orgullosa: "/images/karla/karla_orgullosa.webp",
+      personal_orgullosa: "/images/karla/karla_personal_orgullosa.webp", preocupada: "/images/karla/karla_preocupada.webp",
+      vulnerable: "/images/karla/karla_vulnerable.webp", playa: "/images/karla/karla_playa.webp" }, def: "profesional" },
   /* Milly: la del Kiosco, te trae el periódico en persona cada día; también hace de periodista
      en la Sala de Prensa. Alegre, cotilla, algo dramática. Sin angry.
      "periodico" es su pose sujetando el periódico, para el instante exacto de la entrega.
@@ -1146,16 +1158,16 @@ const AMBIENT_LOPEZ = [
     { m: "happy", t: "Ya ni me molesto en corregirle, directamente respondo a los dos nombres como si fuera normal 😂" }] },
 ];
 
-const KARLA_INTRO_BEATS = [
-  { m: "idle", t: "Así que tú eres el nombre nuevo del que hablan por aquí. Karla. Sí, esa Karla, la de la liga femenina, por si no lo tenías claro." },
-  { m: "angry", t: "No te voy a mentir, he visto partidos peores tuyos que buenos. Pero algo tienes. Voy a mover unos contactos por ti. No te acostumbres, no lo hago con cualquiera." },
-];
-/* AMBIENTE PLACEHOLDER — sustituir cuando se escriba la historia real de Karla */
+/* la escena de primer encuentro de Karla ya vive en KARLA_STORY (su prólogo, "Tu primera
+   marca"): esto es solo relleno genérico entre capítulos de su historia real, sin
+   referencias a objetos/momentos concretos de la campaña (contrato, tarjeta VIP, pulsera). */
+/* moods ajustados al set nuevo de KARLA_STORY (ver NPCS.lisa.arts): ya no existen assets
+   sueltos "idle"/"angry" para ella, así que el relleno usa negociadora/profesional. */
 const AMBIENT_KARLA = [
-  { m: "angry", t: "¿Sabes cuántos patrocinadores me llaman a mí directamente sin que yo mueva un dedo? Bastantes. A ti todavía no. Pero para eso estoy yo aquí, haciendo de niñera de tu carrera." },
+  { m: "negociadora", t: "¿Sabes cuántos patrocinadores me llaman a mí directamente sin que yo mueva un dedo? Bastantes. A ti todavía no. Pero para eso estoy yo aquí, haciendo de niñera de tu carrera." },
   { beats: [
-    { m: "idle", t: "En mis tiempos de jugadora en activo tenía una rutina previa al partido que jamás le he contado a nadie de prensa." },
-    { m: "angry", t: "A ti tampoco te la voy a contar. Solo quería que supieras que existía. Un poco de misterio no le viene mal a nadie." }] },
+    { m: "profesional", t: "En mis tiempos de jugadora en activo tenía una rutina previa al partido que jamás le he contado a nadie de prensa." },
+    { m: "negociadora", t: "A ti tampoco te la voy a contar. Solo quería que supieras que existía. Un poco de misterio no le viene mal a nadie." }] },
 ];
 
 const MILLY_INTRO_BEATS = [
@@ -1256,7 +1268,7 @@ const ZONES = [
   /* npc: "yuna" — casa sigue siendo la pantalla de trofeos (HouseRoom) por defecto, pero
      ahora también admite una escena de personaje encima (ver ZoneScreen: isHome no excluye
      ya pendingNpc), para las escenas de intimidad emocional de su campaña en Casa del jugador */
-  { id: "casa", kind: "home", npc: ["yuna", "lopez", "igor"], label: "Tu Casa", icon: "🏠", x: 18.87, y: 44.54,
+  { id: "casa", kind: "home", npc: ["yuna", "lopez", "igor", "lisa"], label: "Tu Casa", icon: "🏠", x: 18.87, y: 44.54,
     pts: "91.1 348.2 163.7 373.2 152.4 429.4 76.8 405.4 91.1 348.2",
     unlocked: (g) => isZoneUnlocked(g, "casa") },
   /* varios personajes comparten esta zona de calle: la burbuja muestra a quien tenga
@@ -1267,12 +1279,15 @@ const ZONES = [
   { id: "car", kind: "npc", npc: ["lopez", "lisa", "elisa", "igor"], label: "Centro de Alto Rendimiento", icon: "🏋️", x: 61.35, y: 17.42,
     pts: "230 164.5 230 222 387.9 223.7 383.1 153.5 230 164.5",
     unlocked: (g) => isZoneUnlocked(g, "car") },
-  { id: "prensa", kind: "npc", npc: "milly", label: "Sala de Prensa", icon: "🎙️", x: 23.63, y: 31.90,
+  { id: "prensa", kind: "npc", npc: ["milly", "lisa"], label: "Sala de Prensa", icon: "🎙️", x: 23.63, y: 31.90,
     pts: "131.9 245 187.7 293.5 168.3 358.9 91.1 337.4 98.3 259.3 131.9 245",
     unlocked: (g) => isZoneUnlocked(g, "prensa") },
+  /* la presentación de Karla ya no depende de metFlag/intro (eso duplicaba el prólogo real
+     de KARLA_STORY en cuanto se desbloqueara la zona, igual que le pasaba a Igor/restaurante
+     y le pasó de verdad a Milly antes de detectarlo): su propia historia ya se encarga */
   { id: "patro", kind: "npc", npc: ["lisa", "elisa", "milly"], label: "Zona de Patrocinadores", icon: "🏙️", x: 31.70, y: 81.56,
     pts: "131.2 570.8 86.3 660.7 163.3 715.5 190.8 690.4 214.2 702.1 245.3 669.4 185.9 599.7 131.2 570.8",
-    unlocked: (g) => isZoneUnlocked(g, "patro"), metFlag: "metLisa", intro: KARLA_INTRO_BEATS },
+    unlocked: (g) => isZoneUnlocked(g, "patro") },
   { id: "cantera", kind: "npc", npc: "lopez", label: "Cantera", icon: "🎓", x: 86.33, y: 44.94,
     pts: "377.1 345.6 437.4 343.6 426.6 442.1 363.8 442.1 377.1 345.6",
     unlocked: (g) => isZoneUnlocked(g, "cantera") },
@@ -1320,7 +1335,7 @@ const METRO_ZONES = [
   { id: "parque", kind: "npc", npc: ["elisa", "lisa", "milly", "yuna", "lopez"], label: "Parque", icon: "🌳", x: 35.20, y: 18.23,
     pts: "199.15 80.02 81.19 286.08 105.7 333.35 259.66 93.01 199.15 80.02",
     unlocked: (g) => isZoneUnlocked(g, "parque") },
-  { id: "casino", kind: "npc", npc: "elisa", label: "Casino", icon: "🎰", x: 51.03, y: 43.99,
+  { id: "casino", kind: "npc", npc: ["elisa", "lisa"], label: "Casino", icon: "🎰", x: 51.03, y: 43.99,
     pts: "220.6 343.57 206.85 417.61 281.87 429.86 294.89 358.89 220.6 343.57",
     unlocked: (g) => isZoneUnlocked(g, "casino") },
   { id: "enfermeria", kind: "npc", npc: ["elisa", "milly"], label: "Enfermería", icon: "🏥", x: 86.65, y: 22.97,
@@ -1329,7 +1344,7 @@ const METRO_ZONES = [
   { id: "playa", kind: "npc", npc: ["elisa", "milly", "lopez", "lisa", "yuna", "igor"], label: "Playa", icon: "🏖️", x: 12.16, y: 49.44,
     pts: "22.21 382.57 22.21 562.57 125.62 399.43 99.57 382.57 22.21 382.57",
     unlocked: (g) => isZoneUnlocked(g, "playa") },
-  { id: "atico", kind: "npc", npc: "elisa", label: "Ático de Lujo", icon: "🌇", x: 78.27, y: 63.06,
+  { id: "atico", kind: "npc", npc: ["elisa", "lisa"], label: "Ático de Lujo", icon: "🌇", x: 78.27, y: 63.06,
     pts: "353.11 469.13 347.74 507.48 294.89 602.97 445.02 666.29 460.34 464.53 353.11 469.13",
     unlocked: (g) => isZoneUnlocked(g, "atico") },
   /* la presentación de Igor ya no depende de metFlag/intro (eso duplicaba el prólogo real
@@ -2712,14 +2727,283 @@ const IGOR_STORY = {
   }],
 };
 
+/* ============================================================
+   KARLA · sexta campaña completa. Prólogo + 15 capítulos + final +
+   epílogo, sin cambios de motor: reutiliza tal cual la arquitectura de
+   Elisa/Milly/Yuna/López/Igor. Conocida desde el minuto uno (trigger:
+   ()=>true) — su prólogo transcurre en Zona de Patrocinadores, que se
+   autodesbloquea al encolarse esa misma escena.
+
+   Capítulo 8 ("Elegir qué quieres ser") es la segunda etapa de historia
+   con réplicas (tras el capítulo 5 de Yuna): dos opciones que registran
+   flags DISTINTOS (karlaChoiceStatus / karlaChoiceSelf) en vez de
+   converger en uno compartido, porque aquí el documento sí quiere saber
+   cuál se eligió — pero el objetivo de avance del capítulo (el hito de
+   carrera) no depende de cuál sea, tal como pide "ambas convergen".
+
+   Set de moods reconstruido en NPCS.lisa.arts (ver comentario ahí): dos
+   sustituciones documentadas por moods sin asset propio fuera del
+   outfit de gala — [ego] en zona no-gala → "negociadora"; [happy]/
+   [serio] sueltos → "profesional". */
+const KARLA_STORY = {
+  npc: "lisa",
+  chapters: [{
+    id: "cap1",
+    title: "La historia de Karla",
+    trigger: () => true,
+    stages: [
+      /* PRÓLOGO — Tu primera marca */
+      { title: "Tu primera marca", zone: "patro",
+        objective: "Completa un partido o alcanza el primer hito de OVR.",
+        intro: [
+          { m: "negociadora", t: "Así que tú eres el nuevo talento del que todo el mundo está hablando." },
+          { m: "negociadora", t: "Bien. Antes de que digas nada: no, no voy a pedirte que sonrías." },
+          { m: "profesional", t: "Voy a explicarte cómo funciona esto." },
+          { m: "negociadora", t: "Puedes marcar veinte goles y seguir siendo invisible si nadie sabe quién eres." },
+          { m: "negociadora", t: "Yo voy a conseguir que eso no pase." },
+        ],
+        setFlags: ["karlaMet", "metLisa", "karlaStoryStarted"],
+        snap: (g) => ({ matchCount: (g.matchHistory || []).length, ovr: calcOVR(g.player.stats) }),
+        check: (g, snap) => (g.matchHistory || []).length > snap.matchCount || calcOVR(g.player.stats) > snap.ovr },
+      /* CAPÍTULO 1 — El precio de tu nombre */
+      { title: "El precio de tu nombre", zone: "patro",
+        objective: "Alcanza el siguiente hito de OVR o una mejora relevante.",
+        intro: [
+          { m: "negociadora", t: "Este contrato no te hace mejor jugador." },
+          { m: "profesional", t: "Pero puede cambiar lo que ocurre alrededor de tu carrera." },
+          { m: "negociadora", t: "Tu nombre empieza a valer dinero cuando la gente quiere asociarlo con algo." },
+          { m: "orgullosa", t: "Y ahora mismo, eso es exactamente lo que quiero construir contigo." },
+        ],
+        setFlags: ["karlaSponsor"],
+        snap: (g) => ({ tierId: g.tier.id, ovr: calcOVR(g.player.stats) }),
+        check: (g, snap) => {
+          const next = TIERS.find((t) => t.id === snap.tierId + 1);
+          return (next && calcOVR(g.player.stats) >= next.minOvr) || g.tier.id !== snap.tierId;
+        } },
+      /* CAPÍTULO 2 — Primera sesión */
+      { title: "Primera sesión", zone: "prensa",
+        objective: "Completa un partido con buena valoración.",
+        intro: [
+          { m: "profesional", t: "Primera regla: no respondas a la pregunta que te hacen." },
+          { m: "negociadora", t: "Responde a la pregunta que te interesa." },
+          { m: "profesional", t: "No mientas. Simplemente decide qué parte de ti quieres enseñar." },
+          { m: "orgullosa", t: "La prensa no necesita conocerte. Necesita una historia." },
+        ],
+        setFlags: ["karlaPress"],
+        snap: (g) => ({ matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => (m.rating || 0) >= 7) },
+      /* CAPÍTULO 3 — La fotografía */
+      { title: "La fotografía", zone: "patro",
+        objective: "Alcanza un nuevo máximo de OVR o un hito de goles/asistencias.",
+        intro: [
+          { m: "negociadora", t: "Mira a cámara." },
+          { m: "profesional", t: "No, así no." },
+          { m: "profesional", t: "Ahora sí." },
+          { m: "orgullosa", t: "¿Ves? Ese es el jugador que quiero que vea una marca." },
+          { m: "negociadora", t: "Y sí, yo también salgo mejor en las fotos. Es una desgracia que tendrás que aceptar." },
+        ],
+        setFlags: ["karlaFirstCampaign"],
+        snap: (g) => ({ ovr: calcOVR(g.player.stats), goals: careerGoals(g), assists: careerAssists(g) }),
+        check: (g, snap) => calcOVR(g.player.stats) > snap.ovr || careerGoals(g) > snap.goals || careerAssists(g) > snap.assists },
+      /* CAPÍTULO 4 — La tarjeta VIP */
+      { title: "La tarjeta VIP", zone: "casino",
+        objective: "Completa un partido o un hito de carrera.",
+        intro: [
+          { m: "gala_idle", t: "Bienvenido." },
+          { m: "gala_ego", t: "Aquí hay gente que puede hacer que tu carrera cambie en una noche." },
+          { m: "gala_happy", t: "Y gente que puede perder muchísimo dinero en una noche." },
+          { m: "gala_idle", t: "No confundas las dos cosas." },
+        ],
+        setFlags: ["karlaVIP", "karlaCasino"],
+        snap: (g) => ({ matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => (g.matchHistory || []).length > snap.matchCount },
+      /* CAPÍTULO 5 — El juego de parecer invencible */
+      { title: "El juego de parecer invencible", zone: "casino",
+        objective: "Completa un objetivo de carrera sin caer en forma mala.",
+        intro: [
+          { m: "gala_ego", t: "¿Sabes qué es lo más difícil de estar aquí?" },
+          { m: "gala_happy", t: "Que todo el mundo cree que estás disfrutando." },
+          { m: "gala_vulnerable", t: "Y la mayoría de las veces sí." },
+          { m: "gala_vulnerable", t: "Pero algunas noches solo quieres sentarte en algún sitio donde nadie espere nada de ti." },
+        ],
+        setFlags: ["karlaPressure"],
+        snap: (g) => ({ tierId: g.tier.id, seasonNum: g.season.num, since: todayStr() }),
+        check: (g, snap) => {
+          const milestone = g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum;
+          const noBad = !Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.closed && l.form === "caida");
+          return milestone && noBad;
+        } },
+      /* CAPÍTULO 6 — Una mala portada */
+      { title: "Una mala portada", zone: "prensa",
+        objective: "Gana tras una mala valoración o completa una racha de 3 días.",
+        intro: [
+          { m: "molesta", t: "Esto no es lo que habíamos acordado." },
+          { m: "profesional", t: "No han mentido exactamente." },
+          { m: "molesta", t: "Han elegido la versión que más les convenía." },
+          { m: "profesional", t: "Y eso es lo que tienes que aprender a controlar." },
+        ],
+        setFlags: ["karlaPublicImage"],
+        snap: (g) => ({ matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => {
+          const ms = (g.matchHistory || []).slice(snap.matchCount);
+          for (let i = 0; i < ms.length - 1; i++) if ((ms[i].rating || 10) < 6 && ms[i + 1].res === "V") return true;
+          return (g.player.streak || 0) >= 3;
+        } },
+      /* CAPÍTULO 7 — El precio de la perfección */
+      { title: "El precio de la perfección", zone: "atico",
+        objective: "Alcanza un nuevo máximo de OVR o completa una racha de 5 días.",
+        intro: [
+          { m: "preocupada", t: "¿Alguna vez te has preguntado qué pasa cuando dejas de ser interesante?" },
+          { m: "vulnerable", t: "No cuando eres malo. Cuando simplemente aparece alguien mejor." },
+          { m: "preocupada", t: "Ese día llega para todo el mundo." },
+          { m: "personal_orgullosa", t: "Por eso me esfuerzo tanto en no necesitar que nadie me diga que soy buena." },
+        ],
+        setFlags: ["karlaPrivate"],
+        snap: (g) => ({ ovr: calcOVR(g.player.stats) }),
+        check: (g, snap) => calcOVR(g.player.stats) > snap.ovr || (g.player.streak || 0) >= 5 },
+      /* CAPÍTULO 8 — Elegir qué quieres ser (única etapa con réplicas propias: cada opción
+         marca un flag distinto, pero el avance del capítulo no depende de cuál se elija) */
+      { title: "Elegir qué quieres ser", zone: "patro",
+        objective: "Completa un hito de carrera.",
+        intro: [
+          { m: "profesional", t: "Tengo dos propuestas." },
+          { m: "negociadora", t: "Una paga más." },
+          { m: "negociadora", t: "La otra encaja mejor contigo." },
+          { m: "profesional", t: "No voy a decidir por ti." },
+          { m: "orgullosa", t: "Quiero saber qué tipo de jugador quieres ser." },
+        ],
+        replies: [
+          { t: "La que paga más", m: "negociadora", r: ["Práctica. Me gusta cómo piensas."], setFlag: "karlaChoiceStatus" },
+          { t: "La que encaja mejor conmigo", m: "personal_orgullosa", r: ["Esa es la respuesta que esperaba, la verdad."], setFlag: "karlaChoiceSelf" },
+        ],
+        snap: (g) => ({ tierId: g.tier.id, seasonNum: g.season.num }),
+        check: (g, snap) => g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum },
+      /* CAPÍTULO 9 — La noche de la marca */
+      { title: "La noche de la marca", zone: "casino",
+        objective: "Consigue una victoria o un hito de temporada.",
+        intro: [
+          { m: "gala_happy", t: "Esta noche todo el mundo quiere conocerte." },
+          { m: "gala_ego", t: "Sonríe. No demasiado." },
+          { m: "gala_idle", t: "Deja que piensen que estás cómodo." },
+          { m: "gala_vulnerable", t: "Y si te agobias, búscame." },
+        ],
+        snap: (g) => ({ matchCount: (g.matchHistory || []).length, seasonNum: g.season.num }),
+        check: (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") || g.season.num !== snap.seasonNum },
+      /* CAPÍTULO 10 — Fuera del escaparate */
+      { title: "Fuera del escaparate", zone: "playa",
+        objective: "Completa un objetivo de carrera y mantén una forma positiva.",
+        intro: [
+          { m: "playa", t: "No mires así." },
+          { m: "playa", t: "Sí. También sé estar sin tacones, sin cámaras y sin gente preguntándome cuánto vale mi última campaña." },
+          { m: "playa", t: "Hoy no soy tu asesora." },
+          { m: "playa", t: "Y tú no eres mi proyecto." },
+        ],
+        setFlags: ["karlaBeach"],
+        snap: (g) => ({ tierId: g.tier.id, seasonNum: g.season.num, since: todayStr() }),
+        check: (g, snap) => {
+          const milestone = g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum;
+          const noBad = !Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.closed && l.form === "caida");
+          return milestone && noBad;
+        } },
+      /* CAPÍTULO 11 — Lo que no sale en las fotos */
+      { title: "Lo que no sale en las fotos", zone: "atico",
+        objective: "Gana un partido importante o supera un máximo de carrera.",
+        intro: [
+          { m: "vulnerable", t: "Cuando empecé, pensaba que si llegaba arriba dejaría de tener miedo." },
+          { m: "preocupada", t: "No funciona así." },
+          { m: "vulnerable", t: "Solo cambia el miedo." },
+          { m: "personal_orgullosa", t: "Pero también aprendes que puedes seguir avanzando aunque esté ahí." },
+        ],
+        setFlags: ["karlaTrust"],
+        snap: (g) => ({ matchCount: (g.matchHistory || []).length, ovr: calcOVR(g.player.stats), bestRating: g.bestRating || 0 }),
+        check: (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") ||
+          calcOVR(g.player.stats) > snap.ovr || (g.bestRating || 0) > snap.bestRating },
+      /* CAPÍTULO 12 — Tu nombre, tus reglas */
+      { title: "Tu nombre, tus reglas", zone: "prensa",
+        objective: "Completa un partido con buena valoración.",
+        intro: [
+          { m: "profesional", t: "Esta vez no te voy a preparar la respuesta." },
+          { m: "profesional", t: "Habla." },
+          { m: "orgullosa", t: "Quiero ver qué haces cuando nadie te está diciendo qué imagen tienes que vender." },
+        ],
+        snap: (g) => ({ matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => (m.rating || 0) >= 7) },
+      /* CAPÍTULO 13 — El contrato grande */
+      { title: "El contrato grande", zone: "patro",
+        objective: "Alcanza el tier/OVR del gran hito comercial.",
+        intro: [
+          { m: "negociadora", t: "Este es el contrato que cambia las cosas." },
+          { m: "negociadora", t: "Dinero. Visibilidad. Eventos. Todo." },
+          { m: "profesional", t: "También significa que habrá más ojos sobre ti." },
+          { m: "orgullosa", t: "No te voy a decir que sí ni que no. Quiero que lo entiendas." },
+        ],
+        snap: (g) => ({ tierId: g.tier.id }),
+        check: (g, snap) => {
+          const next = TIERS.find((t) => t.id === snap.tierId + 1);
+          return (next && calcOVR(g.player.stats) >= next.minOvr) || g.tier.id !== snap.tierId;
+        } },
+      /* CAPÍTULO 14 — No eres una marca */
+      { title: "No eres una marca", zone: "atico",
+        objective: "Completa una racha de 7 días.",
+        intro: [
+          { m: "preocupada", t: "Creo que he cometido un error." },
+          { m: "vulnerable", t: "He pasado tanto tiempo intentando ser alguien que nadie pudiera reemplazar..." },
+          { m: "vulnerable", t: "...que olvidé que una persona no funciona como una marca." },
+          { m: "personal_orgullosa", t: "Tú me has obligado a acordarme." },
+        ],
+        snap: () => ({}),
+        check: (g) => (g.player.streak || 0) >= 7 },
+      /* CAPÍTULO 15 — La última negociación */
+      { title: "La última negociación", zone: "patro",
+        objective: "Alcanza el nivel de élite.",
+        intro: [
+          { m: "negociadora", t: "Tengo una última propuesta." },
+          { m: "profesional", t: "No es para una marca." },
+          { m: "orgullosa", t: "Es para ti." },
+          { m: "profesional", t: "Que tu carrera sea tuya antes que de cualquier persona que intente venderla." },
+        ],
+        snap: () => ({}),
+        check: (g) => g.tier.id >= TIERS[TIERS.length - 1].id },
+      /* FINAL — La persona detrás del nombre */
+      { title: "La persona detrás del nombre", zone: "atico",
+        objective: "Alcanza el hito final.",
+        intro: [
+          { m: "vulnerable", t: "¿Sabes qué es lo más raro?" },
+          { m: "vulnerable", t: "Al principio pensé que iba a convertirte en una estrella." },
+          { m: "personal_orgullosa", t: "Y acabaste recordándome por qué quería serlo yo." },
+          { m: "personal_orgullosa", t: "No por el dinero. No por las fotos." },
+          { m: "vulnerable", t: "Por poder elegir quién quiero ser." },
+          { m: "personal_orgullosa", t: "Gracias." },
+        ],
+        snap: () => ({}),
+        check: (g) => g.tier.id >= TIERS[TIERS.length - 1].id },
+      /* EPÍLOGO — Sin cámaras (última etapa: final:true, entrega el pin y +1 MEN al entrar aquí) */
+      { title: "Sin cámaras", zone: "casa", final: true,
+        intro: [
+          { m: "personal_orgullosa", t: "No necesito saber cómo va tu imagen esta semana." },
+          { m: "personal_orgullosa", t: "Solo dime si estás bien." },
+          { m: "vulnerable", t: "Eso sí que me interesa." },
+        ],
+        setFlags: ["karlaPinEarned", "karlaStoryComplete"],
+        reward: (g) => {
+          const stats = { ...g.player.stats };
+          stats.MEN = Math.min(99, stats.MEN + 1);
+          const inv = { ...(g.inventory || {}) };
+          inv.karla_pin = (inv.karla_pin || 0) + 1;
+          return { ...g, player: { ...g.player, stats }, inventory: inv };
+        } },
+    ],
+  }],
+};
+
 /* separadas por mapa (para el registro de misiones de cada uno) y también fusionadas
    (para el motor, al que no le importa desde qué mapa se desbloqueó cada historia).
-   Las historias de Elisa, Milly, Yuna, López e Igor se añaden a los dos registros porque
-   sus escenas se reparten entre zonas de La Ciudad y de La Metrópolis: así el panel de
-   Misiones las muestra estés donde estés, no solo desde el mapa donde tocara
+   Las historias de Elisa, Milly, Yuna, López, Igor y Karla se añaden a los dos registros
+   porque sus escenas se reparten entre zonas de La Ciudad y de La Metrópolis: así el panel
+   de Misiones las muestra estés donde estés, no solo desde el mapa donde tocara
    desbloquearlas. */
-const STORIES_CIUDAD = { ...toStories(QUESTS), elisa: ELISA_STORY, milly: MILLY_STORY, yuna: YUNA_STORY, lopez: LOPEZ_STORY, igor: IGOR_STORY };
-const STORIES_METRO = { ...toStories(METRO_QUESTS), elisa: ELISA_STORY, milly: MILLY_STORY, yuna: YUNA_STORY, lopez: LOPEZ_STORY, igor: IGOR_STORY };
+const STORIES_CIUDAD = { ...toStories(QUESTS), elisa: ELISA_STORY, milly: MILLY_STORY, yuna: YUNA_STORY, lopez: LOPEZ_STORY, igor: IGOR_STORY, lisa: KARLA_STORY };
+const STORIES_METRO = { ...toStories(METRO_QUESTS), elisa: ELISA_STORY, milly: MILLY_STORY, yuna: YUNA_STORY, lopez: LOPEZ_STORY, igor: IGOR_STORY, lisa: KARLA_STORY };
 const STORIES = { ...STORIES_CIUDAD, ...STORIES_METRO };
 
 /* ============================================================
@@ -2751,6 +3035,8 @@ const ITEMS = {
     desc: "El pin que te dio López cuando dejaste de ser 'el nuevo'. No se usa ni se regala: es un recuerdo de todo el camino." },
   igor_pin: { name: "Pin de Igor", icon: "📌", img: "/images/objects/igor_pin.webp", kind: "keepsake",
     desc: "El pin que te dio Igor el día que dejó de tratarte como cliente. No se usa ni se regala: es un recuerdo de todo el camino." },
+  karla_pin: { name: "Pin de Karla", icon: "📌", img: "/images/objects/karla_pin.webp", kind: "keepsake",
+    desc: "El pin que te dio Karla cuando dejó de tratarte como un proyecto comercial. No se usa ni se regala: es un recuerdo de todo el camino." },
 };
 /* dar un objeto a su destinatario: reacción propia del personaje + el objeto se gasta */
 const ITEM_GIVE_REACTIONS = {

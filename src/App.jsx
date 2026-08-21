@@ -876,13 +876,21 @@ const NPCS = {
   /* Lisa: futbolista pro, gestiona patrocinios. Su "angry" es en realidad ENGREÍDA/chulería, no enfado real. */
   lisa: { name: "Lisa", color: "#9C6BD6", voice: "/audio/vozchica02.mp3", icon: "/images/lisa_icon.webp",
     arts: { idle: "/images/lisa_idle.webp", happy: "/images/lisa_happy.webp", angry: "/images/lisa_angry.webp" }, def: "idle" },
-  /* Milly: la del Kiosco, te trae el periódico en persona cada día. Alegre, cotilla, algo dramática. Sin angry. */
+  /* Milly: la del Kiosco, te trae el periódico en persona cada día. Alegre, cotilla, algo dramática. Sin angry.
+     "periodico" es su pose sujetando el periódico: se usa en el instante exacto de la entrega, no como mood genérico. */
   milly: { name: "Milly", color: "#C97A2E", voice: "/audio/vozchica01.mp3", icon: "/images/milly_icon.webp",
-    arts: { idle: "/images/milly_idle.webp", happy: "/images/milly_happy.webp" }, def: "idle" },
+    arts: { idle: "/images/milly_idle.webp", happy: "/images/milly_happy.webp", periodico: "/images/milly_periodico.webp" }, def: "idle" },
   /* Igor: chef estrella del Restaurante (Metrópolis). Grande, carismático, trata la nutrición
-     como táctica de fútbol. Sin happy ni angry: solo hay retrato idle. */
+     como táctica de fútbol. Sin angry: solo idle y happy. */
   igor: { name: "Igor", color: "#B5651D", voice: "/audio/vozchico01.mp3", icon: "/images/igor_icon.webp",
-    arts: { idle: "/images/igor_idle.webp" }, def: "idle" },
+    arts: { idle: "/images/igor_idle.webp", happy: "/images/igor_happy.webp" }, def: "idle" },
+  /* Milly "fuera de servicio": la misma Milly, pero de vacaciones en la Playa de la Metrópolis.
+     Npc separado solo para poder encolarla ahí sin mezclar sus mensajes con los del Kiosco. Solo idle. */
+  milly_playa: { name: "Milly", color: "#C97A2E", voice: "/audio/vozchica01.mp3", icon: "/images/milly_icon.webp",
+    arts: { idle: "/images/milly_playa.webp" }, def: "idle" },
+  /* López "fuera de servicio": su primera aparición en la Metrópolis, de vacaciones en la Playa. Solo idle. */
+  lopez_playa: { name: "López", color: "#D65A2E", voice: "/audio/vozchico02.mp3", icon: "/images/lopez_icon.webp",
+    arts: { idle: "/images/lopez_playa.webp" }, def: "idle" },
 };
 const senderToNpc = (from) => {
   if (from === "Entrenador" || from === "Tu agente" || from === "Elisa") return "elisa";
@@ -892,6 +900,8 @@ const senderToNpc = (from) => {
   if (from === "Igor") return "igor";
   if (from === "Elisa Casual") return "elisa_casual";
   if (from === "Elisa Playa") return "elisa_playa";
+  if (from === "Milly Playa") return "milly_playa";
+  if (from === "López Playa") return "lopez_playa";
   if (from === "López" || from.includes("Capitán") || from.includes("· Vestuario")) return "lopez";
   return null; /* prensa/afición/redes/club -> periódico */
 };
@@ -1209,51 +1219,51 @@ const LISA_POOL = [
    Alegre, curiosa, cotilla, algo dramática. Sin angry: lo suyo es la efusividad, no el enfado. --- */
 const MILLY_INTRO_BEATS = [
   { m: "idle", t: "¡Ay, tú debes de ser el fichaje nuevo! Me lo han contado ya tres personas distintas esta mañana, así que imagínate cómo está la cosa por aquí." },
-  { m: "happy", t: "Soy Milly, del Kiosco. A partir de hoy te traigo yo misma el periódico cada mañana, en persona, como hago con mis clientes favoritos. ¡Bienvenido a la familia! Toma, el de hoy." },
+  { m: "periodico", t: "Soy Milly, del Kiosco. A partir de hoy te traigo yo misma el periódico cada mañana, en persona, como hago con mis clientes favoritos. ¡Bienvenido a la familia! Toma, el de hoy." },
 ];
 const MILLY_POOL = [
   { t: "¡Buenos días! Aquí tienes tu periódico, calentito de la rotativa. Bueno, calentito no, pero recién salido, que es lo que cuenta." },
   { beats: [
     { m: "idle", t: "No te lo vas a creer, pero esta mañana han pasado TRES personas a preguntarme por ti antes de las nueve." },
-    { m: "happy", t: "Les he dicho que no sé nada, por supuesto. Aunque, entre tú y yo, sí que sé algo. Pero eso ya te lo cuento otro día. Toma, tu periódico." }] },
+    { m: "periodico", t: "Les he dicho que no sé nada, por supuesto. Aunque, entre tú y yo, sí que sé algo. Pero eso ya te lo cuento otro día. Toma, tu periódico." }] },
   { w: "win", beats: [
     { m: "happy", t: "¡Ay, qué alegría lo de ayer! Se ha notado en el kiosco, ¿eh? Todo el mundo entraba sonriendo a comprar el periódico." },
-    { m: "happy", t: "He vendido el doble que un lunes cualquiera. Toma el tuyo, que este te lo guardo yo aparte, con cariño." }] },
+    { m: "periodico", t: "He vendido el doble que un lunes cualquiera. Toma el tuyo, que este te lo guardo yo aparte, con cariño." }] },
   { w: "loss", t: "Uy, lo de ayer... no te voy a mentir, hasta yo me quedé un poco tocada detrás del mostrador. Pero bueno, aquí tienes tu periódico, que la vida sigue y el lunes es el lunes." },
   { w: "hot", beats: [
     { m: "idle", t: "{streak} días que llevas ya, ¿no? Lo sé porque llevo la cuenta en un papelito pegado a la caja registradora." },
-    { m: "happy", t: "No me preguntes por qué lo hago, simplemente me gusta. Toma tu periódico, sigues siendo mi cliente favorito del mes." }] },
+    { m: "periodico", t: "No me preguntes por qué lo hago, simplemente me gusta. Toma tu periódico, sigues siendo mi cliente favorito del mes." }] },
   { w: "scorer", t: "{goals} goles ya esta temporada, ¿eh? Un señor de la peña vino ayer solo a comentármelo, como si yo no lo supiera ya de sobra. Aquí tienes el periódico, hoy sales otra vez." },
   { beats: [
     { m: "idle", t: "Uy, casi se me olvida contarte... bueno, no, mejor no digo nada, que luego se enfadan conmigo por cotilla." },
-    { m: "happy", t: "Vale, vale, no digo nada más. Toma tu periódico, que hoy además trae una portada que te va a gustar." }] },
+    { m: "periodico", t: "Vale, vale, no digo nada más. Toma tu periódico, que hoy además trae una portada que te va a gustar." }] },
   { w: "derbiSoon", t: "¡Uy, la semana del {derbiRival}! Aquí se nota en el ambiente, la gente entra más nerviosa de lo normal a comprar el periódico. Toma el tuyo, esta edición va a volar." },
   { t: "Sabes que llevo veinte años detrás de este mostrador, ¿verdad? Me conozco cada cotilleo de esta ciudad desde antes de que tú nacieras, prácticamente. Toma, tu periódico de hoy." },
   { beats: [
     { m: "idle", t: "Hoy he tenido una mañana de lo más dramática, ya te cuento otro día, que si no llego tarde al reparto." },
-    { m: "happy", t: "Pero antes de irme corriendo, ¡toma! Tu periódico. Que no se me olvide nunca contigo, aunque sea lo último que haga." }] },
+    { m: "periodico", t: "Pero antes de irme corriendo, ¡toma! Tu periódico. Que no se me olvide nunca contigo, aunque sea lo último que haga." }] },
   { t: "Oye, antes de darte el periódico... ¿te puedo contar un secretillo mío si tú me cuentas uno tuyo? Es un trato justo.", replies: [
-    { t: "Va, trato hecho", m: "happy", setFlag: "millySecret", r: ["¡Sabía que dirías que sí! Vale, no te lo voy a sonsacar ahora mismo delante de la cola del kiosco, pero lo recuerdo, eh. Toma tu periódico, luego seguimos.",
+    { t: "Va, trato hecho", m: "periodico", setFlag: "millySecret", r: ["¡Sabía que dirías que sí! Vale, no te lo voy a sonsacar ahora mismo delante de la cola del kiosco, pero lo recuerdo, eh. Toma tu periódico, luego seguimos.",
       "Estupendo. Yo cumplo mi parte tarde o temprano, ya lo verás. Anda, toma tu periódico, que se hace cola."] },
-    { t: "Prefiero mantener el misterio", m: "idle", r: ["Aaaay, qué soso. Bueno, lo entiendo, no todo el mundo es tan abierto de corazón como yo. Toma tu periódico igualmente.",
+    { t: "Prefiero mantener el misterio", m: "periodico", r: ["Aaaay, qué soso. Bueno, lo entiendo, no todo el mundo es tan abierto de corazón como yo. Toma tu periódico igualmente.",
       "Respeto absoluto. Yo también me guardo cosas, aunque cueste creerlo viniendo de mí. Aquí tienes el periódico."] }] },
   { w: "millySecret", beats: [
     { m: "idle", t: "Sigo pensando en lo que hablamos el otro día. No he dicho nada a nadie, que conste. Bueno, casi nadie." },
-    { m: "happy", t: "Es broma, es broma. O no. Toma tu periódico y hagamos como que no he dicho eso último." }] },
+    { m: "periodico", t: "Es broma, es broma. O no. Toma tu periódico y hagamos como que no he dicho eso último." }] },
   { t: "¿Quieres saber cuál es el rumor más ridículo que me han contado esta semana sobre el club?", replies: [
     { t: "Cuéntamelo", m: "happy", r: ["Que el presidente ficha un delfín entrenado como amuleto de la suerte. Un DELFÍN. La ciudad no tiene ni piscina olímpica, para que veas el nivel del rumor. Toma tu periódico.",
       "Que el campo se va a mudar de sitio piedra a piedra, como en las películas. Ni te cuento quién me lo dijo, con toda la seriedad del mundo. Aquí tienes el periódico."] },
-    { t: "Mejor no, ya tengo suficiente caos", m: "idle", r: ["Sabia decisión, la verdad, hay días que hasta a mí me supera. Toma tu periódico, hoy viene tranquilito, lo prometo."] }] },
+    { t: "Mejor no, ya tengo suficiente caos", m: "periodico", r: ["Sabia decisión, la verdad, hay días que hasta a mí me supera. Toma tu periódico, hoy viene tranquilito, lo prometo."] }] },
   { w: "metLisa", t: "Esa futbolista, Lisa, entró una vez al kiosco y preguntó si tenía la prensa deportiva internacional. Le dije que sí por no quedar mal. No la tenía. Toma, tu periódico de hoy, este si lo tengo seguro." },
   { w: "seasonEnd", t: "Se acaba la temporada {season} y no sabes lo que voy a echar de menos nuestra charla de las mañanas. Bueno, la próxima empieza pronto, así que tampoco te libras de mí. Toma, tu último periódico de esta campaña." },
   { t: "Tengo un frasco de perfume carísimo que me regalaron y no uso nunca, se me queda grande para el kiosco. ¿Se lo doy a alguien que le pegue más?", replies: [
     { t: "A Lisa le encajaría perfecto", m: "happy", giveItem: "perfume_lujo", r: ["¡Genial elección! Toma, dáselo tú de mi parte. Y de paso, toma tu periódico de hoy, que casi se me olvida."] },
-    { t: "Mejor guárdalo tú", m: "idle", r: ["Ya, tienes razón, a saber cuándo lo voy a usar. Toma tu periódico, anda, que se hace tarde."] }] },
+    { t: "Mejor guárdalo tú", m: "periodico", r: ["Ya, tienes razón, a saber cuándo lo voy a usar. Toma tu periódico, anda, que se hace tarde."] }] },
 ];
 
 /* --- IGOR · chef estrella del Restaurante (Metrópolis). Grande, carismático, trata la
    nutrición como si fuera táctica de fútbol. Muy informativo: datos curiosos de comida
-   y recetas de verdad, contados sin ponerse técnico. Sin happy ni angry: solo idle. --- */
+   y recetas de verdad, contados sin ponerse técnico. Sin angry: idle y happy. --- */
 const IGOR_INTRO_BEATS = [
   { m: "idle", t: "¡Ahí está mi próximo proyecto! Perdona, así les digo a todos los que entran nuevos por esa puerta. Igor, chef de este restaurante. Cada plato que sale de mi cocina tiene una función táctica, ¿me explico?" },
   { m: "idle", t: "La nutrición es como el fútbol: no sirve tener buenos ingredientes sueltos, hay que combinarlos en el momento justo. Ven cuando quieras, te voy a enseñar unas cuantas jugadas maestras de cocina." },
@@ -1262,18 +1272,18 @@ const IGOR_POOL = [
   { beats: [
     { m: "idle", t: "Dato de vestuario que casi nadie aprovecha: el plátano no es solo azúcar rápido, lleva potasio de verdad." },
     { m: "idle", t: "Y el potasio es justo lo que se te va con el sudor. Menos calambres en el 90, más piernas frescas. Cómetelo con cabeza, no de postre porque sí." }] },
-  { w: "kgUp", t: "Esos {kg} kg que has ganado no son cualquier cosa si has comido bien mientras tanto. El músculo se construye con proteína repartida en el día, no metida toda de una sentada como quien mete un gol de churro." },
+  { w: "kgUp", m: "happy", t: "Esos {kg} kg que has ganado no son cualquier cosa si has comido bien mientras tanto. El músculo se construye con proteína repartida en el día, no metida toda de una sentada como quien mete un gol de churro." },
   { t: "Pregunta táctica del día: ¿desayunas fuerte o sales de casa con el estómago casi vacío?", replies: [
     { t: "Desayuno fuerte, siempre", m: "idle", r: ["¡ESO es una alineación titular! El desayuno es tu once inicial del día, no un suplente que sale si sobra tiempo.",
       "Perfecto. Un cuerpo que arranca con combustible rinde distinto, y eso no lo dice una app, lo digo yo, que llevo veinte años viéndolo en cocina."] },
     { t: "Casi nada, la verdad", m: "idle", r: ["Ahí tenemos margen de mejora, campeón. No hace falta un banquete, con huevo y fruta ya cambia el partido entero.",
       "Vamos a corregir eso poco a poco. Ni te pido tortilla de diez huevos, solo algo antes de salir por esa puerta."] }] },
-  { w: "win", t: "¡Buen partido! Y no me digas que fue solo mérito tuyo, seguro que algo tuvo que ver la cena de anoche. Yo también sumo puntos, aunque no salga en la ficha." },
+  { w: "win", m: "happy", t: "¡Buen partido! Y no me digas que fue solo mérito tuyo, seguro que algo tuvo que ver la cena de anoche. Yo también sumo puntos, aunque no salga en la ficha." },
   { w: "loss", t: "Día flojo, lo sé. Un truco de cocina para la recuperación: proteína + carbohidrato en la próxima comida, en una proporción tipo 1 a 3. Eso ayuda a recargar más rápido que dejarlo al azar." },
   { beats: [
     { m: "idle", t: "Dato curioso de hoy: la quinoa es de las pocas plantas con proteína completa, con los nueve aminoácidos esenciales." },
     { m: "idle", t: "La mayoría de cereales se quedan cortos en alguno. Por eso en Perú y Bolivia llevan siglos usándola como base, no es ninguna moda reciente de gimnasio." }] },
-  { w: "hot", t: "{streak} días de racha y no me extraña, con la cara de estar comiendo bien que traes últimamente. Sigue así, que un cuerpo bien alimentado no falla en el momento clave." },
+  { w: "hot", m: "happy", t: "{streak} días de racha y no me extraña, con la cara de estar comiendo bien que traes últimamente. Sigue así, que un cuerpo bien alimentado no falla en el momento clave." },
   { t: "Otro dato para la libreta: ¿sabías que el 'carbo-loading' del día antes del partido, si ya comes bien toda la semana, apenas suma nada extra?", replies: [
     { t: "No tenía ni idea", m: "idle", r: ["Es uno de los mitos más repetidos del deporte. Lo importante es la semana entera, no el plato de pasta de la noche anterior.",
       "Se ha vendido mucho ese cuento. La base se construye día a día, como el buen equipo: no se gana la liga en un solo entrenamiento."] },
@@ -1284,7 +1294,7 @@ const IGOR_POOL = [
     { m: "idle", t: "Llevo meses experimentando con una receta japonesa: natto, judías de soja fermentadas." },
     { m: "idle", t: "Huele fuerte, no te lo voy a negar, pero tiene una vitamina K2 que casi ningún otro alimento tiene en esa cantidad. La cocina de verdad se atreve a probar cosas raras." }] },
   { w: "derbiSoon", t: "Con lo del {derbiRival} esta semana te voy a preparar algo especial: nada nuevo el día antes, eso ya lo sabes, pero sí un extra de hierro en los días previos. Ese partido no se juega con las reservas bajas." },
-  { w: "scorer", t: "{goals} goles ya. Cada uno de esos, aunque tú no lo pienses así, lleva algo de las comidas de esta cocina metidas dentro. Modestia aparte, yo también sumo a la jugada." },
+  { w: "scorer", m: "happy", t: "{goals} goles ya. Cada uno de esos, aunque tú no lo pienses así, lleva algo de las comidas de esta cocina metidas dentro. Modestia aparte, yo también sumo a la jugada." },
   { t: "Última curiosidad del día, prometido: ¿sabes qué tienen en común la tortilla española y el tofu japonés?", replies: [
     { t: "Ni idea, cuéntamelo", m: "idle", r: ["Los dos son formas antiguas de concentrar proteína con pocos ingredientes baratos. Cocinas separadas por medio mundo, llegando a la misma idea. Eso es fútbol total en la cocina."] },
     { t: "Que llevan huevo, ¿no?", m: "idle", r: ["Casi, el tofu no lleva huevo, es soja cuajada. Pero el espíritu es el mismo: mucha proteína, pocos ingredientes, siglos de tradición detrás."] }] },
@@ -1352,6 +1362,45 @@ const ELISA_PLAYA_POOL = [
   { beats: [
     { m: "idle", t: "La gente que trabaja conmigo no se cree que yo también sepa desconectar del todo." },
     { m: "happy", t: "Pues aquí me tienes, prueba viviente. Ni cara de decepción contenida ni nada parecido, te lo prometo por hoy." }] },
+];
+
+/* --- MILLY "FUERA DE SERVICIO" · la misma Milly, de vacaciones en la Playa de la
+   Metrópolis, sin el mostrador del Kiosco de por medio. Solo idle: aquí no hay
+   periódico que entregar, así que tampoco su pose "periodico". --- */
+const MILLY_PLAYA_POOL = [
+  { beats: [
+    { m: "idle", t: "¡Anda, mira quién anda por aquí! No, tranquilo, hoy no traigo periódico. Estoy de vacaciones, como una persona normal." },
+    { m: "idle", t: "Aunque te voy a ser sincera: llevo un rato mirando si alguien deja el suyo tirado en la arena, la costumbre no se quita así como así." }] },
+  { w: "win", t: "Me enteré del resultado tumbada aquí, por el móvil de una señora que gritó tan fuerte que se enteró media playa. No hizo falta ni comprar el periódico, para variar." },
+  { t: "Confesión de kiosquera de vacaciones: ¿tú lees las noticias en papel o en el móvil?", replies: [
+    { t: "En papel, como debe ser", m: "happy", r: ["¡ESA es la respuesta correcta! Ya me caías bien, pero ahora un poco más todavía."] },
+    { t: "En el móvil, seamos sinceros", m: "idle", r: ["Ay, me rompes el corazón un poquito, pero lo entiendo. El negocio ya no es lo que era, oye."] }] },
+  { w: "loss", beats: [
+    { m: "idle", t: "Me enteré de lo de ayer por encima, aquí desconectada del todo. No te voy a soltar el discurso del kiosco, hoy no toca." },
+    { m: "idle", t: "Solo te digo que el lunes, cuando vuelva al mostrador, ahí seguiré para lo que necesites. Hoy, playa y ya está." }] },
+  { beats: [
+    { m: "idle", t: "¿Sabes lo raro que es para mí no tener nada que contarte? En el kiosco siempre me entero de todo antes que nadie." },
+    { m: "idle", t: "Aquí en la arena, en cambio, soy una cotilla más sin fuentes. Es un descanso, la verdad, aunque me cueste admitirlo." }] },
+  { w: "hot", t: "{streak} días de racha y yo aquí sin enterarme por el papelito de la caja registradora. Cuando vuelva seguro que ya me lo cuentan todo de golpe." },
+];
+
+/* --- LÓPEZ "FUERA DE SERVICIO" · su primera aparición en la Metrópolis, de vacaciones
+   en la Playa, sin el brazalete de capitán puesto. Solo idle. --- */
+const LOPEZ_PLAYA_POOL = [
+  { beats: [
+    { m: "idle", t: "¡Mira quién anda por aquí! No, tranquilo, no traigo ninguna charla táctica preparada, estoy de vacaciones como Dios manda." },
+    { m: "idle", t: "Aunque si me preguntas, el mejor calentamiento del mundo es el sol dándote en la cara sin que nadie te grite desde la banda." }] },
+  { w: "win", t: "Me enteré del resultado tirado en la toalla, con las gafas de sol puestas y todo. Casi me levanto a celebrarlo yo solo, como un descosido." },
+  { t: "Pregunta de playa, nada de vestuario: ¿fútbol playa o fútbol de verdad?", replies: [
+    { t: "Fútbol de verdad, sin dudarlo", m: "idle", r: ["Sabía respuesta de capitán. Aunque te reto a jugar diez minutos aquí en la arena antes de reafirmarte."] },
+    { t: "Fútbol playa, aquí no hay presión", m: "idle", r: ["JA, te entiendo. Aquí como mucho pierdes por perder la pelota en el mar, que ya es un marcador curioso."] }] },
+  { w: "loss", beats: [
+    { m: "idle", t: "Me enteré de lo de ayer, sí. Pero mira, aquí de vacaciones ni yo mismo me acuerdo de mis propios malos partidos." },
+    { m: "idle", t: "Mañana vuelvo al vestuario y ahí sí, ahí hablamos en serio. Hoy toca no pensar en nada, ni en lo tuyo ni en lo mío." }] },
+  { beats: [
+    { m: "idle", t: "¿Sabes lo raro que es para mí estar callado más de cinco minutos seguidos? En el vestuario no paro." },
+    { m: "idle", t: "Aquí llevo media hora mirando al mar sin decir nada y no me está sentando nada mal, la verdad. Debería probarlo más." }] },
+  { w: "hot", t: "{streak} días de racha y yo aquí desconectado del todo. Cuando vuelva al vestuario seguro que ya se han inventado tres leyendas distintas sobre cómo lo has conseguido." },
 ];
 
 /* goles a lo largo de TODA la carrera (todas las temporadas), para el hito del Centro de Alto Rendimiento */
@@ -1450,7 +1499,7 @@ const METRO_ZONES = [
   { id: "enfermeria", kind: "npc", npc: null, label: "Enfermería", icon: "🏥", x: 86.65, y: 22.97,
     pts: "402.89 159.68 353.11 256.96 460.34 286.08 460.34 197.98 402.89 159.68",
     unlocked: (g) => proteinGoalHits(g) >= 10, reqLabel: "Llega a tu objetivo de proteína 10 veces" },
-  { id: "playa", kind: "npc", npc: "elisa_playa", label: "Playa", icon: "🏖️", x: 12.16, y: 49.44,
+  { id: "playa", kind: "npc", npc: ["elisa_playa", "milly_playa", "lopez_playa"], label: "Playa", icon: "🏖️", x: 12.16, y: 49.44,
     pts: "22.21 382.57 22.21 562.57 125.62 399.43 99.57 382.57 22.21 382.57",
     unlocked: (g) => mealsLoggedCount(g) >= 100, reqLabel: "Registra 100 comidas" },
   { id: "atico", kind: "npc", npc: null, label: "Ático de Lujo", icon: "🌇", x: 78.27, y: 63.06,
@@ -1487,8 +1536,8 @@ const METRO_QUESTS = {
         check: (g) => catStreak(g, (l) => (l.prot || 0) >= g.player.goals.protein) >= 7 },
       { title: "Jugada maestra", final: true,
         intro: [
-          { m: "idle", t: "Lo has conseguido. Y no me refiero solo a la racha, me refiero a que ahora ya piensas en la comida como una jugada, no como un trámite." },
-          { m: "idle", t: "Eso no se me olvida a un chef fácilmente. Ya formas parte del recetario de los que se lo toman en serio de verdad." }],
+          { m: "happy", t: "Lo has conseguido. Y no me refiero solo a la racha, me refiero a que ahora ya piensas en la comida como una jugada, no como un trámite." },
+          { m: "happy", t: "Eso no se me olvida a un chef fácilmente. Ya formas parte del recetario de los que se lo toman en serio de verdad." }],
         introFail: [
           { m: "idle", t: "No llegamos a los siete días seguidos, pero no pasa nada, de verdad. Las rachas buenas a veces tardan varios intentos." },
           { m: "idle", t: "La cocina, como el fútbol, perdona el fallo si sigues viniendo a entrenar. Aquí sigo, cuando quieras retomarlo." }],
@@ -1674,7 +1723,7 @@ const QUESTS = {
       { title: "El titular", final: true,
         intro: [
           { m: "happy", t: "¡CONFIRMADO! El rumor era que ibas a convertirte en el nombre más comentado de esta ciudad. Y mírate. Lo has hecho tú solito, delante de mis narices." },
-          { m: "happy", t: "Llevo veinte años en este mostrador y pocas veces me ha dado tanta alegría tener razón en un cotilleo. Toma, este periódico te lo regalo yo." }],
+          { m: "periodico", t: "Llevo veinte años en este mostrador y pocas veces me ha dado tanta alegría tener razón en un cotilleo. Toma, este periódico te lo regalo yo." }],
         introFail: [
           { m: "idle", t: "El derbi no salió como esperaba, así que el rumor se queda sin confirmar del todo, de momento." },
           { m: "happy", t: "Pero oye, sigo pensando que algún día vas a dar que hablar en esta ciudad. Los rumores buenos tardan en cumplirse, no en desaparecer." }],
@@ -1713,9 +1762,10 @@ const CARDS = [
     bio: "Mánager y entrenadora. Dura en el despacho, blanda cuando cree que nadie mira. Siempre tiene un plan, aunque no siempre lo comparta." },
   { npc: "yuna", unlocked: (g) => !!g.yunaMet,
     bio: "Superfan del Barça con fama de tsundere. Sabe tus estadísticas mejor que tú, aunque jure que 'solo pasaba por aquí'." },
-  { npc: "lopez", unlocked: () => true,
+  { npc: "lopez", unlocked: () => true, variants: [["lopez_playa", "playa"]],
     bio: "Capitán del vestuario. El brazalete le queda grande a cualquiera, pero a él le queda perfecto." },
-  { npc: "milly", unlocked: (g) => !!g.metMilly, bio: "Del Kiosco. Te trae el periódico en persona cada día, con más cotilleos de los que pediste." },
+  { npc: "milly", unlocked: (g) => !!g.metMilly, variants: [["milly_playa", "playa"]],
+    bio: "Del Kiosco. Te trae el periódico en persona cada día, con más cotilleos de los que pediste." },
   { npc: "lisa", unlocked: (g) => !!g.metLisa, bio: "Futbolista profesional, gestiona patrocinios. Engreída de cara al público, exigente de puertas para adentro." },
   { npc: "igor", unlocked: (g) => !!g.metIgor, bio: "Chef estrella del Restaurante. Trata la nutrición como táctica de fútbol, con datos curiosos siempre a mano." },
 ];
@@ -4378,6 +4428,11 @@ export default function App() {
         if (out.yunaMet) candidates.push(["Yuna", YUNA_POOL]);
         if (out.metLisa) candidates.push(["Lisa", LISA_POOL]);
         if (out.metIgor) candidates.push(["Igor", IGOR_POOL]);
+        /* Milly y López "fuera de servicio" en la Playa: a diferencia de Elisa, cada uno
+           solo tiene esa única variante (no comparten sitio con otra suya), así que no
+           necesitan la comprobación de exclusividad, solo estar ya conocidos */
+        if (out.metMilly) candidates.push(["Milly Playa", MILLY_PLAYA_POOL]);
+        candidates.push(["López Playa", LOPEZ_PLAYA_POOL]);
         candidates.push([null, null]); /* comodín: flavor genérico de vestuario/prensa/agente */
         const [name, pool] = candidates[Math.floor(Math.random() * candidates.length)];
         if (!name) {

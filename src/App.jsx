@@ -285,6 +285,14 @@ function sanitizeGame(g) {
     }
   }
   if (out.savedMeals) out.savedMeals = out.savedMeals.filter((m) => m && Number.isFinite(m.kcal) && Number.isFinite(m.prot));
+  /* partidas de antes de que la ruleta tuviera "kind" (o con un item ya no existente
+     en ITEMS) podían dejar un casinoLastSpin que rompía CUALQUIER pantalla de zona,
+     no solo el Casino: se descarta si no tiene una forma reconocible */
+  if (out.casinoLastSpin) {
+    const ls = out.casinoLastSpin;
+    const valid = ls.kind === "xp" || ls.kind === "fichas" || (ls.kind === "item" && ITEMS[ls.itemId]);
+    if (!valid) delete out.casinoLastSpin;
+  }
   /* gym: crear estructura en partidas anteriores al módulo y compactar sesiones antiguas */
   out.gym = pruneGym({ ...emptyGym(), ...(out.gym || {}) });
   /* Karlos, Mabel, Dino, Yuni, Lili, Cubarsí, Yamal, Irina, Punky y Fortuna se han
@@ -2885,12 +2893,16 @@ function ZoneScreen({ zone, pendingNpc, onBack, onOpenPaper, game, onSpin, onBuy
   const showPaperPrompt = zone.kind === "paper" && !pendingNpc;
   const isHome = zone.kind === "home";
   const isCasino = zone.id === "casino";
-  const spunToday = game && game.casinoSpinDay === todayStr();
-  const lastSpin = game && game.casinoLastSpin;
+  const spunToday = isCasino && game && game.casinoSpinDay === todayStr();
+  const lastSpin = isCasino ? game && game.casinoLastSpin : null;
+  /* partidas antiguas pueden tener un casinoLastSpin de una forma previa a "kind"
+     (o un itemId que ya no existe en ITEMS): si no lo reconocemos, mejor texto
+     genérico que romper la pantalla entera */
   const lastSpinText = !lastSpin ? "" :
     lastSpin.kind === "xp" ? `Te tocaron +${lastSpin.amount} XP en ${lastSpin.stat}.` :
     lastSpin.kind === "fichas" ? `Te tocaron +${lastSpin.amount} 🪙 fichas.` :
-    `¡Premio especial: ${ITEMS[lastSpin.itemId].name}!`;
+    lastSpin.kind === "item" && ITEMS[lastSpin.itemId] ? `¡Premio especial: ${ITEMS[lastSpin.itemId].name}!` :
+    "Ya has girado hoy.";
   const SHOP = [["especias_raras", 8], ["botiquin", 6]];
   return (
     <div className="zone-screen">

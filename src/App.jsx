@@ -4648,65 +4648,50 @@ export default function App() {
       const brevs = pickFlavor(out, 2 + Math.round(Math.random()), ["press", "fan", "social", "club"]);
       brevs.forEach((fv) => { out = addMsg(out, fv.from, fv.text); });
       out.recentTpl = [...(out.recentTpl || []), ...brevs.map((m) => m.t).filter(Boolean)].slice(-12);
-      /* y a veces, un personaje se pasa a verte al abrir la pestaña: se elige entre
-         todos los que ya conoces (y también, a veces, algo genérico del vestuario/prensa) */
-      if (Math.random() < 0.6) {
-        const candidates = [["López", LOPEZ_POOL], ["Elisa", ELISA_POOL]];
-        /* Elisa "de vacaciones" en la Metrópolis: solo puede estar en un sitio a la vez
-           (Parque/Restaurante, Playa o Ático/Casino/Restaurante de gala, nunca dos a la
-           vez), así que si ya tiene una aparición casual pendiente de leer bajo cualquiera
-           de sus tres npc, no se le añade otra hoy */
-        const elisaMetroPending = (out.npcQueue || []).some((e) => e.npc === "elisa_casual" || e.npc === "elisa_playa" || e.npc === "elisa_gala");
-        if (!elisaMetroPending) {
-          const r = Math.random();
-          if (r < 1 / 3) candidates.push(["Elisa Casual", ELISA_CASUAL_POOL]);
-          else if (r < 2 / 3) candidates.push(["Elisa Playa", ELISA_PLAYA_POOL]);
-          else candidates.push(["Elisa Gala", ELISA_GALA_POOL]);
-        }
-        if (out.yunaMet) candidates.push(["Yuna", YUNA_POOL]);
-        if (out.metLisa) candidates.push(["Karla", KARLA_POOL]);
-        if (out.metIgor) candidates.push(["Igor", IGOR_POOL]);
-        /* Milly y López "fuera de servicio" en la Playa: a diferencia de Elisa y Karla, cada
-           uno solo tiene esa única variante (no comparten sitio con otra suya), así que no
-           necesitan la comprobación de exclusividad, solo estar ya conocidos */
-        if (out.metMilly) candidates.push(["Milly Playa", MILLY_PLAYA_POOL]);
-        candidates.push(["López Playa", LOPEZ_PLAYA_POOL]);
-        /* Karla "fuera de servicio": igual que Elisa, Parque O Playa, nunca las dos a la vez */
-        if (out.metLisa) {
-          const karlaMetroPending = (out.npcQueue || []).some((e) => e.npc === "karla_casual" || e.npc === "karla_playa");
-          if (!karlaMetroPending) {
-            if (Math.random() < 0.5) candidates.push(["Karla Casual", KARLA_CASUAL_POOL]);
-            else candidates.push(["Karla Playa", KARLA_PLAYA_POOL]);
-          }
-        }
-        /* zonas de La Ciudad sin retrato propio: el mismo personaje, visto en otro punto
-           de la ciudad. Solo se les añade una vez esa zona concreta está desbloqueada,
-           para que no quede un mensaje pendiente en un sitio al que aún no puedes ir */
+      /* cada día se pasan a verte varios personajes de los que ya conoces (3 o 4, ver
+         más abajo). La elección va en dos pasos: primero QUIÉN aparece hoy, con el mismo
+         peso para todos (nadie sale más solo por tener más zonas propias); después, para
+         cada uno de los elegidos, en qué faceta/zona concreta lo hace hoy. Así López no
+         se come el turno de los demás solo por tener seis variantes registradas. */
+      {
         const zoneOk = (id) => (ZONES.find((z) => z.id === id) || {}).unlocked(out);
-        if (zoneOk("car")) {
-          candidates.push(["López Entreno", LOPEZ_CAR_POOL]);
-          if (out.metLisa) candidates.push(["Karla Entreno", KARLA_CAR_POOL]);
-        }
-        if (out.metMilly && zoneOk("prensa")) candidates.push(["Milly Prensa", MILLY_PRENSA_POOL]);
-        if (zoneOk("cantera")) candidates.push(["López Cantera", LOPEZ_CANTERA_POOL]);
-        if (zoneOk("tienda")) {
-          if (out.yunaMet) candidates.push(["Yuna Tienda", YUNA_TIENDA_POOL]);
-          candidates.push(["López Tienda", LOPEZ_TIENDA_POOL]);
-        }
-        if (zoneOk("estadio")) {
-          candidates.push(["López Estadio", LOPEZ_ESTADIO_POOL]);
-          if (out.yunaMet) candidates.push(["Yuna Estadio", YUNA_ESTADIO_POOL]);
-          candidates.push(["Elisa Estadio", ELISA_ESTADIO_POOL]);
-        }
-        candidates.push([null, null]); /* comodín: flavor genérico de vestuario/prensa/agente */
-        const [name, pool] = candidates[Math.floor(Math.random() * candidates.length)];
-        if (!name) {
-          const fv = pickFlavor(out, 1, ["squad", "cap", "coach", "agent"])[0];
-          if (fv) out = addMsg(out, fv.from, fv.text, { replies: fv.replies });
-        } else {
+        const roster = {
+          lopez: [
+            ["López", LOPEZ_POOL], ["López Playa", LOPEZ_PLAYA_POOL],
+            ...(zoneOk("car") ? [["López Entreno", LOPEZ_CAR_POOL]] : []),
+            ...(zoneOk("cantera") ? [["López Cantera", LOPEZ_CANTERA_POOL]] : []),
+            ...(zoneOk("tienda") ? [["López Tienda", LOPEZ_TIENDA_POOL]] : []),
+            ...(zoneOk("estadio") ? [["López Estadio", LOPEZ_ESTADIO_POOL]] : []),
+          ],
+          elisa: [
+            ["Elisa", ELISA_POOL], ["Elisa Casual", ELISA_CASUAL_POOL],
+            ["Elisa Playa", ELISA_PLAYA_POOL], ["Elisa Gala", ELISA_GALA_POOL],
+            ...(zoneOk("estadio") ? [["Elisa Estadio", ELISA_ESTADIO_POOL]] : []),
+          ],
+          ...(out.yunaMet ? { yuna: [
+            ["Yuna", YUNA_POOL],
+            ...(zoneOk("tienda") ? [["Yuna Tienda", YUNA_TIENDA_POOL]] : []),
+            ...(zoneOk("estadio") ? [["Yuna Estadio", YUNA_ESTADIO_POOL]] : []),
+          ] } : {}),
+          ...(out.metLisa ? { karla: [
+            ["Karla", KARLA_POOL], ["Karla Casual", KARLA_CASUAL_POOL], ["Karla Playa", KARLA_PLAYA_POOL],
+            ...(zoneOk("car") ? [["Karla Entreno", KARLA_CAR_POOL]] : []),
+          ] } : {}),
+          ...(out.metIgor ? { igor: [["Igor", IGOR_POOL]] } : {}),
+          ...(out.metMilly ? { milly: [
+            ["Milly Playa", MILLY_PLAYA_POOL],
+            ...(zoneOk("prensa") ? [["Milly Prensa", MILLY_PRENSA_POOL]] : []),
+          ] } : {}),
+        };
+        const names = Object.keys(roster);
+        const shuffled = [...names].sort(() => Math.random() - 0.5);
+        const target = Math.min(names.length, 3 + Math.floor(Math.random() * 2)); /* 3 o 4 personajes hoy */
+        shuffled.slice(0, target).forEach((key) => {
+          const variants = roster[key];
+          const [name, pool] = variants[Math.floor(Math.random() * variants.length)];
           const p = pool.filter((y) => !y.w || (COND[y.w] && COND[y.w](c)));
           if (p.length) out = playPoolEntry(out, name, p[Math.floor(Math.random() * p.length)], c);
-        }
+        });
       }
     }
     return checkQuests(checkZoneUnlocks(out));

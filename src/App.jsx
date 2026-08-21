@@ -1599,39 +1599,43 @@ const careerGoals = (g) => (g.matchHistory || []).reduce((a, m) => a + (m.myGoal
    de esa zona (coordenadas absolutas, sin tocar), para pintarla de gris con su
    silueta exacta cuando está bloqueada. Los nombres ya están dibujados en el propio
    SVG, así que aquí NO se repite ninguna etiqueta de texto. */
-const CITY_MAP_VB = { x: 220.14, y: -8.23, w: 437.96, h: 760.68 };
+const CITY_MAP_VB = { x: 36.3, y: 60.2, w: 417.1, h: 720 };
 const ZONES = [
-  { id: "oficina", kind: "npc", npc: "elisa", label: "Oficina", icon: "🏢", x: 22.50, y: 11.06,
-    pts: "256.99 59.94 260.4 109.64 409.5 101.81 409.5 48.37 256.99 59.94",
+  { id: "oficina", kind: "npc", npc: "elisa", label: "Oficina", icon: "🏢", x: 18.62, y: 6.04,
+    pts: "52.3 87.7 55.7 137.4 204.8 129.6 204.8 76.2 52.3 87.7",
     unlocked: () => true },
-  { id: "ciudad-dep", kind: "npc", npc: "lopez", label: "Ciudad Deportiva", icon: "🏟️", x: 64.97, y: 34.42,
-    pts: "431.63 217.22 418.95 256.54 461.84 305.56 642.1 305.56 642.1 219.77 431.63 217.22",
+  { id: "ciudad-dep", kind: "npc", npc: "lopez", label: "Ciudad Deportiva", icon: "🏟️", x: 63.22, y: 30.73,
+    pts: "226.9 245 214.2 284.3 257.1 333.4 437.4 333.4 437.4 247.6 226.9 245",
     unlocked: () => true },
-  { id: "kiosco", kind: "paper", npc: "milly", label: "Kiosco", icon: "📰", x: 70.71, y: 46.45,
-    pts: "507.8 317.81 572.65 317.81 561.42 382.66 525.33 379.09 503.72 355.6 507.8 317.81",
+  { id: "kiosco", kind: "paper", npc: "milly", label: "Kiosco", icon: "📰", x: 69.23, y: 43.44,
+    pts: "303.1 345.6 367.9 345.6 356.7 410.5 320.6 406.9 299 383.4 303.1 345.6",
     unlocked: () => true },
-  /* El Barrio no es un edificio: es una zona de calle, sin forma propia que pintar de gris */
+  /* Tu Casa: sin personaje, es la pantalla de trofeos y estadísticas de tu carrera. Siempre disponible. */
+  { id: "casa", kind: "home", npc: null, label: "Tu Casa", icon: "🏠", x: 18.87, y: 44.54,
+    pts: "91.1 348.2 163.7 373.2 152.4 429.4 76.8 405.4 91.1 348.2",
+    unlocked: () => true },
   /* varios personajes comparten esta zona de calle: la burbuja muestra a quien tenga
      algo pendiente ahora mismo (ver EXTRA_NPCS y CityMap); en reposo, el puntito de siempre */
-  { id: "barrio", kind: "npc", npc: ["yuna", "lili"], label: "El Barrio", icon: "🌆", x: 57.83, y: 52.92,
+  { id: "barrio", kind: "npc", npc: ["yuna", "lili"], label: "El Barrio", icon: "🌆", x: 53.16, y: 58.16,
+    pts: "217.8 461 217.8 507.5 318.4 500 318.4 465.1 217.8 461",
     unlocked: (g) => !!g.yunaMet, reqLabel: "Gánate tu primera victoria" },
-  { id: "car", kind: "npc", npc: ["dino", "cubarsi"], label: "Centro de Alto Rendimiento", icon: "🏋️", x: 63.19, y: 21.84,
-    pts: "434.69 136.71 434.69 194.24 592.65 195.94 587.89 125.73 434.69 136.71",
+  { id: "car", kind: "npc", npc: ["dino", "cubarsi"], label: "Centro de Alto Rendimiento", icon: "🏋️", x: 61.35, y: 17.42,
+    pts: "230 164.5 230 222 387.9 223.7 383.1 153.5 230 164.5",
     unlocked: (g) => careerGoals(g) >= 3, reqLabel: "Marca 3 goles en tu carrera", metFlag: "metDino", intro: DINO_INTRO_BEATS },
-  { id: "prensa", kind: "npc", npc: "punky", label: "Sala de Prensa", icon: "🎙️", x: 27.28, y: 35.54,
-    pts: "336.65 217.22 392.4 265.73 372.99 331.09 295.89 309.64 303.03 231.52 336.65 217.22",
+  { id: "prensa", kind: "npc", npc: "punky", label: "Sala de Prensa", icon: "🎙️", x: 23.63, y: 31.90,
+    pts: "131.9 245 187.7 293.5 168.3 358.9 91.1 337.4 98.3 259.3 131.9 245",
     unlocked: (g) => calcOVR(g.player.stats) >= 70, reqLabel: "Alcanza 70 de media", metFlag: "metPunky", intro: PUNKY_INTRO_BEATS },
-  { id: "patro", kind: "npc", npc: "lisa", label: "Zona de Patrocinadores", icon: "🏙️", x: 34.97, y: 82.54,
-    pts: "335.99 543 291.05 632.88 368.09 687.73 395.51 662.64 418.95 674.31 450.08 641.63 390.6 571.89 335.99 543",
+  { id: "patro", kind: "npc", npc: "lisa", label: "Zona de Patrocinadores", icon: "🏙️", x: 31.70, y: 81.56,
+    pts: "131.2 570.8 86.3 660.7 163.3 715.5 190.8 690.4 214.2 702.1 245.3 669.4 185.9 599.7 131.2 570.8",
     unlocked: (g) => g.tier.id >= 2, reqLabel: "Asciende a Primera Federación", metFlag: "metLisa", intro: LISA_INTRO_BEATS },
-  { id: "cantera", kind: "npc", npc: "yuni", label: "Cantera", icon: "🎓", x: 86.99, y: 47.88,
-    pts: "581.84 317.81 642.1 315.77 631.37 414.32 568.57 414.32 581.84 317.81",
+  { id: "cantera", kind: "npc", npc: "yuni", label: "Cantera", icon: "🎓", x: 86.33, y: 44.94,
+    pts: "377.1 345.6 437.4 343.6 426.6 442.1 363.8 442.1 377.1 345.6",
     unlocked: (g) => calcOVR(g.player.stats) >= 78, reqLabel: "Alcanza 78 de media", metFlag: "metYuni", intro: YUNI_INTRO_BEATS },
-  { id: "tienda", kind: "npc", npc: "irina", label: "Tienda Oficial", icon: "🛍️", x: 82.14, y: 66.90,
-    pts: "547.12 483.77 551.72 531.77 628.82 524.62 624.74 479.69 547.12 483.77",
+  { id: "tienda", kind: "npc", npc: "irina", label: "Tienda Oficial", icon: "🛍️", x: 81.25, y: 65.05,
+    pts: "342.4 511.6 347 559.6 424.1 552.4 420 507.5 342.4 511.6",
     unlocked: (g) => g.tier.id >= 3, reqLabel: "Asciende a LaLiga Hypermotion / 2ª europea", metFlag: "metIrina", intro: IRINA_INTRO_BEATS },
-  { id: "estadio", kind: "npc", npc: "yamal", label: "Gran Estadio", icon: "🏆", x: 75.80, y: 88.46,
-    pts: "588.81 606.32 499.76 629.73 467.63 649.9 494.8 736.45 588.81 736.45 635.81 687.73 588.81 606.32",
+  { id: "estadio", kind: "npc", npc: "yamal", label: "Gran Estadio", icon: "🏆", x: 74.57, y: 87.82,
+    pts: "384.1 634.1 295 657.5 262.9 677.7 290.1 764.2 384.1 764.2 431.1 715.5 384.1 634.1",
     unlocked: (g) => g.tier.id >= 4, reqLabel: "Asciende a Primera división · media tabla", metFlag: "metYamal", intro: YAMAL_INTRO_BEATS, big: true },
 ];
 /* una zona puede tener uno o varios personajes asignados (p.ej. El Barrio) */
@@ -2953,10 +2957,11 @@ function Newspaper({ game, onRead }) {
    siempre hay periódico, así que en vez de cartel ofrece abrirlo.
    Fondo real: si existe /images/zones/{id}.webp se usa; si no (todavía no se ha
    subido), cae a un degradado de marcador de posición sin romper nada. */
-function ZoneScreen({ zone, pendingNpc, onBack, onOpenPaper }) {
+function ZoneScreen({ zone, pendingNpc, onBack, onOpenPaper, game }) {
   const [imgOk, setImgOk] = useState(true);
   const npc = pendingNpc ? NPCS[pendingNpc] : null;
   const showPaperPrompt = zone.kind === "paper" && !pendingNpc;
+  const isHome = zone.kind === "home";
   return (
     <div className="zone-screen">
       {imgOk ? (
@@ -2968,13 +2973,58 @@ function ZoneScreen({ zone, pendingNpc, onBack, onOpenPaper }) {
       <div className="zone-shade" />
       <button className="zone-back" onClick={onBack}>← Volver</button>
       <div className="zone-label">{zone.label}</div>
-      {!pendingNpc && !showPaperPrompt && (
+      {!pendingNpc && !showPaperPrompt && !isHome && (
         <div className="zone-empty-card">
           <div style={{ fontSize: 30, marginBottom: 6 }}>🏚️</div>
           Parece que no hay nadie por aquí ahora mismo.</div>)}
       {showPaperPrompt && (
         <button className="zone-empty-card zone-paper-btn" onClick={onOpenPaper}>
           🗞️ Leer el periódico de hoy</button>)}
+      {isHome && <HouseRoom game={game} />}
+    </div>);
+}
+
+/* Tu Casa: sin personaje, muestra la vitrina de trofeos (una liga ganada = un trofeo)
+   y las estadísticas de partidos de toda tu carrera. */
+function HouseRoom({ game }) {
+  const trophies = (game.careerLog || []).filter((c) => c.pos === 1);
+  const hist = game.matchHistory || [];
+  const wins = hist.filter((m) => m.res === "V").length;
+  const draws = hist.filter((m) => m.res === "E").length;
+  const losses = hist.filter((m) => m.res === "D").length;
+  const goals = hist.reduce((a, m) => a + (m.myGoals || 0), 0);
+  const assists = hist.reduce((a, m) => a + (m.myAssists || 0), 0);
+  const rated = hist.filter((m) => m.rating != null);
+  const avgR = rated.length ? (rated.reduce((a, m) => a + m.rating, 0) / rated.length).toFixed(1) : "—";
+  const bestR = rated.length ? Math.max(...rated.map((m) => m.rating)) : null;
+  return (
+    <div className="house-room" onClick={(e) => e.stopPropagation()}>
+      <div className="house-card">
+        <div className="house-title">🏆 Vitrina de trofeos</div>
+        {trophies.length === 0 ? (
+          <div className="empty" style={{ padding: "10px 4px" }}>
+            <span className="em-ico">🗄️</span>Todavía no hay ninguna liga en la vitrina.<br />Termina 1º de tu categoría para ganar tu primer trofeo.</div>
+        ) : (
+          <div className="house-trophies">
+            {trophies.map((t, i) => (
+              <div key={i} className="house-trophy">
+                <Crest c1={t.c1} c2={t.c2} name={t.club} size={30} />
+                <div style={{ fontSize: 10.5, color: "#9a9e8e", marginTop: 4 }}>T{t.season}</div>
+                <div style={{ fontSize: 10, color: "#EFEEE3", fontWeight: 600 }}>🏆</div>
+              </div>))}
+          </div>)}
+      </div>
+      <div className="house-card">
+        <div className="house-title">📊 Estadísticas de carrera</div>
+        <div className="house-stats">
+          <div className="house-stat"><b>{hist.length}</b><span>Partidos</span></div>
+          <div className="house-stat"><b>{wins}-{draws}-{losses}</b><span>V-E-D</span></div>
+          <div className="house-stat"><b>{goals}</b><span>Goles</span></div>
+          <div className="house-stat"><b>{assists}</b><span>Asistencias</span></div>
+          <div className="house-stat"><b>{avgR}</b><span>Media</span></div>
+          <div className="house-stat"><b>{bestR != null ? bestR : "—"}</b><span>Mejor nota</span></div>
+        </div>
+      </div>
     </div>);
 }
 
@@ -4667,7 +4717,8 @@ export default function App() {
         out = addMsg(out, "Elisa",
           `🏁 FIN DE TEMPORADA ${s.num}.\nPosición final: ${pos}º de 10.\nTus goles: ${goals} · Nota media: ${avgR}.\n${pos <= 3 ? "Temporada histórica. Eres el nombre del vestuario." : pos <= 6 ? "Temporada digna. El año que viene, más." : "Temporada dura. Que sirva de gasolina."}`,
           { mood: pos <= 3 ? "happy" : pos <= 6 ? "idle" : "angry" });
-        out.careerLog = [...out.careerLog, { season: s.num, text: `${pos}º con ${g.club.name} · ${goals} goles · media ${avgR}` }];
+        out.careerLog = [...out.careerLog, { season: s.num, pos, club: g.club.name, c1: g.club.c1, c2: g.club.c2, league: g.tier.league,
+          text: `${pos}º con ${g.club.name} · ${goals} goles · media ${avgR}` }];
         /* memoria del año: resumen sobre datos ya guardados (partidos, logs, pesos) */
         const assists = seasonMatches.reduce((a, x) => a + (x.myAssists || 0), 0);
         const bestR = ratings.length ? Math.max(...ratings.map((x) => x.rating)) : null;
@@ -4950,7 +5001,7 @@ export default function App() {
       )}
       {/* visitar una zona: fondo a toda pantalla + flecha para volver */}
       {tab === "chat" && visitedZoneObj && (
-        <ZoneScreen zone={visitedZoneObj} pendingNpc={visitedActiveNpc}
+        <ZoneScreen zone={visitedZoneObj} pendingNpc={visitedActiveNpc} game={game}
           onBack={() => setVisitedZone(null)} onOpenPaper={() => setShowPaper(true)} />)}
       {/* diálogo de personaje: overlay a nivel de App (fuera de .tab-in), aparece encima
           del fondo de la zona en cuanto hay alguien esperando ahí (visitedActiveNpc) */}
@@ -5118,6 +5169,17 @@ function StyleTag() {
         max-width:78%; font-size:13.5px; line-height:1.5; border:1.5px solid rgba(239,238,227,.25); }
       .zone-paper-btn { border:1.5px solid #CDF546; cursor:pointer; font-family:'Oswald',sans-serif;
         letter-spacing:1px; font-size:14px; }
+      /* --- Tu Casa: vitrina de trofeos + estadísticas de carrera --- */
+      .house-room { position:fixed; left:50%; bottom:8%; transform:translateX(-50%); z-index:2;
+        width:88%; max-width:360px; max-height:70vh; overflow-y:auto; display:flex; flex-direction:column; gap:10px; }
+      .house-card { background:rgba(16,18,8,.85); border:1.5px solid rgba(239,238,227,.25); border-radius:16px; padding:14px; }
+      .house-title { color:#CDF546; font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:1px; margin-bottom:10px; }
+      .house-trophies { display:flex; flex-wrap:wrap; gap:12px; }
+      .house-trophy { display:flex; flex-direction:column; align-items:center; }
+      .house-stats { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; }
+      .house-stat { text-align:center; background:rgba(239,238,227,.06); border-radius:10px; padding:8px 4px; }
+      .house-stat b { display:block; font-family:'Oswald',sans-serif; font-size:16px; color:#EFEEE3; }
+      .house-stat span { font-size:10px; color:#9a9e8e; }
       .tabbtn { flex:1; min-width:0; background:none; border:none; color:#8d9279; padding:8px 0 9px; display:flex; flex-direction:column;
         align-items:center; gap:2px; cursor:pointer; font-family:'Barlow',sans-serif; border-radius:16px; }
       /* --- periódico --- */

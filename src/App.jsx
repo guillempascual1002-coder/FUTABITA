@@ -927,40 +927,46 @@ function pickEvent(g) {
    (moods/poses); algunas poses vienen de las antiguas variantes
    fuera-de-servicio, ahora fundidas aquí como un mood más. --- */
 const NPCS = {
-  lopez: { name: "López", color: "#D65A2E", voice: "/audio/vozchico02.mp3", icon: "/images/lopez_icon.webp",
-    arts: { idle: "/images/Lopez_idle.webp", happy: "/images/Lopez_happy.webp",
-      playa: "/images/lopez_playa.webp" }, def: "idle" },
+  lopez: { name: "López", color: "#D65A2E", voice: "/audio/vozchico02.mp3", icon: "/images/lopez/lopez_icon.webp",
+    arts: { idle: "/images/lopez/Lopez_idle.webp", happy: "/images/lopez/Lopez_happy.webp",
+      playa: "/images/lopez/lopez_playa.webp" }, def: "idle" },
   /* en Yuna, "angry" es en realidad SONROJADA: es su cara de tsundere pillada en falta.
      "preocupada" es su preocupación genuina, sin la careta puesta, antes de taparla con el
      sonrojo/enfado. "barcelona" es su lado fan sin disimulo, para cuando habla del Barça en sí.
      "playa" reservada, sin usar todavía en ninguna escena. */
-  yuna: { name: "Yuna", color: "#D4537E", voice: "/audio/vozchica01.mp3", icon: "/images/yuna_icon.webp",
-    arts: { idle: "/images/Yuna_Idle.webp", happy: "/images/Yuna_happy.webp", angry: "/images/Yuna_angry.webp",
-      preocupada: "/images/yuna_preocupada.webp", barcelona: "/images/yuna_barcelona.webp",
-      playa: "/images/yuna_playablush.webp" }, def: "idle" },
+  yuna: { name: "Yuna", color: "#D4537E", voice: "/audio/vozchica01.mp3", icon: "/images/yuna/yuna_icon.webp",
+    arts: { idle: "/images/yuna/Yuna_idle.webp", happy: "/images/yuna/Yuna_happy.webp", angry: "/images/yuna/Yuna_angry.webp",
+      preocupada: "/images/yuna/yuna_preocupada.webp", barcelona: "/images/yuna/yuna_barcelona.webp",
+      playa: "/images/yuna/yuna_playablush.webp" }, def: "idle" },
   /* en Elisa, "angry" es su cara de decepción contenida: para semanas flojas o cuando habla de
      entrenadora estricta. "casual"/"playa"/"gala" son sus tres facetas fuera de servicio. */
   elisa: { name: "Elisa", color: "#2E6ED6", voice: "/audio/vozchica02.mp3", icon: "/images/elisa/elisa_icon.webp",
     /* a partir de ahora los assets de Elisa viven en su propia carpeta (public/images/elisa/);
-       el resto de personajes se irá moviendo igual más adelante, personaje a personaje */
+       el resto de personajes se irá moviendo igual más adelante, personaje a personaje.
+       angry = decepción contenida, nunca enfado explosivo (ver ELISA_STORY). gala/playa son
+       outfits: solo se usan en sus propias escenas, nunca se mezclan con otro mood. */
     arts: { idle: "/images/elisa/Elisa_idle.webp", happy: "/images/elisa/Elisa_happy.webp", angry: "/images/elisa/Elisa_angry.webp",
-      casual: "/images/elisa/elisa_casual.webp", playa: "/images/elisa/elisa_playa.webp", gala: "/images/elisa/elisa_gala.webp" }, def: "idle" },
+      casual: "/images/elisa/elisa_casual.webp", playa: "/images/elisa/elisa_playa.webp", gala: "/images/elisa/elisa_gala.webp",
+      agotada: "/images/elisa/elisa_agotada.webp", celebracion: "/images/elisa/elisa_celebracion.webp",
+      decidida: "/images/elisa/elisa_decidida.webp", orgullosa: "/images/elisa/elisa_orgullosa.webp",
+      preocupada: "/images/elisa/elisa_preocupada.webp", sorprendida: "/images/elisa/elisa_sorprendida.webp",
+      suave: "/images/elisa/elisa_suave.webp" }, def: "idle" },
   /* Karla: futbolista pro, gestiona patrocinios. Su "angry" es en realidad ENGREÍDA/chulería,
      no enfado real. "casual"/"playa" son sus dos facetas fuera de servicio. */
-  lisa: { name: "Karla", color: "#9C6BD6", voice: "/audio/vozchica02.mp3", icon: "/images/karla_icon.webp",
-    arts: { idle: "/images/karla_idle.webp", happy: "/images/karla_happy.webp", angry: "/images/karla_ego.webp",
-      casual: "/images/karla_casual.webp", playa: "/images/karla_playa.webp" }, def: "idle" },
+  lisa: { name: "Karla", color: "#9C6BD6", voice: "/audio/vozchica02.mp3", icon: "/images/karla/karla_icon.webp",
+    arts: { idle: "/images/karla/karla_idle.webp", happy: "/images/karla/karla_happy.webp", angry: "/images/karla/karla_ego.webp",
+      casual: "/images/karla/karla_casual.webp", playa: "/images/karla/karla_playa.webp" }, def: "idle" },
   /* Milly: la del Kiosco, te trae el periódico en persona cada día; también hace de periodista
      en la Sala de Prensa. Alegre, cotilla, algo dramática. Sin angry.
      "periodico" es su pose sujetando el periódico, para el instante exacto de la entrega.
      "playa" es su faceta fuera de servicio. */
-  milly: { name: "Milly", color: "#C97A2E", voice: "/audio/vozchica01.mp3", icon: "/images/milly_icon.webp",
-    arts: { idle: "/images/milly_idle.webp", happy: "/images/milly_happy.webp",
-      periodico: "/images/milly_periodico.webp", playa: "/images/milly_playa.webp" }, def: "idle" },
+  milly: { name: "Milly", color: "#C97A2E", voice: "/audio/vozchica01.mp3", icon: "/images/milly/milly_icon.webp",
+    arts: { idle: "/images/milly/milly_idle.webp", happy: "/images/milly/milly_happy.webp",
+      periodico: "/images/milly/milly_periodico.webp", playa: "/images/milly/milly_playa.webp" }, def: "idle" },
   /* Igor: chef estrella del Restaurante (Metrópolis). Grande, carismático, trata la nutrición
      como táctica de fútbol. Sin angry: solo idle y happy. */
-  igor: { name: "Igor", color: "#B5651D", voice: "/audio/vozchico01.mp3", icon: "/images/igor_icon.webp",
-    arts: { idle: "/images/igor_idle.webp", happy: "/images/igor_happy.webp" }, def: "idle" },
+  igor: { name: "Igor", color: "#B5651D", voice: "/audio/vozchico01.mp3", icon: "/images/igor/igor_icon.webp",
+    arts: { idle: "/images/igor/igor_idle.webp", happy: "/images/igor/igor_happy.webp" }, def: "idle" },
 };
 /* el sender siempre es el nombre real del personaje ahora (la zona ya no crea una
    identidad de sender distinta: es contexto de la escena, ver campo "zone" en addMsg/addScene) */
@@ -1170,6 +1176,13 @@ const AMBIENT_BY_CHAR = {
 
 /* goles a lo largo de TODA la carrera (todas las temporadas), para el hito del Centro de Alto Rendimiento */
 const careerGoals = (g) => (g.matchHistory || []).reduce((a, m) => a + (m.myGoals || 0), 0);
+/* asistencias de toda la carrera, mismo criterio que careerGoals (para objetivos de historia) */
+const careerAssists = (g) => (g.matchHistory || []).reduce((a, m) => a + (m.myAssists || 0), 0);
+/* días "cumplidos" desde una fecha (inclusive): el día se cerró con al menos un 70% de
+   cumplimiento. Para objetivos de historia tipo "completa N días de objetivos" sin tener
+   que repetir en cada misión los mismos tres campos (gym/comida/sueño) a mano. */
+const daysGoalsCompletedSince = (g, sinceDay) =>
+  Object.entries(g.logs || {}).filter(([d, l]) => d >= sinceDay && l.closed && (l.pct || 0) >= 70).length;
 /* hitos de constancia para desbloquear las zonas de La Metrópolis, contados sobre TODO el historial de logs */
 const gymDaysCount = (g) => Object.values(g.logs || {}).filter((l) => l.gym).length;
 const habitDaysCount = (g) => Object.values(g.logs || {}).filter((l) => (l.habitsDone || []).length > 0).length;
@@ -1212,7 +1225,7 @@ const ZONES = [
   { id: "oficina", kind: "npc", npc: "elisa", label: "Oficina", icon: "🏢", x: 18.62, y: 6.04,
     pts: "52.3 87.7 55.7 137.4 204.8 129.6 204.8 76.2 52.3 87.7",
     unlocked: (g) => isZoneUnlocked(g, "oficina") },
-  { id: "ciudad-dep", kind: "npc", npc: "lopez", label: "Ciudad Deportiva", icon: "🏟️", x: 63.22, y: 30.73,
+  { id: "ciudad-dep", kind: "npc", npc: ["lopez", "elisa"], label: "Ciudad Deportiva", icon: "🏟️", x: 63.22, y: 30.73,
     pts: "226.9 245 214.2 284.3 257.1 333.4 437.4 333.4 437.4 247.6 226.9 245",
     unlocked: (g) => isZoneUnlocked(g, "ciudad-dep") },
   { id: "kiosco", kind: "paper", npc: "milly", label: "Kiosco", icon: "📰", x: 69.23, y: 43.44,
@@ -1224,16 +1237,16 @@ const ZONES = [
     unlocked: (g) => isZoneUnlocked(g, "casa") },
   /* varios personajes comparten esta zona de calle: la burbuja muestra a quien tenga
      algo pendiente ahora mismo (ver EXTRA_NPCS y CityMap); en reposo, el puntito de siempre */
-  { id: "barrio", kind: "npc", npc: "yuna", label: "El Barrio", icon: "🌆", x: 53.16, y: 58.16,
+  { id: "barrio", kind: "npc", npc: ["yuna", "elisa"], label: "El Barrio", icon: "🌆", x: 53.16, y: 58.16,
     pts: "217.8 461 217.8 507.5 318.4 500 318.4 465.1 217.8 461",
     unlocked: (g) => isZoneUnlocked(g, "barrio") },
-  { id: "car", kind: "npc", npc: ["lopez", "lisa"], label: "Centro de Alto Rendimiento", icon: "🏋️", x: 61.35, y: 17.42,
+  { id: "car", kind: "npc", npc: ["lopez", "lisa", "elisa"], label: "Centro de Alto Rendimiento", icon: "🏋️", x: 61.35, y: 17.42,
     pts: "230 164.5 230 222 387.9 223.7 383.1 153.5 230 164.5",
     unlocked: (g) => isZoneUnlocked(g, "car") },
   { id: "prensa", kind: "npc", npc: "milly", label: "Sala de Prensa", icon: "🎙️", x: 23.63, y: 31.90,
     pts: "131.9 245 187.7 293.5 168.3 358.9 91.1 337.4 98.3 259.3 131.9 245",
     unlocked: (g) => isZoneUnlocked(g, "prensa") },
-  { id: "patro", kind: "npc", npc: "lisa", label: "Zona de Patrocinadores", icon: "🏙️", x: 31.70, y: 81.56,
+  { id: "patro", kind: "npc", npc: ["lisa", "elisa"], label: "Zona de Patrocinadores", icon: "🏙️", x: 31.70, y: 81.56,
     pts: "131.2 570.8 86.3 660.7 163.3 715.5 190.8 690.4 214.2 702.1 245.3 669.4 185.9 599.7 131.2 570.8",
     unlocked: (g) => isZoneUnlocked(g, "patro"), metFlag: "metLisa", intro: KARLA_INTRO_BEATS },
   { id: "cantera", kind: "npc", npc: "lopez", label: "Cantera", icon: "🎓", x: 86.33, y: 44.94,
@@ -1286,7 +1299,7 @@ const METRO_ZONES = [
   { id: "casino", kind: "npc", npc: "elisa", label: "Casino", icon: "🎰", x: 51.03, y: 43.99,
     pts: "220.6 343.57 206.85 417.61 281.87 429.86 294.89 358.89 220.6 343.57",
     unlocked: (g) => isZoneUnlocked(g, "casino") },
-  { id: "enfermeria", kind: "npc", npc: null, label: "Enfermería", icon: "🏥", x: 86.65, y: 22.97,
+  { id: "enfermeria", kind: "npc", npc: "elisa", label: "Enfermería", icon: "🏥", x: 86.65, y: 22.97,
     pts: "402.89 159.68 353.11 256.96 460.34 286.08 460.34 197.98 402.89 159.68",
     unlocked: (g) => isZoneUnlocked(g, "enfermeria") },
   { id: "playa", kind: "npc", npc: ["elisa", "milly", "lopez", "lisa"], label: "Playa", icon: "🏖️", x: 12.16, y: 49.44,
@@ -1369,10 +1382,263 @@ const toStories = (registry) => {
   });
   return out;
 };
+
+/* ============================================================
+   ELISA · primera campaña narrativa completa del motor de historias.
+   Prólogo + 12 capítulos + Final + Epílogo, todos como ETAPAS de un
+   único capítulo (chapters[0]) — encajan directamente en la forma que
+   ya soporta checkStories, sin necesitar capítulos adicionales.
+
+   Cada etapa puede llevar:
+     zone         — dónde aparece su escena (se autodesbloquea al
+                    encolarse: ver enterStage en checkStories).
+     alsoUnlock   — zonas extra que se abren de cara a un crossover
+                    futuro con otro personaje, no la propia zona de
+                    la escena (solo capítulos 8 y 11 la usan).
+     setFlags     — flags de game.flags-equivalentes (campos sueltos
+                    en game) que otros personajes podrán consultar
+                    más adelante.
+   ============================================================ */
+const ELISA_STORY = {
+  npc: "elisa",
+  chapters: [{
+    id: "cap1",
+    title: "La carrera de Elisa",
+    trigger: () => true, /* es el primer NPC del juego: arranca en cuanto el motor puede evaluarla */
+    stages: [
+      /* PRÓLOGO — La primera llamada */
+      { title: "La primera llamada", zone: "barrio",
+        objective: "Completa un día de preparación: entrenamiento + alimentación + sueño.",
+        intro: [
+          { m: "idle", t: "¿Tú eres {player}?" },
+          { m: "idle", t: "Vale. Soy Elisa. Me han hablado de ti. No voy a decirte que eres una estrella porque todavía no lo eres." },
+          { m: "idle", t: "Pero tienes algo que me interesa." },
+          { m: "happy", t: "Y antes de que preguntes: sí, eso es una buena noticia." },
+          { m: "idle", t: "Estás en Tercera Federación. Aquí nadie te va a regalar nada. Si quieres llegar arriba, vamos a tener que trabajar." },
+          { m: "decidida", t: "Yo voy a ocuparme de que tengas una oportunidad. Lo que hagas con ella ya será cosa tuya." },
+          { m: "idle", t: "Si aceptas, mañana empezamos de verdad. Oficina. Ocho en punto." },
+        ],
+        setFlags: ["elisaMet"],
+        snap: () => ({ since: todayStr() }),
+        check: (g, snap) => Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.closed &&
+          l.gym && (l.prot || 0) >= g.player.goals.protein && l.sleep != null && l.sleep >= g.player.goals.sleepGoal) },
+      /* CAPÍTULO 1 — Desde abajo */
+      { title: "Desde abajo", zone: "oficina",
+        objective: "Completa 3 días de objetivos diarios y consigue una victoria.",
+        intro: [
+          { m: "idle", t: "Si has venido pensando que hoy vamos a hablar de goles, te tengo una mala noticia." },
+          { m: "idle", t: "Los goles son el resultado. Antes están el entrenamiento, la comida, el descanso y la cabeza." },
+          { m: "happy", t: "Sí. Ya sé que suena menos emocionante." },
+          { m: "idle", t: "Pero te prometo que será bastante más importante." },
+          { m: "decidida", t: "Quiero que construyamos algo que aguante cuando las cosas dejen de salir bien." },
+        ],
+        setFlags: ["elisaStoryStarted", "elisaOfficeUnlocked"],
+        snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3 &&
+          (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") },
+      /* CAPÍTULO 2 — Ganarse el sitio */
+      { title: "Ganarse el sitio", zone: "ciudad-dep",
+        objective: "Marca 1 gol, consigue una victoria y alcanza una racha de 3 días.",
+        intro: [
+          { m: "idle", t: "Te voy a decir algo que no suele gustar escuchar." },
+          { m: "idle", t: "No tienes derecho a ser titular." },
+          { m: "angry", t: "Y no, no te estoy castigando. Si fueras mi sobrino también te diría lo mismo." },
+          { m: "idle", t: "Lo que sí tienes es derecho a ganártelo." },
+          { m: "decidida", t: "Haz que el entrenador no tenga una excusa para dejarte fuera." },
+        ],
+        snap: (g) => ({ goals: careerGoals(g), matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => careerGoals(g) > snap.goals &&
+          (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") && (g.player.streak || 0) >= 3 },
+      /* CAPÍTULO 3 — El precio del progreso */
+      { title: "El precio del progreso", zone: "oficina",
+        objective: "Cumple alimentación 4 días y sueño 3 días; consigue una victoria.",
+        intro: [
+          { m: "agotada", t: "Dame un segundo..." },
+          { m: "agotada", t: "Llevo desde las seis con informes, llamadas y dos cafés que ya no deberían contar como café." },
+          { m: "sorprendida", t: "No pongas esa cara. Estoy bien." },
+          { m: "idle", t: "Bueno. Estoy suficientemente bien." },
+          { m: "preocupada", t: "Lo que me preocupa es que tú estés intentando acelerar todo esto demasiado." },
+          { m: "idle", t: "No quiero que llegues arriba rápido. Quiero que llegues y puedas quedarte." },
+        ],
+        snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => {
+          const days = Object.entries(g.logs || {}).filter(([d, l]) => d >= snap.since && l.closed);
+          const foodDays = days.filter(([, l]) => (l.prot || 0) >= g.player.goals.protein).length;
+          const sleepDays = days.filter(([, l]) => l.sleep != null && l.sleep >= g.player.goals.sleepGoal).length;
+          return foodDays >= 4 && sleepDays >= 3 && (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V");
+        } },
+      /* CAPÍTULO 4 — Un sitio más grande */
+      { title: "Un sitio más grande", zone: "car",
+        objective: "Cumple 5 días de objetivos y mejora tu OVR respecto al inicio del capítulo.",
+        intro: [
+          { m: "idle", t: "Bienvenido a tu primera visita al centro." },
+          { m: "happy", t: "Mira bien. Hace unos meses ni siquiera sabías que existía este sitio." },
+          { m: "decidida", t: "Aquí no entrenan para parecer profesionales. Entrenan para sobrevivir cuando el nivel sube." },
+          { m: "idle", t: "Y eso es exactamente lo que quiero para ti." },
+          { m: "orgullosa", t: "Has mejorado. Ahora toca demostrar que puedes hacerlo otra vez." },
+        ],
+        setFlags: ["elisaTrainingRoutine"],
+        snap: (g) => ({ since: todayStr(), ovr: calcOVR(g.player.stats) }),
+        check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 5 && calcOVR(g.player.stats) > snap.ovr },
+      /* CAPÍTULO 5 — Tu nombre empieza a pesar */
+      { title: "Tu nombre empieza a pesar", zone: "patro",
+        objective: "Alcanza el siguiente nivel de OVR o cambia de club.",
+        intro: [
+          { m: "idle", t: "Antes de entrar, una cosa." },
+          { m: "idle", t: "A partir de ahora habrá gente interesada en ti que no sabe nada de fútbol." },
+          { m: "idle", t: "Querrán tu cara, tu nombre, tu tiempo y, si pueden, una parte de todo lo que generes." },
+          { m: "decidida", t: "No voy a decidir por ti. Pero sí voy a asegurarme de que entiendas lo que estás firmando." },
+          { m: "sorprendida", t: "Y sí, sé que esto es mucho para alguien que empezó jugando en Tercera." },
+        ],
+        setFlags: ["elisaPatronUnlocked"],
+        snap: (g) => ({ tierId: g.tier.id, clubName: g.club.name }),
+        check: (g, snap) => {
+          const next = TIERS.find((t) => t.id === snap.tierId + 1);
+          return (next && calcOVR(g.player.stats) >= next.minOvr) || g.tier.id !== snap.tierId || g.club.name !== snap.clubName;
+        } },
+      /* CAPÍTULO 6 — La persona detrás del jugador */
+      { title: "La persona detrás del jugador", zone: "parque",
+        objective: "Completa entrenamiento + alimentación + sueño y gana el siguiente partido.",
+        intro: [
+          { m: "casual", t: "Hoy no vengo a hablar de fútbol." },
+          { m: "sorprendida", t: "Sí. Puedes mirarme así. Yo también tengo días en los que no quiero hablar de fútbol." },
+          { m: "casual", t: "A veces me pregunto si la gente se acuerda de que los jugadores son personas." },
+          { m: "suave", t: "Supongo que contigo estoy aprendiendo a acordarme de que los mánagers también." },
+          { m: "casual", t: "No te acostumbres. Mañana vuelvo a ser insoportable." },
+        ],
+        snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.closed &&
+          l.gym && (l.prot || 0) >= g.player.goals.protein && l.sleep != null && l.sleep >= g.player.goals.sleepGoal) &&
+          (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") },
+      /* CAPÍTULO 7 — El partido que importa */
+      { title: "El partido que importa", zone: "estadio",
+        objective: "Gana el derbi, suma gol o asistencia y mantén una racha de 6 días.",
+        intro: [
+          { m: "preocupada", t: "¿Nervioso?" },
+          { m: "idle", t: "No me digas que no. Te conozco demasiado bien ya." },
+          { m: "preocupada", t: "Es normal. El derbi pesa." },
+          { m: "decidida", t: "Pero no quiero que juegues para demostrarme nada." },
+          { m: "orgullosa", t: "Juega porque has trabajado para estar aquí." },
+        ],
+        setFlags: ["elisaTrustUp"],
+        snap: (g) => ({ matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => {
+          const ms = (g.matchHistory || []).slice(snap.matchCount);
+          return ms.some((m) => m.derbi && m.res === "V") && ms.some((m) => (m.myGoals || 0) > 0 || (m.myAssists || 0) > 0) &&
+            (g.player.streak || 0) >= 6;
+        } },
+      /* CAPÍTULO 8 — Ya no eres el mismo */
+      { title: "Ya no eres el mismo", zone: "oficina", alsoUnlock: ["prensa"],
+        objective: "Sube de categoría o cambia de club, y juega un partido después.",
+        intro: [
+          { m: "idle", t: "Tengo tres llamadas esperándome." },
+          { m: "happy", t: "Enhorabuena. Eso significa que empiezas a ser importante." },
+          { m: "idle", t: "También significa que van a empezar a opinar sobre ti personas que jamás han hablado contigo." },
+          { m: "decidida", t: "No voy a encerrarte en una burbuja." },
+          { m: "suave", t: "Pero si alguna vez necesitas salir de todo ese ruido, sabes dónde encontrarme." },
+        ],
+        snap: (g) => ({ tierId: g.tier.id, matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => g.tier.id !== snap.tierId && (g.matchHistory || []).length > snap.matchCount },
+      /* CAPÍTULO 9 — La caída */
+      { title: "La caída", zone: "enfermeria",
+        objective: "Recupera forma 'buen' o 'alza', gana un partido y completa 3 días de objetivos.",
+        intro: [
+          { m: "angry", t: "No estoy enfadada." },
+          { m: "angry", t: "Estoy decepcionada. Y creo que sabes perfectamente por qué." },
+          { m: "preocupada", t: "Pero no voy a convertir un mal momento en una sentencia." },
+          { m: "preocupada", t: "Si estás cansado, dímelo. Si tienes miedo, dímelo. Si no sabes qué hacer, también." },
+          { m: "suave", t: "Lo único que no quiero es que intentes cargar con todo tú solo." },
+        ],
+        setFlags: ["elisaCrisis"],
+        snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => (g.player.form === "buen" || g.player.form === "alza") &&
+          (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") && daysGoalsCompletedSince(g, snap.since) >= 3 },
+      /* CAPÍTULO 10 — Una noche distinta */
+      { title: "Una noche distinta", zone: "casino",
+        objective: "Completa un hito de carrera y mantén una racha de 5 días.",
+        intro: [
+          { m: "gala", t: "No te acostumbres a verme así." },
+          { m: "gala", t: "Esta noche no soy tu entrenadora." },
+          { m: "gala", t: "Bueno... técnicamente sigo siéndolo." },
+          { m: "gala", t: "Pero durante unas horas podemos fingir que ninguno de los dos tiene una temporada que sacar adelante." },
+          { m: "gala", t: "Y no, no pienso dejar que apuestes tu carrera en una mesa." },
+        ],
+        setFlags: ["elisaCrisisResolved"],
+        snap: (g) => ({ tierId: g.tier.id, seasonNum: g.season.num }),
+        check: (g, snap) => (g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum) && (g.player.streak || 0) >= 5 },
+      /* CAPÍTULO 11 — Lo que elegimos */
+      { title: "Lo que elegimos", zone: "oficina", alsoUnlock: ["playa"],
+        objective: "Completa un hito de carrera mientras decides tu camino.",
+        intro: [
+          { m: "idle", t: "He pasado meses diciéndote lo que creo que deberías hacer." },
+          { m: "idle", t: "Hoy voy a hacer algo distinto." },
+          { m: "decidida", t: "Voy a preguntarte qué quieres tú." },
+          { m: "preocupada", t: "Porque puede que mi idea de tu mejor carrera no sea exactamente la misma que la tuya." },
+          { m: "suave", t: "Y si he aprendido algo contigo, es que acompañar a alguien no significa caminar delante." },
+        ],
+        snap: (g) => ({ tierId: g.tier.id, seasonNum: g.season.num }),
+        check: (g, snap) => (g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum) && (g.player.streak || 0) >= 5 },
+      /* CAPÍTULO 12 — Hasta arriba */
+      { title: "Hasta arriba", zone: "atico",
+        objective: "Alcanza el nivel de élite, gana un partido importante, racha de 6 días y supera tu mejor OVR o nota.",
+        intro: [
+          { m: "idle", t: "¿Te acuerdas de la primera vez que te vi?" },
+          { m: "happy", t: "No tenías nada de esto." },
+          { m: "idle", t: "Ni este club. Ni este estadio. Ni todas estas llamadas." },
+          { m: "orgullosa", t: "Y, sinceramente, sigo viendo al mismo jugador." },
+          { m: "suave", t: "Solo que ahora sabes de lo que eres capaz." },
+        ],
+        setFlags: ["elisaDecisionMade"],
+        snap: (g) => ({ matchCount: (g.matchHistory || []).length, ovr: calcOVR(g.player.stats), bestRating: g.bestRating || 0 }),
+        check: (g, snap) => {
+          const eliteId = TIERS[TIERS.length - 1].id;
+          return g.tier.id >= eliteId && (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") &&
+            (g.player.streak || 0) >= 6 && (calcOVR(g.player.stats) > snap.ovr || (g.bestRating || 0) > snap.bestRating);
+        } },
+      /* FINAL — El jugador que conocí */
+      { title: "El jugador que conocí", zone: "estadio",
+        objective: "Alcanza el umbral final de élite.",
+        intro: [
+          { m: "orgullosa", t: "Cuando te conocí, estabas en Tercera Federación y estabas convencido de que tenías que demostrar algo en cada minuto." },
+          { m: "idle", t: "Yo solo quería darte una oportunidad." },
+          { m: "orgullosa", t: "Luego me obligaste a darte otra. Y otra." },
+          { m: "suave", t: "Y en algún momento dejé de pensar en dónde podías llegar." },
+          { m: "suave", t: "Empecé a disfrutar de estar ahí para verlo." },
+          { m: "orgullosa", t: "Has llegado muy lejos, {player}." },
+          { m: "suave", t: "Y sí. Estoy orgullosa de ti." },
+        ],
+        snap: () => ({}),
+        check: (g) => g.tier.id >= TIERS[TIERS.length - 1].id },
+      /* EPÍLOGO — Ocho en punto (última etapa: final:true, sin objetivo propio,
+         entrega el pin y el +1 MEN al entrar aquí, ver reward) */
+      { title: "Ocho en punto", zone: "oficina", final: true,
+        intro: [
+          { m: "idle", t: "Ocho en punto." },
+          { m: "suave", t: "Sigues llegando a la hora." },
+          { m: "happy", t: "Menos mal. Ya empezaba a pensar que había hecho un mal trabajo." },
+          { m: "suave", t: "Bueno... supongo que eso es todo." },
+          { m: "suave", t: "No la carrera. Eso no se acaba aquí." },
+          { m: "suave", t: "Solo esta parte." },
+        ],
+        setFlags: ["elisaStoryComplete", "elisaPinEarned"],
+        reward: (g) => {
+          const stats = { ...g.player.stats };
+          stats.MEN = Math.min(99, stats.MEN + 1);
+          const inv = { ...(g.inventory || {}) };
+          inv.elisa_pin = (inv.elisa_pin || 0) + 1;
+          return { ...g, player: { ...g.player, stats }, inventory: inv };
+        } },
+    ],
+  }],
+};
+
 /* separadas por mapa (para el registro de misiones de cada uno) y también fusionadas
-   (para el motor, al que no le importa desde qué mapa se desbloqueó cada historia) */
-const STORIES_CIUDAD = toStories(QUESTS);
-const STORIES_METRO = toStories(METRO_QUESTS);
+   (para el motor, al que no le importa desde qué mapa se desbloqueó cada historia).
+   La historia de Elisa se añade a los dos registros porque sus escenas se reparten
+   entre zonas de La Ciudad y de La Metrópolis: así el panel de Misiones la muestra
+   esté donde esté el jugador, no solo desde el mapa donde tocara desbloquearla. */
+const STORIES_CIUDAD = { ...toStories(QUESTS), elisa: ELISA_STORY };
+const STORIES_METRO = { ...toStories(METRO_QUESTS), elisa: ELISA_STORY };
 const STORIES = { ...STORIES_CIUDAD, ...STORIES_METRO };
 
 /* ============================================================
@@ -1392,6 +1658,10 @@ const ITEMS = {
     desc: "Un premio raro de la ruleta del Casino. Nadie sabe si de verdad trae suerte, pero por probar..." },
   perfume_lujo: { name: "Perfume de Lujo", icon: "🧴", img: "/images/objects/perfume_lujo.webp", kind: "gift", giveTo: "lisa",
     desc: "Un frasco carísimo que Milly guardaba 'para una ocasión especial'. Le pega mucho a Karla." },
+  /* recuerdo, no consumible ni regalable: solo se enseña (ver InventoryPanel, no
+     renderiza botón de acción para un kind que no sea "consumable"/"gift") */
+  elisa_pin: { name: "Pin de Elisa", icon: "📌", img: "/images/objects/elisa_pin.webp", kind: "keepsake",
+    desc: "El pin que te dio Elisa al cierre de vuestra historia. No se usa ni se regala: es un recuerdo de todo el camino." },
 };
 /* dar un objeto a su destinatario: reacción propia del personaje + el objeto se gasta */
 const ITEM_GIVE_REACTIONS = {
@@ -3842,12 +4112,16 @@ export default function App() {
     const npc = senderToNpc(from);
     if (npc) {
       const q = [...(g.npcQueue || [])];
-      /* tope de cola: si el jugador estuvo días sin abrir, no se apilan 10 diálogos.
-         Las ofertas y los mensajes que confirman un hito (applyOnRead) nunca se descartan:
-         si se perdieran, el estado avanzaría sin que el jugador hubiera leído la escena. */
-      if (q.length >= 6) { const i = q.findIndex((e) => e.kind !== "offer" && !e.applyOnRead); if (i >= 0) q.splice(i, 1); }
+      /* tope de cola: si el jugador estuvo días sin abrir, no se apilan decenas de diálogos.
+         12 y no menos: las escenas narrativas más largas (el prólogo y el final de la
+         campaña de Elisa tienen 7 beats) solo llevan applyOnRead en la ÚLTIMA frase, así
+         que con un tope más bajo la propia escena se autodesalojaba su primer beat según
+         se iba encolando. Las ofertas y los mensajes que confirman un hito (applyOnRead)
+         nunca se descartan: si se perdieran, el estado avanzaría sin que el jugador hubiera
+         leído la escena. */
+      if (q.length >= 12) { const i = q.findIndex((e) => e.kind !== "offer" && !e.applyOnRead); if (i >= 0) q.splice(i, 1); }
       q.push({ id: Date.now() + Math.random(), npc, mood: extra.mood || moodOf(npc, text), text,
-        kind: extra.kind, offer: extra.offer, replies: extra.replies, applyOnRead: extra.applyOnRead });
+        kind: extra.kind, offer: extra.offer, replies: extra.replies, applyOnRead: extra.applyOnRead, zone: extra.zone });
       return { ...g, npcQueue: q };
     }
     const today = todayStr();
@@ -3860,11 +4134,13 @@ export default function App() {
   /* "escena": varias frases seguidas del mismo personaje, cada una con su propia expresión.
      Se apilan en la cola de diálogos (ya soporta varias entradas con el contador "+N en espera"),
      así que al tocar para avanzar el retrato cambia de idle a happy/angry entre frase y frase.
-     Solo la ÚLTIMA frase lleva los extras (replies, kind, offer...). */
+     Solo la ÚLTIMA frase lleva los extras (replies, kind, offer...); la zona (si la escena
+     tiene una) va en TODAS las frases, para que la burbuja "+N en espera" de esa zona
+     cuente la escena entera y no solo su último mensaje. */
   const addScene = (g, from, beats, extra = {}) => {
     let out = g;
     beats.forEach((b, i) => {
-      out = addMsg(out, from, b.t, i === beats.length - 1 ? { mood: b.m, ...extra } : { mood: b.m });
+      out = addMsg(out, from, b.t, i === beats.length - 1 ? { mood: b.m, ...extra } : { mood: b.m, zone: extra.zone });
     });
     return out;
   };
@@ -3921,6 +4197,16 @@ export default function App() {
      (ver STORIES). El progreso es siempre determinista — depende de check(g,snap),
      nunca de la rotación ambiental aleatoria — así que esto encaja tal cual con
      "el azar decide cuándo aparece una escena disponible, nunca si la historia avanza". */
+  /* entrar en una etapa desbloquea, en el mismo momento en que se encola su escena, la
+     zona donde esa escena transcurre (stage.zone) y cualquier zona extra que la etapa
+     quiera abrir de cara a un crossover futuro (stage.alsoUnlock) — así "el personaje te
+     espera en X" y "X se desbloquea" son el mismo evento, sin depender de que el jugador
+     haya leído todavía el mensaje (no podría llegar a X para leerlo si no). */
+  const enterStage = (g, stage) => {
+    let out = stage.zone ? unlockZone(g, stage.zone) : g;
+    (stage.alsoUnlock || []).forEach((zoneId) => { out = unlockZone(out, zoneId); });
+    return out;
+  };
   const checkStories = (g) => {
     let out = g;
     const stories = { ...(out.stories || {}) };
@@ -3937,8 +4223,9 @@ export default function App() {
         if (!chapter.trigger(out)) return;
         const s0 = chapter.stages[0];
         const state = { chapter: chapterIdx, stage: 0, snap: s0.snap ? s0.snap(out) : {}, startDay: todayStr() };
+        out = enterStage(out, s0);
         out = addScene(out, NPCS[def.npc].name, s0.intro.map((b) => ({ m: b.m, t: fillTpl(b.t, flavorCtx(out)) })),
-          { applyOnRead: { story: { key, state } } });
+          { zone: s0.zone, applyOnRead: { story: { key, state }, flags: s0.setFlags } });
         pending[key] = true;
         return;
       }
@@ -3958,8 +4245,9 @@ export default function App() {
         ? { chapter: chapterIdx + 1, stage: -1, snap: {}, startDay: todayStr() } /* -1: aún no ha empezado su primera etapa */
         : { chapter: chapterIdx, stage: nextIdx, snap: next.snap ? next.snap(out) : {}, startDay: todayStr(), done: chapterDone, failed };
       const beats = failed && next.introFail ? next.introFail : next.intro;
+      out = enterStage(out, next);
       out = addScene(out, NPCS[def.npc].name, beats.map((b) => ({ m: b.m, t: fillTpl(b.t, flavorCtx(out)) })),
-        { applyOnRead: { story: { key, state } } });
+        { zone: next.zone, applyOnRead: { story: { key, state }, flags: next.setFlags } });
       pending[key] = true;
       if (chapterDone && next.reward && !failed) out = next.reward(out);
     });

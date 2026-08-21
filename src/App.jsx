@@ -1586,6 +1586,10 @@ const IRINA_POOL = [
 
 /* goles a lo largo de TODA la carrera (todas las temporadas), para el hito del Centro de Alto Rendimiento */
 const careerGoals = (g) => (g.matchHistory || []).reduce((a, m) => a + (m.myGoals || 0), 0);
+/* hitos de constancia para desbloquear las zonas de La Metrópolis, contados sobre TODO el historial de logs */
+const gymDaysCount = (g) => Object.values(g.logs || {}).filter((l) => l.gym).length;
+const habitDaysCount = (g) => Object.values(g.logs || {}).filter((l) => (l.habitsDone || []).length > 0).length;
+const kcalGoalHits = (g) => Object.values(g.logs || {}).filter((l) => (l.kcal || 0) >= (g.player.goals.kcal || Infinity)).length;
 
 /* ============================================================
    LA CIUDAD · zonas del mapa, con su requisito de desbloqueo.
@@ -1673,16 +1677,16 @@ const METRO_MAP_VB = { x: 65.19, y: 64.02, w: 411.15, h: 728.26 };
 const METRO_ZONES = [
   { id: "parque", kind: "npc", npc: null, label: "Parque", icon: "🌳", x: 25.24, y: 15.17,
     pts: "199.15 80.02 81.19 286.08 105.7 333.35 259.66 93.01 199.15 80.02",
-    unlocked: () => true },
+    unlocked: (g) => gymDaysCount(g) >= 5, reqLabel: "Completa 5 días de gym" },
   { id: "casino", kind: "npc", npc: null, label: "Casino", icon: "🎰", x: 43.72, y: 43.21,
     pts: "220.6 343.57 206.85 417.61 281.87 429.86 294.89 358.89 220.6 343.57",
-    unlocked: () => true },
+    unlocked: (g) => habitDaysCount(g) >= 20, reqLabel: "Registra hábitos 20 días" },
   { id: "atico", kind: "npc", npc: null, label: "Ático de Lujo", icon: "🌇", x: 75.52, y: 63.97,
     pts: "353.11 469.13 347.74 507.48 294.89 602.97 445.02 666.29 460.34 464.53 353.11 469.13",
-    unlocked: () => true },
+    unlocked: (g) => calcOVR(g.player.stats) >= 80, reqLabel: "Alcanza 80 de media" },
   { id: "restaurante", kind: "npc", npc: null, label: "Restaurante", icon: "🍽️", x: 58.72, y: 84.24,
     pts: "284.94 620.02 223.66 727.26 294.89 776.28 377.62 688.96 335.49 662.91 344.68 647.24 284.94 620.02",
-    unlocked: () => true },
+    unlocked: (g) => kcalGoalHits(g) >= 5, reqLabel: "Llega a tu objetivo de calorías 5 veces" },
 ];
 const METRO_EXTRA_NPCS = [];
 const METRO_QUESTS = {};

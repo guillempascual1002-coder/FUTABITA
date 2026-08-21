@@ -1659,6 +1659,24 @@ const EXTRA_NPCS = [
 ];
 
 /* ============================================================
+   LA METRÓPOLIS · segundo mapa, independiente del de La Ciudad
+   (su propio viaje, sus propias zonas/personajes y sus propias
+   misiones, para que el registro de misiones no las mezcle todas).
+   De momento no tiene zonas todavía: en cuanto llegue su SVG y sus
+   personajes, se rellenan METRO_ZONES/METRO_EXTRA_NPCS/METRO_QUESTS
+   con el mismo formato que ZONES/EXTRA_NPCS/QUESTS, sin tocar nada
+   más de la arquitectura (CityMap, ZoneScreen, QuestPanel... ya
+   están preparados para funcionar con cualquiera de los dos mapas).
+   ============================================================ */
+const METRO_MAP_VB = { x: 0, y: 0, w: 100, h: 100 };
+const METRO_ZONES = [];
+const METRO_EXTRA_NPCS = [];
+const METRO_QUESTS = {};
+/* todas las zonas de ambos mapas juntas, solo para resolver "en qué zona estoy"
+   sin que importe desde qué mapa se abrió (los id no se repiten entre mapas) */
+const ALL_ZONES = [...ZONES, ...METRO_ZONES];
+
+/* ============================================================
    MISIONES · historias por entregas, aparte de las frases sueltas.
    Se guardan en g.quests[npc] = { stage, snap, startDay, done, failed }.
    Cada etapa: intro (escena al empezarla), objective (texto para el
@@ -3048,8 +3066,8 @@ function PaperModal({ game, onRead, onClose }) {
 
 /* Registro de misiones: solo enseña las historias que ya han empezado (nada de spoilers
    de las que aún no se han desbloqueado), con el objetivo actual y una barra de progreso. */
-function QuestPanel({ game, onClose }) {
-  const active = Object.entries(QUESTS)
+function QuestPanel({ game, onClose, questsRegistry }) {
+  const active = Object.entries(questsRegistry)
     .map(([key, def]) => ({ key, def, qs: (game.quests || {})[key] }))
     .filter((x) => x.qs);
   return (
@@ -3088,7 +3106,7 @@ function QuestPanel({ game, onClose }) {
 }
 
 /* ---------- LA CIUDAD · mapa de zonas con desbloqueo progresivo ---------- */
-function CityMap({ game, onVisit }) {
+function CityMap({ game, onVisit, zones, vb, svgSrc, mapLabel }) {
   const npcQueue = game.npcQueue || [];
   const [flash, setFlash] = useState(null); /* id de zona mostrando su requisito/aviso */
 
@@ -3104,31 +3122,40 @@ function CityMap({ game, onVisit }) {
     onVisit(z.id);
   };
   /* centro de cada zona en las coordenadas nativas del SVG (para el texto del candado) */
-  const cx = (z) => CITY_MAP_VB.x + (z.x / 100) * CITY_MAP_VB.w;
-  const cy = (z) => CITY_MAP_VB.y + (z.y / 100) * CITY_MAP_VB.h;
-  const flashZone = flash ? ZONES.find((z) => z.id === flash) : null;
+  const cx = (z) => vb.x + (z.x / 100) * vb.w;
+  const cy = (z) => vb.y + (z.y / 100) * vb.h;
+  const flashZone = flash ? zones.find((z) => z.id === flash) : null;
+
+  /* mapa todavía sin zonas (p.ej. la Metrópolis, a la espera de su SVG y sus personajes) */
+  if (!zones.length) return (
+    <div className="city-wrap city-empty">
+      <div className="city-empty-card">
+        <div style={{ fontSize: 34, marginBottom: 8 }}>🚧</div>
+        {mapLabel} está en construcción.<br />Vuelve pronto.
+      </div>
+    </div>);
 
   return (
     <div className="city-wrap">
-      <img src="/images/city-map.svg" alt="Mapa de la ciudad" className="city-bg-img" />
+      <img src={svgSrc} alt={`Mapa de ${mapLabel}`} className="city-bg-img" />
       {/* la zona en sí (su silueta real del mapa) es lo clicable, no un círculo suelto encima.
           bloqueadas: gris + candado. desbloqueadas sin nada pendiente: invisible, pero clicable
           en toda su forma. Con algo pendiente, esa silueta queda tapada por la burbuja de personaje. */}
-      <svg className="city-overlay" viewBox={`${CITY_MAP_VB.x} ${CITY_MAP_VB.y} ${CITY_MAP_VB.w} ${CITY_MAP_VB.h}`} preserveAspectRatio="none">
-        {ZONES.filter((z) => !z.unlocked(game)).map((z) => (
+      <svg className="city-overlay" viewBox={`${vb.x} ${vb.y} ${vb.w} ${vb.h}`} preserveAspectRatio="none">
+        {zones.filter((z) => !z.unlocked(game)).map((z) => (
           <g key={z.id} className="city-lockshape" onClick={() => zoneClick(z, false)}>
             {z.pts ? <polygon points={z.pts} className="city-lockfill" />
               /* sin edificio propio (El Barrio): círculo invisible solo para ampliar la zona tocable */
               : <circle cx={cx(z)} cy={cy(z)} r="20" fill="transparent" />}
             <text x={cx(z)} y={cy(z)} className={"city-locktxt" + (z.pts ? "" : " small")} textAnchor="middle" dominantBaseline="central">🔒</text>
           </g>))}
-        {ZONES.filter((z) => z.unlocked(game) && !zonePending(z, game)).map((z) => (
+        {zones.filter((z) => z.unlocked(game) && !zonePending(z, game)).map((z) => (
           <g key={z.id} className="city-clickshape" onClick={() => zoneClick(z, true)}>
             {z.pts ? <polygon points={z.pts} fill="transparent" />
               : <circle cx={cx(z)} cy={cy(z)} r="20" fill="transparent" />}
           </g>))}
       </svg>
-      {ZONES.map((z) => {
+      {zones.map((z) => {
         const unlocked = z.unlocked(game);
         const style = { left: z.x + "%", top: z.y + "%" };
         /* el candado, el clic en reposo y el aviso van todos dentro del overlay SVG /
@@ -4287,15 +4314,18 @@ export default function App() {
   const [visitedZone, setVisitedZone] = useState(null); // qué zona de la Ciudad estás visitando ahora mismo
   const [showPaper, setShowPaper] = useState(false); // periódico abierto como ventana modal desde el Kiosco
   const [showQuests, setShowQuests] = useState(false); // registro de misiones
+  const [activeMap, setActiveMap] = useState("ciudad"); // "ciudad" o "metropoli": qué mapa se ve en la pestaña Ciudad
   const saveTimer = useRef();
 
   const pushToast = (t) => { setToast(t); setTimeout(() => setToast(null), 3200); };
-  /* como el periódico: al salir de la pestaña Ciudad, cualquier visita/periódico/registro abierto se cierra */
-  useEffect(() => { if (tab !== "chat") { setVisitedZone(null); setShowPaper(false); setShowQuests(false); } }, [tab]);
+  /* como el periódico: al salir de la pestaña Ciudad, cualquier visita/periódico/registro abierto se cierra,
+     y se vuelve al mapa de La Ciudad para no dejarte "perdido" en la Metrópolis la próxima vez que entres */
+  useEffect(() => { if (tab !== "chat") { setVisitedZone(null); setShowPaper(false); setShowQuests(false); setActiveMap("ciudad"); } }, [tab]);
   /* quién tiene algo pendiente en la zona que estás visitando ahora: se recalcula solo
      en cada render, así que en cuanto se vacía su cola la pantalla pasa sola al cartel
-     de "no hay nadie" sin necesidad de un efecto aparte que pueda desincronizarse */
-  const visitedZoneObj = visitedZone ? ZONES.find((z) => z.id === visitedZone) : null;
+     de "no hay nadie" sin necesidad de un efecto aparte que pueda desincronizarse.
+     ALL_ZONES junta las zonas de los dos mapas, así da igual desde cuál se abrió. */
+  const visitedZoneObj = visitedZone ? ALL_ZONES.find((z) => z.id === visitedZone) : null;
   const visitedActiveNpc = visitedZoneObj ? zoneActiveNpc(visitedZoneObj, game ? (game.npcQueue || []) : []) : null;
 
   /* mensajes en 2ª persona -> cola de diálogos NPC; 3ª persona -> artículo del periódico.
@@ -4342,7 +4372,7 @@ export default function App() {
      acción que pueda mover el requisito: media, goles de carrera o ascenso de categoría. */
   const checkZoneUnlocks = (g) => {
     let out = g;
-    [...ZONES, ...EXTRA_NPCS].forEach((z) => {
+    [...ZONES, ...EXTRA_NPCS, ...METRO_ZONES, ...METRO_EXTRA_NPCS].forEach((z) => {
       if (!z.metFlag || out[z.metFlag] || (out.introQueued && out.introQueued[z.metFlag]) || !z.unlocked(out)) return;
       /* el flag "ya lo conoces" no se marca aquí: se marca cuando el jugador lee la escena
          de verdad (applyOnRead), para no dar por vista una conversación que se perdió */
@@ -4362,7 +4392,7 @@ export default function App() {
     let out = g;
     const quests = { ...(out.quests || {}) };
     const pending = { ...(out.questPending || {}) };
-    Object.entries(QUESTS).forEach(([key, def]) => {
+    Object.entries({ ...QUESTS, ...METRO_QUESTS }).forEach(([key, def]) => {
       if (pending[key]) return; /* ya hay una escena suya esperando a leerse, no dupliques */
       let qs = quests[key];
       if (!qs) {
@@ -4994,7 +5024,12 @@ export default function App() {
               notify={pushToast} onGoGym={() => setTab("gym")} onAddNote={addNote} onDelNote={delNote} />}
             {tab === "gym" && <GymTab game={game} api={gymApi} notify={pushToast} />}
             {tab === "league" && <LeagueTab game={game} onPlayMatch={playMatch} crest={crest} crestScale={crestScale} />}
-            {tab === "chat" && <CityMap game={game} onVisit={setVisitedZone} />}
+            {tab === "chat" && activeMap === "ciudad" && (
+              <CityMap game={game} onVisit={setVisitedZone} zones={ZONES} vb={CITY_MAP_VB}
+                svgSrc="/images/city-map.svg" mapLabel="La Ciudad" />)}
+            {tab === "chat" && activeMap === "metropoli" && (
+              <CityMap game={game} onVisit={setVisitedZone} zones={METRO_ZONES} vb={METRO_MAP_VB}
+                svgSrc="/images/metropolis-map.svg" mapLabel="La Metrópolis" />)}
             {tab === "me" && <ProfileTab game={game} photo={photo} onWeight={addWeight} onPhoto={savePhoto} onRemovePhoto={removePhoto}
               crest={crest} onCrest={saveCrest} onRemoveCrest={removeCrest} crestScale={crestScale} onCrestScale={saveCrestScale}
               onGoals={setGoals} getBackup={getBackup} onRestore={restoreBackup} haptics={haptics} onHaptics={setHapticsPref}
@@ -5029,9 +5064,13 @@ export default function App() {
       {tab === "chat" && !visitedZone && !showPaper && (
         <div className="quest-fab-wrap">
           <button className="quest-fab" onClick={() => setShowQuests(true)} aria-label="Misiones">📜</button>
+          <button className="quest-fab" onClick={() => setActiveMap(activeMap === "ciudad" ? "metropoli" : "ciudad")}
+            aria-label={activeMap === "ciudad" ? "Viajar a la Metrópolis" : "Volver a La Ciudad"}>
+            {activeMap === "ciudad" ? "🌆" : "🏙️"}</button>
         </div>)}
       {tab === "chat" && showQuests && (
-        <QuestPanel game={game} onClose={() => setShowQuests(false)} />)}
+        <QuestPanel game={game} onClose={() => setShowQuests(false)}
+          questsRegistry={activeMap === "ciudad" ? QUESTS : METRO_QUESTS} />)}
       {game.pendingSummary && !liveMatch && (
         <div className="overlay" style={{ background: "radial-gradient(ellipse at 50% 0%, #0E3320, #05070d 75%)", overflowY: "auto" }}>
           <div className="pop-in" style={{ width: "100%", maxWidth: 340, padding: "30px 0" }}>
@@ -5167,7 +5206,7 @@ function StyleTag() {
       /* botón de misiones: mismo truco de centrado que la tabbar (para alinearse con ella
          sin importar el ancho de viewport), pero el botón en sí solo ocupa la izquierda */
       .quest-fab-wrap { position:fixed; bottom:78px; left:50%; transform:translateX(-50%);
-        width:calc(100% - 20px); max-width:460px; display:flex; justify-content:flex-start;
+        width:calc(100% - 20px); max-width:460px; display:flex; justify-content:flex-start; gap:10px;
         z-index:35; pointer-events:none; }
       .quest-fab { pointer-events:auto; width:52px; height:52px; border-radius:50%; background:#16190F;
         color:#CDF546; border:2px solid #CDF546; font-size:22px; display:flex; align-items:center;
@@ -5360,6 +5399,9 @@ function StyleTag() {
         animation:pop .3s ease both; max-width:90%; text-align:center; }
       /* --- la ciudad: mapa dibujado (SVG propio) + capa de zonas encima --- */
       .city-wrap { position:relative; width:100%; margin:6px 0 30px; line-height:0; }
+      .city-empty { display:flex; align-items:center; justify-content:center; min-height:50vh; }
+      .city-empty-card { line-height:1.5; text-align:center; color:#6F7563; font-size:13.5px;
+        background:#F0EFE5; border-radius:16px; padding:26px 22px; max-width:260px; }
       .city-bg-img { display:block; width:100%; height:auto; }
       .city-overlay { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
       .city-lockshape { pointer-events:auto; cursor:pointer; }

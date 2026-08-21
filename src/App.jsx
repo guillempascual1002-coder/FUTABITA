@@ -961,8 +961,13 @@ const NPCS = {
      "periodico" es su pose sujetando el periódico, para el instante exacto de la entrega.
      "playa" es su faceta fuera de servicio. */
   milly: { name: "Milly", color: "#C97A2E", voice: "/audio/vozchica01.mp3", icon: "/images/milly/milly_icon.webp",
+    /* periodico: SOLO para la entrega física del periódico diario (kiosco), no como mood
+       genérico. playa: outfit completo, no se mezcla con otros moods dentro de una escena. */
     arts: { idle: "/images/milly/milly_idle.webp", happy: "/images/milly/milly_happy.webp",
-      periodico: "/images/milly/milly_periodico.webp", playa: "/images/milly/milly_playa.webp" }, def: "idle" },
+      periodico: "/images/milly/milly_periodico.webp", playa: "/images/milly/milly_playa.webp",
+      curiosa: "/images/milly/milly_curiosa.webp", sorprendida: "/images/milly/milly_sorprendida.webp",
+      preocupada: "/images/milly/milly_preocupada.webp", decidida: "/images/milly/milly_decidida.webp",
+      orgullosa: "/images/milly/milly_orgullosa.webp" }, def: "idle" },
   /* Igor: chef estrella del Restaurante (Metrópolis). Grande, carismático, trata la nutrición
      como táctica de fútbol. Sin angry: solo idle y happy. */
   igor: { name: "Igor", color: "#B5651D", voice: "/audio/vozchico01.mp3", icon: "/images/igor/igor_icon.webp",
@@ -1225,7 +1230,7 @@ const ZONES = [
   { id: "oficina", kind: "npc", npc: "elisa", label: "Oficina", icon: "🏢", x: 18.62, y: 6.04,
     pts: "52.3 87.7 55.7 137.4 204.8 129.6 204.8 76.2 52.3 87.7",
     unlocked: (g) => isZoneUnlocked(g, "oficina") },
-  { id: "ciudad-dep", kind: "npc", npc: ["lopez", "elisa"], label: "Ciudad Deportiva", icon: "🏟️", x: 63.22, y: 30.73,
+  { id: "ciudad-dep", kind: "npc", npc: ["lopez", "elisa", "milly"], label: "Ciudad Deportiva", icon: "🏟️", x: 63.22, y: 30.73,
     pts: "226.9 245 214.2 284.3 257.1 333.4 437.4 333.4 437.4 247.6 226.9 245",
     unlocked: (g) => isZoneUnlocked(g, "ciudad-dep") },
   { id: "kiosco", kind: "paper", npc: "milly", label: "Kiosco", icon: "📰", x: 69.23, y: 43.44,
@@ -1237,7 +1242,7 @@ const ZONES = [
     unlocked: (g) => isZoneUnlocked(g, "casa") },
   /* varios personajes comparten esta zona de calle: la burbuja muestra a quien tenga
      algo pendiente ahora mismo (ver EXTRA_NPCS y CityMap); en reposo, el puntito de siempre */
-  { id: "barrio", kind: "npc", npc: ["yuna", "elisa"], label: "El Barrio", icon: "🌆", x: 53.16, y: 58.16,
+  { id: "barrio", kind: "npc", npc: ["yuna", "elisa", "milly"], label: "El Barrio", icon: "🌆", x: 53.16, y: 58.16,
     pts: "217.8 461 217.8 507.5 318.4 500 318.4 465.1 217.8 461",
     unlocked: (g) => isZoneUnlocked(g, "barrio") },
   { id: "car", kind: "npc", npc: ["lopez", "lisa", "elisa"], label: "Centro de Alto Rendimiento", icon: "🏋️", x: 61.35, y: 17.42,
@@ -1246,7 +1251,7 @@ const ZONES = [
   { id: "prensa", kind: "npc", npc: "milly", label: "Sala de Prensa", icon: "🎙️", x: 23.63, y: 31.90,
     pts: "131.9 245 187.7 293.5 168.3 358.9 91.1 337.4 98.3 259.3 131.9 245",
     unlocked: (g) => isZoneUnlocked(g, "prensa") },
-  { id: "patro", kind: "npc", npc: ["lisa", "elisa"], label: "Zona de Patrocinadores", icon: "🏙️", x: 31.70, y: 81.56,
+  { id: "patro", kind: "npc", npc: ["lisa", "elisa", "milly"], label: "Zona de Patrocinadores", icon: "🏙️", x: 31.70, y: 81.56,
     pts: "131.2 570.8 86.3 660.7 163.3 715.5 190.8 690.4 214.2 702.1 245.3 669.4 185.9 599.7 131.2 570.8",
     unlocked: (g) => isZoneUnlocked(g, "patro"), metFlag: "metLisa", intro: KARLA_INTRO_BEATS },
   { id: "cantera", kind: "npc", npc: "lopez", label: "Cantera", icon: "🎓", x: 86.33, y: 44.94,
@@ -1255,7 +1260,7 @@ const ZONES = [
   { id: "tienda", kind: "npc", npc: ["yuna", "lopez"], label: "Tienda Oficial", icon: "🛍️", x: 81.25, y: 65.05,
     pts: "342.4 511.6 347 559.6 424.1 552.4 420 507.5 342.4 511.6",
     unlocked: (g) => isZoneUnlocked(g, "tienda") },
-  { id: "estadio", kind: "npc", npc: ["lopez", "yuna", "elisa"], label: "Gran Estadio", icon: "🏆", x: 74.57, y: 87.82,
+  { id: "estadio", kind: "npc", npc: ["lopez", "yuna", "elisa", "milly"], label: "Gran Estadio", icon: "🏆", x: 74.57, y: 87.82,
     pts: "384.1 634.1 295 657.5 262.9 677.7 290.1 764.2 384.1 764.2 431.1 715.5 384.1 634.1",
     unlocked: (g) => isZoneUnlocked(g, "estadio"), big: true },
 ];
@@ -1293,13 +1298,13 @@ const EXTRA_NPCS = [];
    480 792.72, sobre el lienzo original de 480x822.74. */
 const METRO_MAP_VB = { x: 0, y: 30.02, w: 480, h: 792.72 };
 const METRO_ZONES = [
-  { id: "parque", kind: "npc", npc: ["elisa", "lisa"], label: "Parque", icon: "🌳", x: 35.20, y: 18.23,
+  { id: "parque", kind: "npc", npc: ["elisa", "lisa", "milly"], label: "Parque", icon: "🌳", x: 35.20, y: 18.23,
     pts: "199.15 80.02 81.19 286.08 105.7 333.35 259.66 93.01 199.15 80.02",
     unlocked: (g) => isZoneUnlocked(g, "parque") },
   { id: "casino", kind: "npc", npc: "elisa", label: "Casino", icon: "🎰", x: 51.03, y: 43.99,
     pts: "220.6 343.57 206.85 417.61 281.87 429.86 294.89 358.89 220.6 343.57",
     unlocked: (g) => isZoneUnlocked(g, "casino") },
-  { id: "enfermeria", kind: "npc", npc: "elisa", label: "Enfermería", icon: "🏥", x: 86.65, y: 22.97,
+  { id: "enfermeria", kind: "npc", npc: ["elisa", "milly"], label: "Enfermería", icon: "🏥", x: 86.65, y: 22.97,
     pts: "402.89 159.68 353.11 256.96 460.34 286.08 460.34 197.98 402.89 159.68",
     unlocked: (g) => isZoneUnlocked(g, "enfermeria") },
   { id: "playa", kind: "npc", npc: ["elisa", "milly", "lopez", "lisa"], label: "Playa", icon: "🏖️", x: 12.16, y: 49.44,
@@ -1632,13 +1637,256 @@ const ELISA_STORY = {
   }],
 };
 
+/* ============================================================
+   MILLY · segunda campaña narrativa completa. Prólogo + 13 capítulos +
+   final + epílogo, misma forma que ELISA_STORY (una sola etapa de
+   chapters[0] por cada escena). Milly representa la ciudad alrededor
+   de la carrera del jugador: sus zonas se reparten entre Kiosco/Barrio/
+   Ciudad Deportiva/Sala de Prensa/Patrocinadores (Ciudad) y Parque/
+   Enfermería/Gran Estadio (mezcla de ambos mapas, ver más abajo).
+
+   Nota de asset: el documento de esta campaña usa el mood "suave" en 3
+   frases (capítulos 11, final y epílogo) pero no lo declara entre sus
+   assets ni existe /images/milly/milly_suave.webp — a diferencia de
+   Elisa, que sí tiene ese mood. Sustituidas por el mood más cercano
+   (idle/happy) en vez de dejar una imagen rota o inventar un asset. */
+const MILLY_STORY = {
+  npc: "milly",
+  chapters: [{
+    id: "cap1",
+    title: "La historia de Milly",
+    trigger: () => true,
+    stages: [
+      /* PRÓLOGO — El periódico de hoy */
+      { title: "El periódico de hoy", zone: "kiosco",
+        objective: "Recoge el primer periódico y completa un día de juego.",
+        intro: [
+          { m: "periodico", t: "¡Buenos días! Bueno, dependiendo de la hora. Si acabas de levantarte, para ti es una noticia de última hora." },
+          { m: "happy", t: "Soy Milly. Dueña del kiosco, repartidora oficial y persona que sabe demasiadas cosas de demasiada gente." },
+          { m: "idle", t: "Tú eres {player}, ¿verdad? El nuevo de {club}." },
+          { m: "curiosa", t: "¿Primeros días y ya estás llamando la atención? Qué peligro." },
+          { m: "happy", t: "Toma. El periódico. No lo he leído entero, solo las partes importantes." },
+          { m: "periodico", t: "Y antes de que preguntes: sí, te lo voy a traer todos los días." },
+        ],
+        setFlags: ["millyMet"],
+        snap: () => ({ since: todayStr() }),
+        check: (g, snap) => !!g.paperRead && g.paperRead >= snap.since &&
+          Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.closed) },
+      /* CAPÍTULO 1 — Una noticia pequeña */
+      { title: "Una noticia pequeña", zone: "kiosco",
+        objective: "Juega un partido y consigue un resultado registrado.",
+        intro: [
+          { m: "curiosa", t: "Vale, necesito una cosa." },
+          { m: "idle", t: "No pongas esa cara. No es ilegal." },
+          { m: "curiosa", t: "Bueno... técnicamente tampoco estoy segura de que sea periodismo." },
+          { m: "happy", t: "Quiero escribir una mini noticia sobre tu primer partido." },
+          { m: "idle", t: "No hace falta que seas una estrella. Las historias pequeñas son las que llenan el periódico." },
+        ],
+        setFlags: ["millyStoryStarted"],
+        snap: (g) => ({ matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => (g.matchHistory || []).length > snap.matchCount },
+      /* CAPÍTULO 2 — La libreta */
+      { title: "La libreta", zone: "kiosco",
+        objective: "Consigue una victoria y completa 3 días de objetivos.",
+        intro: [
+          { m: "curiosa", t: "He empezado una libreta." },
+          { m: "happy", t: "Bueno, ya tenía una. Pero esta es la seria." },
+          { m: "curiosa", t: "Apunto nombres, fechas, cosas raras que escucho y preguntas que todavía no sé responder." },
+          { m: "idle", t: "No significa que vaya detrás de ti." },
+          { m: "curiosa", t: "Significa que, si casualmente apareces en mis notas, será por motivos periodísticos." },
+        ],
+        setFlags: ["millyNotes"],
+        snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3 &&
+          (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") },
+      /* CAPÍTULO 3 — La cámara */
+      { title: "La cámara", zone: "barrio",
+        objective: "Completa un entrenamiento y consigue una victoria.",
+        intro: [
+          { m: "happy", t: "¡Tengo cámara!" },
+          { m: "sorprendida", t: "Sí, ya sé que parece pequeña. Pero las cosas importantes también pueden caber en una cámara pequeña." },
+          { m: "curiosa", t: "Quiero hacer una foto tuya entrenando." },
+          { m: "idle", t: "No para el periódico de mañana. Para mi archivo." },
+          { m: "decidida", t: "Si quiero ser periodista de verdad, necesito aprender a mirar antes de escribir." },
+        ],
+        snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.gym) &&
+          (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") },
+      /* CAPÍTULO 4 — La historia detrás del marcador */
+      { title: "La historia detrás del marcador", zone: "prensa",
+        objective: "Marca un gol y suma una asistencia u otra contribución.",
+        intro: [
+          { m: "sorprendida", t: "¿Sabes qué? La gente aquí pregunta cosas muy serias." },
+          { m: "happy", t: "Yo también sé hacer preguntas serias." },
+          { m: "curiosa", t: "Bueno... algunas veces." },
+          { m: "decidida", t: "Quiero contar qué hay detrás de un marcador." },
+          { m: "idle", t: "Tu gol está bien. Pero quiero saber qué pasó antes de que llegaras a marcarlo." },
+        ],
+        snap: (g) => ({ goals: careerGoals(g), assists: careerAssists(g) }),
+        check: (g, snap) => {
+          const dg = careerGoals(g) - snap.goals, da = careerAssists(g) - snap.assists;
+          return dg >= 1 && (da >= 1 || dg >= 2);
+        } },
+      /* CAPÍTULO 5 — No todo se publica */
+      { title: "No todo se publica", zone: "prensa",
+        objective: "Completa 4 días de objetivos y consigue una victoria.",
+        intro: [
+          { m: "curiosa", t: "He descubierto una cosa." },
+          { m: "preocupada", t: "Y por primera vez no sé si debería contártela." },
+          { m: "idle", t: "Porque una noticia puede ser verdad y aun así hacer daño." },
+          { m: "decidida", t: "Quiero escribir bien. No solo escribir rápido." },
+          { m: "happy", t: "Aunque me cueste horrores no cotillear." },
+        ],
+        setFlags: ["millyEthics"],
+        snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 4 &&
+          (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") },
+      /* CAPÍTULO 6 — El kiosco */
+      { title: "El kiosco", zone: "kiosco",
+        objective: "Consigue una racha de 6 días y mejora tu OVR.",
+        intro: [
+          { m: "preocupada", t: "Hoy no traigo una noticia divertida." },
+          { m: "preocupada", t: "Cada vez vendo menos periódicos." },
+          { m: "happy", t: "¡No pongas esa cara! Todavía no voy a cerrar." },
+          { m: "idle", t: "Pero sí me preocupa." },
+          { m: "orgullosa", t: "Este kiosco es mi sitio. Aquí he conocido a medio barrio." },
+          { m: "decidida", t: "Así que voy a encontrar una forma de que vuelva a importar." },
+        ],
+        setFlags: ["millyKioskCrisis"],
+        snap: (g) => ({ ovr: calcOVR(g.player.stats) }),
+        check: (g, snap) => (g.player.streak || 0) >= 6 && calcOVR(g.player.stats) > snap.ovr },
+      /* CAPÍTULO 7 — Tu nombre en portada */
+      { title: "Tu nombre en portada", zone: "kiosco",
+        objective: "Alcanza un nuevo nivel o una mejora notable de OVR.",
+        intro: [
+          { m: "sorprendida", t: "¡Estás en portada!" },
+          { m: "happy", t: "Bueno, en una esquina. Pero una esquina importante." },
+          { m: "curiosa", t: "Podría haber puesto una foto enorme." },
+          { m: "idle", t: "Pero no quiero convertirte en un cartel publicitario." },
+          { m: "orgullosa", t: "Quiero que cuando alguien lea tu nombre sepa por qué está ahí." },
+        ],
+        snap: (g) => ({ tierId: g.tier.id, ovr: calcOVR(g.player.stats) }),
+        check: (g, snap) => g.tier.id !== snap.tierId || calcOVR(g.player.stats) >= snap.ovr + 3 },
+      /* CAPÍTULO 8 — Lo que nadie pregunta */
+      { title: "Lo que nadie pregunta", zone: "patro",
+        objective: "Cambia de club o de nivel, y juega un partido después.",
+        intro: [
+          { m: "curiosa", t: "He venido a hacer una pregunta." },
+          { m: "decidida", t: "No a ti. A ellos." },
+          { m: "idle", t: "¿Cuánto de lo que cuentan sobre un jugador es realmente suyo?" },
+          { m: "preocupada", t: "Porque si todo el mundo empieza a hablar por ti, puede que un día nadie escuche lo que tú dices." },
+          { m: "decidida", t: "Y eso sí que sería una noticia." },
+        ],
+        snap: (g) => ({ tierId: g.tier.id, clubName: g.club.name, matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => (g.tier.id !== snap.tierId || g.club.name !== snap.clubName) &&
+          (g.matchHistory || []).length > snap.matchCount },
+      /* CAPÍTULO 9 — Una mala noticia */
+      { title: "Una mala noticia", zone: "enfermeria",
+        objective: "Completa 3 días de objetivos y gana un partido.",
+        intro: [
+          { m: "preocupada", t: "Hoy no tengo ninguna broma." },
+          { m: "preocupada", t: "Me han contado algo que podría llenar media portada." },
+          { m: "idle", t: "Pero no voy a publicarlo." },
+          { m: "decidida", t: "No todo lo que sabemos nos pertenece." },
+          { m: "preocupada", t: "Supongo que esto también forma parte de aprender a ser periodista." },
+        ],
+        snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3 &&
+          (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") },
+      /* CAPÍTULO 10 — La credencial */
+      { title: "La credencial", zone: "prensa",
+        objective: "Supera tu mejor nota u OVR y consigue una victoria.",
+        intro: [
+          { m: "sorprendida", t: "Mira." },
+          { m: "happy", t: "¡Mira bien!" },
+          { m: "decidida", t: "Ahora sí." },
+          { m: "orgullosa", t: "Ya no estoy aquí porque conozco a alguien que conoce a alguien." },
+          { m: "happy", t: "Bueno... sigo conociendo a muchísima gente." },
+          { m: "decidida", t: "Pero ahora tengo un sitio propio." },
+        ],
+        setFlags: ["millyJournalist"],
+        snap: (g) => ({ bestRating: g.bestRating || 0, ovr: calcOVR(g.player.stats), matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => ((g.bestRating || 0) > snap.bestRating || calcOVR(g.player.stats) > snap.ovr) &&
+          (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") },
+      /* CAPÍTULO 11 — La noticia que no esperaba */
+      { title: "La noticia que no esperaba", zone: "parque",
+        objective: "Completa una racha de 6 días y un hito de carrera.",
+        intro: [
+          { m: "preocupada", t: "Tengo una oportunidad." },
+          { m: "idle", t: "Una de esas oportunidades que deberían hacerte saltar de alegría." },
+          { m: "preocupada", t: "Y no estoy saltando." },
+          { m: "curiosa", t: "Porque si me voy, ¿quién va a repartir el periódico por aquí?" },
+          { m: "idle", t: "No quiero convertirme en alguien que cuenta historias de un sitio en el que ya no vive." },
+        ],
+        snap: (g) => ({ tierId: g.tier.id, seasonNum: g.season.num }),
+        check: (g, snap) => (g.player.streak || 0) >= 6 && (g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum) },
+      /* CAPÍTULO 12 — La gran historia */
+      { title: "La gran historia", zone: "estadio",
+        objective: "Gana un partido, suma gol/asistencia y supera tu mejor OVR o nota.",
+        intro: [
+          { m: "curiosa", t: "No me mires así." },
+          { m: "happy", t: "Sí, llevo la cámara." },
+          { m: "decidida", t: "Y sí, esta vez voy a hacer el reportaje entero." },
+          { m: "orgullosa", t: "No sobre una estrella." },
+          { m: "decidida", t: "Sobre alguien que empezó en Tercera y se empeñó en llegar arriba." },
+        ],
+        setFlags: ["millyBigStory"],
+        snap: (g) => ({ matchCount: (g.matchHistory || []).length, ovr: calcOVR(g.player.stats), bestRating: g.bestRating || 0 }),
+        check: (g, snap) => {
+          const ms = (g.matchHistory || []).slice(snap.matchCount);
+          return ms.some((m) => m.res === "V") && ms.some((m) => (m.myGoals || 0) > 0 || (m.myAssists || 0) > 0) &&
+            (calcOVR(g.player.stats) > snap.ovr || (g.bestRating || 0) > snap.bestRating);
+        } },
+      /* CAPÍTULO 13 — La portada */
+      { title: "La portada", zone: "kiosco",
+        objective: "Alcanza el nivel de élite.",
+        intro: [
+          { m: "orgullosa", t: "Ya está." },
+          { m: "happy", t: "He tardado tres noches." },
+          { m: "curiosa", t: "He cambiado el titular siete veces." },
+          { m: "orgullosa", t: "Y al final he dejado tu nombre como estaba." },
+          { m: "happy", t: "Porque después de todo este tiempo, creo que ya sé quién eres." },
+        ],
+        snap: () => ({}),
+        check: (g) => g.tier.id >= TIERS[TIERS.length - 1].id },
+      /* FINAL — La última entrega (sin objetivo propio: se resuelve en cuanto se lee) */
+      { title: "La última entrega", zone: "kiosco",
+        objective: "Sin objetivo adicional.",
+        intro: [
+          { m: "periodico", t: "¡Buenos días!" },
+          { m: "happy", t: "¿Sabes qué es lo gracioso?" },
+          { m: "orgullosa", t: "Que después de todo esto, sigo haciendo exactamente lo mismo." },
+          { m: "happy", t: "Te traigo el periódico." },
+          { m: "happy", t: "Solo que ahora, algunas de las historias que hay dentro también las he escrito yo." },
+          { m: "orgullosa", t: "Y una de ellas empezó contigo." },
+        ],
+        snap: () => ({}), check: () => true },
+      /* EPÍLOGO — El kiosco sigue aquí (última etapa: final:true, entrega el pin al entrar aquí) */
+      { title: "El kiosco sigue aquí", zone: "kiosco", final: true,
+        intro: [
+          { m: "idle", t: "¿Sabes qué me gusta de este sitio?" },
+          { m: "happy", t: "Que aquí las cosas cambian muchísimo." },
+          { m: "happy", t: "Pero algunas personas siguen volviendo." },
+          { m: "happy", t: "Así que toma." },
+          { m: "periodico", t: "Tu periódico." },
+        ],
+        setFlags: ["millyStoryComplete", "millyPinEarned"],
+        reward: (g) => {
+          const inv = { ...(g.inventory || {}) };
+          inv.milly_pin = (inv.milly_pin || 0) + 1;
+          return { ...g, inventory: inv };
+        } },
+    ],
+  }],
+};
+
 /* separadas por mapa (para el registro de misiones de cada uno) y también fusionadas
    (para el motor, al que no le importa desde qué mapa se desbloqueó cada historia).
-   La historia de Elisa se añade a los dos registros porque sus escenas se reparten
-   entre zonas de La Ciudad y de La Metrópolis: así el panel de Misiones la muestra
-   esté donde esté el jugador, no solo desde el mapa donde tocara desbloquearla. */
-const STORIES_CIUDAD = { ...toStories(QUESTS), elisa: ELISA_STORY };
-const STORIES_METRO = { ...toStories(METRO_QUESTS), elisa: ELISA_STORY };
+   Las historias de Elisa y Milly se añaden a los dos registros porque sus escenas se
+   reparten entre zonas de La Ciudad y de La Metrópolis: así el panel de Misiones las
+   muestra estés donde estés, no solo desde el mapa donde tocara desbloquearlas. */
+const STORIES_CIUDAD = { ...toStories(QUESTS), elisa: ELISA_STORY, milly: MILLY_STORY };
+const STORIES_METRO = { ...toStories(METRO_QUESTS), elisa: ELISA_STORY, milly: MILLY_STORY };
 const STORIES = { ...STORIES_CIUDAD, ...STORIES_METRO };
 
 /* ============================================================
@@ -1662,6 +1910,8 @@ const ITEMS = {
      renderiza botón de acción para un kind que no sea "consumable"/"gift") */
   elisa_pin: { name: "Pin de Elisa", icon: "📌", img: "/images/objects/elisa_pin.webp", kind: "keepsake",
     desc: "El pin que te dio Elisa al cierre de vuestra historia. No se usa ni se regala: es un recuerdo de todo el camino." },
+  milly_pin: { name: "Pin de Milly", icon: "📌", img: "/images/objects/milly_pin.webp", kind: "keepsake",
+    desc: "El pin que te dio Milly al publicar su gran reportaje. No se usa ni se regala: es un recuerdo de todo el camino." },
 };
 /* dar un objeto a su destinatario: reacción propia del personaje + el objeto se gasta */
 const ITEM_GIVE_REACTIONS = {

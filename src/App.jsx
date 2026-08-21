@@ -386,6 +386,17 @@ function sanitizeGame(g) {
       });
     }
   }
+  /* si la historia de un personaje ya empezó (stories[key] existe) pero el flag de
+     "ya lo conoces" que usan CARDS/AMBIENT_BY_CHAR nunca llegó a fijarse — p.ej. una
+     partida arrastrada de antes de que el prólogo actual lo marcara — se rellena aquí
+     para que la carta no se quede bloqueada eternamente aunque la conversación real
+     ya haya pasado */
+  const MET_FLAG_BY_STORY = { milly: "metMilly", lisa: "metLisa", igor: "metIgor", yuna: "yunaMet" };
+  if (out.stories) {
+    Object.entries(MET_FLAG_BY_STORY).forEach(([key, flag]) => {
+      if (out.stories[key] && !out[flag]) out[flag] = true;
+    });
+  }
   return out;
 }
 
@@ -1461,6 +1472,11 @@ const ELISA_STORY = {
         ],
         setFlags: ["elisaMet"],
         snap: () => ({ since: todayStr() }),
+        subs: [
+          (g, snap) => Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.closed && l.gym),
+          (g, snap) => Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.closed && (l.prot || 0) >= g.player.goals.protein),
+          (g, snap) => Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.closed && l.sleep != null && l.sleep >= g.player.goals.sleepGoal),
+        ],
         check: (g, snap) => Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.closed &&
           l.gym && (l.prot || 0) >= g.player.goals.protein && l.sleep != null && l.sleep >= g.player.goals.sleepGoal) },
       /* CAPÍTULO 1 — Desde abajo */
@@ -1475,6 +1491,10 @@ const ELISA_STORY = {
         ],
         setFlags: ["elisaStoryStarted", "elisaOfficeUnlocked"],
         snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
+        subs: [
+          (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3,
+          (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
+        ],
         check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3 &&
           (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") },
       /* CAPÍTULO 2 — Ganarse el sitio */
@@ -1488,6 +1508,11 @@ const ELISA_STORY = {
           { m: "decidida", t: "Haz que el entrenador no tenga una excusa para dejarte fuera." },
         ],
         snap: (g) => ({ goals: careerGoals(g), matchCount: (g.matchHistory || []).length }),
+        subs: [
+          (g, snap) => careerGoals(g) > snap.goals,
+          (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
+          (g) => (g.player.streak || 0) >= 3,
+        ],
         check: (g, snap) => careerGoals(g) > snap.goals &&
           (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") && (g.player.streak || 0) >= 3 },
       /* CAPÍTULO 3 — El precio del progreso */
@@ -1502,6 +1527,11 @@ const ELISA_STORY = {
           { m: "idle", t: "No quiero que llegues arriba rápido. Quiero que llegues y puedas quedarte." },
         ],
         snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
+        subs: [
+          (g, snap) => Object.entries(g.logs || {}).filter(([d, l]) => d >= snap.since && l.closed && (l.prot || 0) >= g.player.goals.protein).length >= 4,
+          (g, snap) => Object.entries(g.logs || {}).filter(([d, l]) => d >= snap.since && l.closed && l.sleep != null && l.sleep >= g.player.goals.sleepGoal).length >= 3,
+          (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
+        ],
         check: (g, snap) => {
           const days = Object.entries(g.logs || {}).filter(([d, l]) => d >= snap.since && l.closed);
           const foodDays = days.filter(([, l]) => (l.prot || 0) >= g.player.goals.protein).length;
@@ -1520,6 +1550,10 @@ const ELISA_STORY = {
         ],
         setFlags: ["elisaTrainingRoutine"],
         snap: (g) => ({ since: todayStr(), ovr: calcOVR(g.player.stats) }),
+        subs: [
+          (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 5,
+          (g, snap) => calcOVR(g.player.stats) > snap.ovr,
+        ],
         check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 5 && calcOVR(g.player.stats) > snap.ovr },
       /* CAPÍTULO 5 — Tu nombre empieza a pesar */
       { title: "Tu nombre empieza a pesar", zone: "patro",
@@ -1548,6 +1582,11 @@ const ELISA_STORY = {
           { m: "casual", t: "No te acostumbres. Mañana vuelvo a ser insoportable." },
         ],
         snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
+        subs: [
+          (g, snap) => Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.closed &&
+            l.gym && (l.prot || 0) >= g.player.goals.protein && l.sleep != null && l.sleep >= g.player.goals.sleepGoal),
+          (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
+        ],
         check: (g, snap) => Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.closed &&
           l.gym && (l.prot || 0) >= g.player.goals.protein && l.sleep != null && l.sleep >= g.player.goals.sleepGoal) &&
           (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") },
@@ -1563,6 +1602,11 @@ const ELISA_STORY = {
         ],
         setFlags: ["elisaTrustUp"],
         snap: (g) => ({ matchCount: (g.matchHistory || []).length }),
+        subs: [
+          (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.derbi && m.res === "V"),
+          (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => (m.myGoals || 0) > 0 || (m.myAssists || 0) > 0),
+          (g) => (g.player.streak || 0) >= 6,
+        ],
         check: (g, snap) => {
           const ms = (g.matchHistory || []).slice(snap.matchCount);
           return ms.some((m) => m.derbi && m.res === "V") && ms.some((m) => (m.myGoals || 0) > 0 || (m.myAssists || 0) > 0) &&
@@ -1579,6 +1623,10 @@ const ELISA_STORY = {
           { m: "suave", t: "Pero si alguna vez necesitas salir de todo ese ruido, sabes dónde encontrarme." },
         ],
         snap: (g) => ({ tierId: g.tier.id, matchCount: (g.matchHistory || []).length }),
+        subs: [
+          (g, snap) => g.tier.id !== snap.tierId,
+          (g, snap) => (g.matchHistory || []).length > snap.matchCount,
+        ],
         check: (g, snap) => g.tier.id !== snap.tierId && (g.matchHistory || []).length > snap.matchCount },
       /* CAPÍTULO 9 — La caída */
       { title: "La caída", zone: "enfermeria",
@@ -1592,6 +1640,11 @@ const ELISA_STORY = {
         ],
         setFlags: ["elisaCrisis"],
         snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
+        subs: [
+          (g) => g.player.form === "buen" || g.player.form === "alza",
+          (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
+          (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3,
+        ],
         check: (g, snap) => (g.player.form === "buen" || g.player.form === "alza") &&
           (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") && daysGoalsCompletedSince(g, snap.since) >= 3 },
       /* CAPÍTULO 10 — Una noche distinta */
@@ -1606,6 +1659,10 @@ const ELISA_STORY = {
         ],
         setFlags: ["elisaCrisisResolved"],
         snap: (g) => ({ tierId: g.tier.id, seasonNum: g.season.num }),
+        subs: [
+          (g, snap) => g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum,
+          (g) => (g.player.streak || 0) >= 5,
+        ],
         check: (g, snap) => (g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum) && (g.player.streak || 0) >= 5 },
       /* CAPÍTULO 11 — Lo que elegimos */
       { title: "Lo que elegimos", zone: "oficina", alsoUnlock: ["playa"],
@@ -1618,6 +1675,10 @@ const ELISA_STORY = {
           { m: "suave", t: "Y si he aprendido algo contigo, es que acompañar a alguien no significa caminar delante." },
         ],
         snap: (g) => ({ tierId: g.tier.id, seasonNum: g.season.num }),
+        subs: [
+          (g, snap) => g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum,
+          (g) => (g.player.streak || 0) >= 5,
+        ],
         check: (g, snap) => (g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum) && (g.player.streak || 0) >= 5 },
       /* CAPÍTULO 12 — Hasta arriba */
       { title: "Hasta arriba", zone: "atico",
@@ -1631,6 +1692,12 @@ const ELISA_STORY = {
         ],
         setFlags: ["elisaDecisionMade"],
         snap: (g) => ({ matchCount: (g.matchHistory || []).length, ovr: calcOVR(g.player.stats), bestRating: g.bestRating || 0 }),
+        subs: [
+          (g) => g.tier.id >= TIERS[TIERS.length - 1].id,
+          (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
+          (g) => (g.player.streak || 0) >= 6,
+          (g, snap) => calcOVR(g.player.stats) > snap.ovr || (g.bestRating || 0) > snap.bestRating,
+        ],
         check: (g, snap) => {
           const eliteId = TIERS[TIERS.length - 1].id;
           return g.tier.id >= eliteId && (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") &&
@@ -1706,6 +1773,10 @@ const MILLY_STORY = {
         ],
         setFlags: ["millyMet", "metMilly"], /* metMilly: nombre que sigue usando CardDetail/CARDS para desbloquear su carta */
         snap: () => ({ since: todayStr() }),
+        subs: [
+          (g, snap) => !!g.paperRead && g.paperRead >= snap.since,
+          (g, snap) => Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.closed),
+        ],
         check: (g, snap) => !!g.paperRead && g.paperRead >= snap.since &&
           Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.closed) },
       /* CAPÍTULO 1 — Una noticia pequeña */
@@ -1733,6 +1804,10 @@ const MILLY_STORY = {
         ],
         setFlags: ["millyNotes"],
         snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
+        subs: [
+          (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3,
+          (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
+        ],
         check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3 &&
           (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") },
       /* CAPÍTULO 3 — La cámara */
@@ -1746,6 +1821,10 @@ const MILLY_STORY = {
           { m: "decidida", t: "Si quiero ser periodista de verdad, necesito aprender a mirar antes de escribir." },
         ],
         snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
+        subs: [
+          (g, snap) => Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.gym),
+          (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
+        ],
         check: (g, snap) => Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.gym) &&
           (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") },
       /* CAPÍTULO 4 — La historia detrás del marcador */
@@ -1759,6 +1838,10 @@ const MILLY_STORY = {
           { m: "idle", t: "Tu gol está bien. Pero quiero saber qué pasó antes de que llegaras a marcarlo." },
         ],
         snap: (g) => ({ goals: careerGoals(g), assists: careerAssists(g) }),
+        subs: [
+          (g, snap) => careerGoals(g) - snap.goals >= 1,
+          (g, snap) => careerAssists(g) - snap.assists >= 1 || careerGoals(g) - snap.goals >= 2,
+        ],
         check: (g, snap) => {
           const dg = careerGoals(g) - snap.goals, da = careerAssists(g) - snap.assists;
           return dg >= 1 && (da >= 1 || dg >= 2);
@@ -1775,6 +1858,10 @@ const MILLY_STORY = {
         ],
         setFlags: ["millyEthics"],
         snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
+        subs: [
+          (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 4,
+          (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
+        ],
         check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 4 &&
           (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") },
       /* CAPÍTULO 6 — El kiosco */
@@ -1790,6 +1877,10 @@ const MILLY_STORY = {
         ],
         setFlags: ["millyKioskCrisis"],
         snap: (g) => ({ ovr: calcOVR(g.player.stats) }),
+        subs: [
+          (g) => (g.player.streak || 0) >= 6,
+          (g, snap) => calcOVR(g.player.stats) > snap.ovr,
+        ],
         check: (g, snap) => (g.player.streak || 0) >= 6 && calcOVR(g.player.stats) > snap.ovr },
       /* CAPÍTULO 7 — Tu nombre en portada */
       { title: "Tu nombre en portada", zone: "kiosco",
@@ -1814,6 +1905,10 @@ const MILLY_STORY = {
           { m: "decidida", t: "Y eso sí que sería una noticia." },
         ],
         snap: (g) => ({ tierId: g.tier.id, clubName: g.club.name, matchCount: (g.matchHistory || []).length }),
+        subs: [
+          (g, snap) => g.tier.id !== snap.tierId || g.club.name !== snap.clubName,
+          (g, snap) => (g.matchHistory || []).length > snap.matchCount,
+        ],
         check: (g, snap) => (g.tier.id !== snap.tierId || g.club.name !== snap.clubName) &&
           (g.matchHistory || []).length > snap.matchCount },
       /* CAPÍTULO 9 — Una mala noticia */
@@ -1827,6 +1922,10 @@ const MILLY_STORY = {
           { m: "preocupada", t: "Supongo que esto también forma parte de aprender a ser periodista." },
         ],
         snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
+        subs: [
+          (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3,
+          (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
+        ],
         check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3 &&
           (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") },
       /* CAPÍTULO 10 — La credencial */
@@ -1842,6 +1941,10 @@ const MILLY_STORY = {
         ],
         setFlags: ["millyJournalist"],
         snap: (g) => ({ bestRating: g.bestRating || 0, ovr: calcOVR(g.player.stats), matchCount: (g.matchHistory || []).length }),
+        subs: [
+          (g, snap) => (g.bestRating || 0) > snap.bestRating || calcOVR(g.player.stats) > snap.ovr,
+          (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
+        ],
         check: (g, snap) => ((g.bestRating || 0) > snap.bestRating || calcOVR(g.player.stats) > snap.ovr) &&
           (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") },
       /* CAPÍTULO 11 — La noticia que no esperaba */
@@ -1855,6 +1958,10 @@ const MILLY_STORY = {
           { m: "idle", t: "No quiero convertirme en alguien que cuenta historias de un sitio en el que ya no vive." },
         ],
         snap: (g) => ({ tierId: g.tier.id, seasonNum: g.season.num }),
+        subs: [
+          (g) => (g.player.streak || 0) >= 6,
+          (g, snap) => g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum,
+        ],
         check: (g, snap) => (g.player.streak || 0) >= 6 && (g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum) },
       /* CAPÍTULO 12 — La gran historia */
       { title: "La gran historia", zone: "estadio",
@@ -1868,6 +1975,11 @@ const MILLY_STORY = {
         ],
         setFlags: ["millyBigStory"],
         snap: (g) => ({ matchCount: (g.matchHistory || []).length, ovr: calcOVR(g.player.stats), bestRating: g.bestRating || 0 }),
+        subs: [
+          (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
+          (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => (m.myGoals || 0) > 0 || (m.myAssists || 0) > 0),
+          (g, snap) => calcOVR(g.player.stats) > snap.ovr || (g.bestRating || 0) > snap.bestRating,
+        ],
         check: (g, snap) => {
           const ms = (g.matchHistory || []).slice(snap.matchCount);
           return ms.some((m) => m.res === "V") && ms.some((m) => (m.myGoals || 0) > 0 || (m.myAssists || 0) > 0) &&
@@ -1965,6 +2077,10 @@ const YUNA_STORY = {
         ],
         setFlags: ["yunaStoryStarted"],
         snap: (g) => ({ matchCount: (g.matchHistory || []).length, goals: careerGoals(g) }),
+        subs: [
+          (g, snap) => (g.matchHistory || []).length > snap.matchCount,
+          (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") || careerGoals(g) > snap.goals,
+        ],
         check: (g, snap) => (g.matchHistory || []).length > snap.matchCount &&
           ((g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") || careerGoals(g) > snap.goals) },
       /* CAPÍTULO 2 — La tienda */
@@ -1992,6 +2108,10 @@ const YUNA_STORY = {
         ],
         setFlags: ["yunaFirstGift"],
         snap: (g) => ({ since: todayStr(), goals: careerGoals(g) }),
+        subs: [
+          (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3,
+          (g, snap) => careerGoals(g) > snap.goals,
+        ],
         check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3 && careerGoals(g) > snap.goals },
       /* CAPÍTULO 4 — El Barça y tú */
       { title: "El Barça y tú", zone: "parque",
@@ -2004,6 +2124,10 @@ const YUNA_STORY = {
           { m: "angry", t: "No he dicho que contigo." },
         ],
         snap: (g) => ({ matchCount: (g.matchHistory || []).length }),
+        subs: [
+          (g) => (g.player.streak || 0) >= 3,
+          (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
+        ],
         check: (g, snap) => (g.player.streak || 0) >= 3 && (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") },
       /* CAPÍTULO 5 — La pregunta incómoda (única etapa con réplicas: las tres convergen).
          "replies" va en la propia etapa (no en el beat): checkStories lo reenvía como
@@ -2063,6 +2187,10 @@ const YUNA_STORY = {
         ],
         setFlags: ["yunaJealous", "yunaCrush"],
         snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
+        subs: [
+          (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 4,
+          (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
+        ],
         check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 4 &&
           (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") },
       /* CAPÍTULO 9 — Lo que no digo */
@@ -2077,6 +2205,10 @@ const YUNA_STORY = {
         ],
         setFlags: ["yunaConfessionReady"],
         snap: (g) => ({ tierId: g.tier.id, seasonNum: g.season.num }),
+        subs: [
+          (g) => (g.player.streak || 0) >= 5,
+          (g, snap) => g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum,
+        ],
         check: (g, snap) => (g.player.streak || 0) >= 5 && (g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum) },
       /* CAPÍTULO 10 — Una tarde sin fútbol */
       { title: "Una tarde sin fútbol", zone: "playa",
@@ -2090,6 +2222,10 @@ const YUNA_STORY = {
         ],
         setFlags: ["yunaDate"],
         snap: (g) => ({ tierId: g.tier.id, seasonNum: g.season.num, matchCount: (g.matchHistory || []).length }),
+        subs: [
+          (g, snap) => g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum,
+          (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
+        ],
         check: (g, snap) => (g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum) &&
           (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") },
       /* CAPÍTULO 11 — La segunda bufanda */
@@ -2115,6 +2251,10 @@ const YUNA_STORY = {
           { m: "blush", t: "Porque me importas demasiado." },
         ],
         snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
+        subs: [
+          (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3,
+          (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
+        ],
         check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3 &&
           (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") },
       /* CAPÍTULO 13 — Sin excusas */
@@ -2130,6 +2270,10 @@ const YUNA_STORY = {
         ],
         setFlags: ["yunaRelationship"],
         snap: (g) => ({ tierId: g.tier.id, seasonNum: g.season.num }),
+        subs: [
+          (g) => (g.player.streak || 0) >= 6,
+          (g, snap) => g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum,
+        ],
         check: (g, snap) => (g.player.streak || 0) >= 6 && (g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum) },
       /* CAPÍTULO 14 — Juntos */
       { title: "Juntos", zone: "casa",
@@ -2142,6 +2286,10 @@ const YUNA_STORY = {
           { m: "enamorada", t: "Y no pienso volver a esconderme detrás de una bufanda." },
         ],
         snap: (g) => ({ tierId: g.tier.id, seasonNum: g.season.num, matchCount: (g.matchHistory || []).length }),
+        subs: [
+          (g, snap) => g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum,
+          (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
+        ],
         check: (g, snap) => (g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum) &&
           (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") },
       /* CAPÍTULO 15 — El recuerdo */
@@ -2155,6 +2303,10 @@ const YUNA_STORY = {
           { m: "enamorada", t: "Ahora ya no tengo ninguna excusa." },
         ],
         snap: (g) => ({ ovr: calcOVR(g.player.stats), bestRating: g.bestRating || 0, matchCount: (g.matchHistory || []).length }),
+        subs: [
+          (g, snap) => calcOVR(g.player.stats) > snap.ovr || (g.bestRating || 0) > snap.bestRating,
+          (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
+        ],
         check: (g, snap) => (calcOVR(g.player.stats) > snap.ovr || (g.bestRating || 0) > snap.bestRating) &&
           (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") },
       /* FINAL — Por una vez, sin excusas */
@@ -2255,6 +2407,10 @@ const LOPEZ_STORY = {
           { m: "happy", t: "No hace falta que seas el mejor. Pero intenta no ser el que desaparece." },
         ],
         snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
+        subs: [
+          (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 4,
+          (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
+        ],
         check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 4 &&
           (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") },
       /* CAPÍTULO 3 — La foto */
@@ -2269,6 +2425,10 @@ const LOPEZ_STORY = {
         ],
         setFlags: ["lopezTeamPhoto"],
         snap: (g) => ({ matchCount: (g.matchHistory || []).length }),
+        subs: [
+          (g, snap) => (g.matchHistory || []).length > snap.matchCount,
+          (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => (m.rating || 0) >= 7),
+        ],
         check: (g, snap) => {
           const ms = (g.matchHistory || []).slice(snap.matchCount);
           return ms.length > 0 && ms.some((m) => (m.rating || 0) >= 7);
@@ -2297,6 +2457,10 @@ const LOPEZ_STORY = {
           { m: "idle", t: "Supongo que también tengo que aprender a decirlo." },
         ],
         snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
+        subs: [
+          (g, snap) => Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.gym),
+          (g, snap) => (g.matchHistory || []).length > snap.matchCount,
+        ],
         check: (g, snap) => Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.gym) &&
           (g.matchHistory || []).length > snap.matchCount },
       /* CAPÍTULO 6 — El vestuario después de una derrota */
@@ -2310,6 +2474,10 @@ const LOPEZ_STORY = {
           { m: "happy", t: "Así que mañana quiero verte aquí. Y con cara de no haber perdido la final del mundo." },
         ],
         snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
+        subs: [
+          (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "D"),
+          (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 2,
+        ],
         check: (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "D") &&
           daysGoalsCompletedSince(g, snap.since) >= 2 },
       /* CAPÍTULO 7 — El brazalete */
@@ -2349,6 +2517,10 @@ const LOPEZ_STORY = {
           { m: "playa", t: "Y no, no estoy bromeando." },
         ],
         snap: (g) => ({ tierId: g.tier.id, seasonNum: g.season.num, matchCount: (g.matchHistory || []).length }),
+        subs: [
+          (g, snap) => g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum,
+          (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
+        ],
         check: (g, snap) => (g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum) &&
           (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") },
       /* CAPÍTULO 10 — Cuando cambia el vestuario */
@@ -2429,6 +2601,10 @@ const LOPEZ_STORY = {
           { m: "capitan", t: "Eso es lo que hace un capitán." },
         ],
         snap: (g) => ({ matchCount: (g.matchHistory || []).length }),
+        subs: [
+          (g) => (g.player.streak || 0) >= 7,
+          (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
+        ],
         check: (g, snap) => (g.player.streak || 0) >= 7 &&
           (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") },
       /* FINAL — Ya no eres el nuevo */
@@ -2537,6 +2713,10 @@ const IGOR_STORY = {
           { m: "happy", t: "En fútbol sería ese jugador que parece que no va a hacer nada y en el minuto noventa te destroza el partido." },
         ],
         snap: () => ({ since: todayStr() }),
+        subs: [
+          (g, snap) => Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.gym),
+          (g, snap) => Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.closed && (l.prot || 0) >= g.player.goals.protein),
+        ],
         check: (g, snap) => Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.gym) &&
           Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.closed && (l.prot || 0) >= g.player.goals.protein) },
       /* CAPÍTULO 4 — Cocina de dos */
@@ -2551,6 +2731,10 @@ const IGOR_STORY = {
         ],
         setFlags: ["igorKitchen"],
         snap: () => ({ since: todayStr() }),
+        subs: [
+          (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 1,
+          (g, snap) => Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.closed && (l.prot || 0) >= g.player.goals.protein),
+        ],
         check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 1 &&
           Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.closed && (l.prot || 0) >= g.player.goals.protein) },
       /* CAPÍTULO 5 — El plato estrella */
@@ -2614,6 +2798,10 @@ const IGOR_STORY = {
           { m: "orgulloso", t: "Y que un plato puede decir cosas que uno no sabe decir hablando." },
         ],
         snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
+        subs: [
+          (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3,
+          (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
+        ],
         check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3 &&
           (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") },
       /* CAPÍTULO 10 — Un día sin fútbol */
@@ -2690,6 +2878,11 @@ const IGOR_STORY = {
         ],
         setFlags: ["igorApron"],
         snap: () => ({ since: todayStr() }),
+        subs: [
+          (g, snap) => Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.closed && l.gym),
+          (g, snap) => Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.closed && (l.prot || 0) >= g.player.goals.protein),
+          (g, snap) => Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.closed && l.sleep != null && l.sleep >= g.player.goals.sleepGoal),
+        ],
         check: (g, snap) => Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.closed &&
           l.gym && (l.prot || 0) >= g.player.goals.protein && l.sleep != null && l.sleep >= g.player.goals.sleepGoal) },
       /* FINAL — A la mesa */
@@ -2828,6 +3021,10 @@ const KARLA_STORY = {
         ],
         setFlags: ["karlaPressure"],
         snap: (g) => ({ tierId: g.tier.id, seasonNum: g.season.num, since: todayStr() }),
+        subs: [
+          (g, snap) => g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum,
+          (g, snap) => !Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.closed && l.form === "caida"),
+        ],
         check: (g, snap) => {
           const milestone = g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum;
           const noBad = !Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.closed && l.form === "caida");
@@ -2900,6 +3097,10 @@ const KARLA_STORY = {
         ],
         setFlags: ["karlaBeach"],
         snap: (g) => ({ tierId: g.tier.id, seasonNum: g.season.num, since: todayStr() }),
+        subs: [
+          (g, snap) => g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum,
+          (g, snap) => !Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.closed && l.form === "caida"),
+        ],
         check: (g, snap) => {
           const milestone = g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum;
           const noBad = !Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.closed && l.form === "caida");
@@ -4090,8 +4291,25 @@ function PaperModal({ game, onRead, onClose }) {
     </div>);
 }
 
+/* progreso DENTRO de la etapa activa (no de la historia entera): si la etapa declara
+   "subs" (las sub-condiciones que componen su objetivo, ver stage.subs en STORIES),
+   la barra es cuántas de esas sub-condiciones ya se cumplen ahora mismo — así "gana
+   dos partidos" sube al 50% tras el primero y al 100% tras el segundo. Las etapas sin
+   "subs" (objetivo de una sola condición, o un "o" donde cualquiera vale el 100% de
+   golpe) caen al binario de siempre: 0% hasta que stage.check() se cumple. */
+function stageProgress(game, stageDef, snap) {
+  if (stageDef.subs && stageDef.subs.length) {
+    const met = stageDef.subs.filter((fn) => fn(game, snap)).length;
+    return met / stageDef.subs.length;
+  }
+  return stageDef.check(game, snap) ? 1 : 0;
+}
+
 /* Registro de misiones: solo enseña las historias que ya han empezado (nada de spoilers
-   de las que aún no se han desbloqueado), con el objetivo actual y una barra de progreso. */
+   de las que aún no se han desbloqueado). La barra representa el progreso de la etapa
+   ACTIVA (se reinicia al empezar cada una); al completarse queda en verde esperando a
+   que el jugador hable con el personaje — la siguiente etapa no aparece ni la barra se
+   reinicia hasta que lea esa conversación (game.storyPending[key]). */
 function QuestPanel({ game, onClose, storiesRegistry }) {
   const active = Object.entries(storiesRegistry)
     .map(([key, def]) => ({ key, def, st: (game.stories || {})[key] }))
@@ -4106,8 +4324,9 @@ function QuestPanel({ game, onClose, storiesRegistry }) {
         {active.map(({ key, def, st }) => {
           const npc = NPCS[def.npc];
           const chapter = def.chapters[st.chapter];
-          const totalStages = chapter.stages.length - 1;
           const stageDef = chapter.stages[st.stage];
+          const waitingToTalk = !st.done && !!(game.storyPending && game.storyPending[key]);
+          const pct = st.done || waitingToTalk ? 1 : stageProgress(game, stageDef, st.snap);
           return (
             <div key={key} className="panel" style={{ display: "flex", gap: 12, alignItems: "center" }}>
               <img src={npc.icon} alt={npc.name} style={{ width: 44, height: 44, borderRadius: "50%",
@@ -4119,10 +4338,15 @@ function QuestPanel({ game, onClose, storiesRegistry }) {
                     {st.failed ? "Historia cerrada" : "✓ Completada"}</div>
                 ) : (
                   <>
-                    <div style={{ fontSize: 11.5, color: "#6F7563" }}>Etapa {st.stage + 1}/{totalStages} · {stageDef.title}</div>
-                    <div style={{ fontSize: 12.5, marginTop: 3 }}>{stageDef.objective}</div>
+                    <div style={{ fontSize: 11.5, color: "#6F7563" }}>{stageDef.title}</div>
+                    {waitingToTalk ? (
+                      <div style={{ fontSize: 12.5, marginTop: 3, color: "#3F8F2B", fontWeight: 600 }}>
+                        ✓ Completada · habla con {npc.name}</div>
+                    ) : (
+                      <div style={{ fontSize: 12.5, marginTop: 3 }}>{stageDef.objective}</div>
+                    )}
                     <div className="track" style={{ marginTop: 6 }}>
-                      <div className="fill" style={{ width: `${(st.stage / totalStages) * 100}%`, background: "#CDF546" }} />
+                      <div className="fill" style={{ width: `${pct * 100}%`, background: pct >= 1 ? "#2E9E44" : "#CDF546" }} />
                     </div>
                   </>)}
               </div>

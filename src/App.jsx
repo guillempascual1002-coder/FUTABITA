@@ -980,8 +980,14 @@ const NPCS = {
       orgullosa: "/images/milly/milly_orgullosa.webp" }, def: "idle" },
   /* Igor: chef estrella del Restaurante (Metrópolis). Grande, carismático, trata la nutrición
      como táctica de fútbol. Sin angry: solo idle y happy. */
+  /* chef: pose de máxima identidad profesional (presenta/prepara un plato), reservada
+     para escenas clave. playa: outfit independiente, no se mezcla con otros moods. */
   igor: { name: "Igor", color: "#B5651D", voice: "/audio/vozchico01.mp3", icon: "/images/igor/igor_icon.webp",
-    arts: { idle: "/images/igor/igor_idle.webp", happy: "/images/igor/igor_happy.webp" }, def: "idle" },
+    arts: { idle: "/images/igor/igor_idle.webp", happy: "/images/igor/igor_happy.webp",
+      serio: "/images/igor/igor_serio.webp", preocupado: "/images/igor/igor_preocupado.webp",
+      orgulloso: "/images/igor/igor_orgulloso.webp", chef: "/images/igor/igor_chef.webp",
+      cansado: "/images/igor/igor_cansado.webp", celebracion: "/images/igor/igor_celebracion.webp",
+      playa: "/images/igor/igor_playa.webp" }, def: "idle" },
 };
 /* el sender siempre es el nombre real del personaje ahora (la zona ya no crea una
    identidad de sender distinta: es contexto de la escena, ver campo "zone" en addMsg/addScene) */
@@ -1172,11 +1178,9 @@ const MILLY_PAPER_LINES = [
     { t: "Mejor guárdalo tú", m: "periodico", r: ["Ya, tienes razón, a saber cuándo lo voy a usar. Toma tu periódico, anda, que se hace tarde."] }] },
 ];
 
-const IGOR_INTRO_BEATS = [
-  { m: "idle", t: "¡Ahí está mi próximo proyecto! Perdona, así les digo a todos los que entran nuevos por esa puerta. Igor, chef de este restaurante. Cada plato que sale de mi cocina tiene una función táctica, ¿me explico?" },
-  { m: "idle", t: "La nutrición es como el fútbol: no sirve tener buenos ingredientes sueltos, hay que combinarlos en el momento justo. Ven cuando quieras, te voy a enseñar unas cuantas jugadas maestras de cocina." },
-];
-/* AMBIENTE PLACEHOLDER — sustituir cuando se escriba la historia real de Igor */
+/* la escena de primer encuentro de Igor ya vive en IGOR_STORY (su prólogo, "La cocina del
+   delantero"): esto es solo relleno genérico entre capítulos de su historia real, sin
+   referencias a objetos/momentos concretos de la campaña (receta, plato, delantal). */
 const AMBIENT_IGOR = [
   { beats: [
     { m: "idle", t: "Dato de vestuario que casi nadie aprovecha: el plátano no es solo azúcar rápido, lleva potasio de verdad." },
@@ -1252,15 +1256,15 @@ const ZONES = [
   /* npc: "yuna" — casa sigue siendo la pantalla de trofeos (HouseRoom) por defecto, pero
      ahora también admite una escena de personaje encima (ver ZoneScreen: isHome no excluye
      ya pendingNpc), para las escenas de intimidad emocional de su campaña en Casa del jugador */
-  { id: "casa", kind: "home", npc: ["yuna", "lopez"], label: "Tu Casa", icon: "🏠", x: 18.87, y: 44.54,
+  { id: "casa", kind: "home", npc: ["yuna", "lopez", "igor"], label: "Tu Casa", icon: "🏠", x: 18.87, y: 44.54,
     pts: "91.1 348.2 163.7 373.2 152.4 429.4 76.8 405.4 91.1 348.2",
     unlocked: (g) => isZoneUnlocked(g, "casa") },
   /* varios personajes comparten esta zona de calle: la burbuja muestra a quien tenga
      algo pendiente ahora mismo (ver EXTRA_NPCS y CityMap); en reposo, el puntito de siempre */
-  { id: "barrio", kind: "npc", npc: ["yuna", "elisa", "milly", "lopez"], label: "El Barrio", icon: "🌆", x: 53.16, y: 58.16,
+  { id: "barrio", kind: "npc", npc: ["yuna", "elisa", "milly", "lopez", "igor"], label: "El Barrio", icon: "🌆", x: 53.16, y: 58.16,
     pts: "217.8 461 217.8 507.5 318.4 500 318.4 465.1 217.8 461",
     unlocked: (g) => isZoneUnlocked(g, "barrio") },
-  { id: "car", kind: "npc", npc: ["lopez", "lisa", "elisa"], label: "Centro de Alto Rendimiento", icon: "🏋️", x: 61.35, y: 17.42,
+  { id: "car", kind: "npc", npc: ["lopez", "lisa", "elisa", "igor"], label: "Centro de Alto Rendimiento", icon: "🏋️", x: 61.35, y: 17.42,
     pts: "230 164.5 230 222 387.9 223.7 383.1 153.5 230 164.5",
     unlocked: (g) => isZoneUnlocked(g, "car") },
   { id: "prensa", kind: "npc", npc: "milly", label: "Sala de Prensa", icon: "🎙️", x: 23.63, y: 31.90,
@@ -1275,7 +1279,7 @@ const ZONES = [
   { id: "tienda", kind: "npc", npc: ["yuna", "lopez"], label: "Tienda Oficial", icon: "🛍️", x: 81.25, y: 65.05,
     pts: "342.4 511.6 347 559.6 424.1 552.4 420 507.5 342.4 511.6",
     unlocked: (g) => isZoneUnlocked(g, "tienda") },
-  { id: "estadio", kind: "npc", npc: ["lopez", "yuna", "elisa", "milly"], label: "Gran Estadio", icon: "🏆", x: 74.57, y: 87.82,
+  { id: "estadio", kind: "npc", npc: ["lopez", "yuna", "elisa", "milly", "igor"], label: "Gran Estadio", icon: "🏆", x: 74.57, y: 87.82,
     pts: "384.1 634.1 295 657.5 262.9 677.7 290.1 764.2 384.1 764.2 431.1 715.5 384.1 634.1",
     unlocked: (g) => isZoneUnlocked(g, "estadio"), big: true },
 ];
@@ -1322,15 +1326,17 @@ const METRO_ZONES = [
   { id: "enfermeria", kind: "npc", npc: ["elisa", "milly"], label: "Enfermería", icon: "🏥", x: 86.65, y: 22.97,
     pts: "402.89 159.68 353.11 256.96 460.34 286.08 460.34 197.98 402.89 159.68",
     unlocked: (g) => isZoneUnlocked(g, "enfermeria") },
-  { id: "playa", kind: "npc", npc: ["elisa", "milly", "lopez", "lisa", "yuna"], label: "Playa", icon: "🏖️", x: 12.16, y: 49.44,
+  { id: "playa", kind: "npc", npc: ["elisa", "milly", "lopez", "lisa", "yuna", "igor"], label: "Playa", icon: "🏖️", x: 12.16, y: 49.44,
     pts: "22.21 382.57 22.21 562.57 125.62 399.43 99.57 382.57 22.21 382.57",
     unlocked: (g) => isZoneUnlocked(g, "playa") },
   { id: "atico", kind: "npc", npc: "elisa", label: "Ático de Lujo", icon: "🌇", x: 78.27, y: 63.06,
     pts: "353.11 469.13 347.74 507.48 294.89 602.97 445.02 666.29 460.34 464.53 353.11 469.13",
     unlocked: (g) => isZoneUnlocked(g, "atico") },
+  /* la presentación de Igor ya no depende de metFlag/intro (eso duplicaba el prólogo real
+     de IGOR_STORY en cuanto se desbloqueara la zona): su propia historia ya se encarga */
   { id: "restaurante", kind: "npc", npc: ["igor", "elisa"], label: "Restaurante", icon: "🍽️", x: 63.88, y: 81.68,
     pts: "284.94 620.02 223.66 727.26 294.89 776.28 377.62 688.96 335.49 662.91 344.68 647.24 284.94 620.02",
-    unlocked: (g) => isZoneUnlocked(g, "restaurante"), metFlag: "metIgor", intro: IGOR_INTRO_BEATS },
+    unlocked: (g) => isZoneUnlocked(g, "restaurante") },
 ];
 const METRO_EXTRA_NPCS = [];
 /* METRO_QUESTS + QUESTS (más abajo) son la fuente de datos de STORIES.
@@ -1683,7 +1689,7 @@ const MILLY_STORY = {
           { m: "happy", t: "Toma. El periódico. No lo he leído entero, solo las partes importantes." },
           { m: "periodico", t: "Y antes de que preguntes: sí, te lo voy a traer todos los días." },
         ],
-        setFlags: ["millyMet"],
+        setFlags: ["millyMet", "metMilly"], /* metMilly: nombre que sigue usando CardDetail/CARDS para desbloquear su carta */
         snap: () => ({ since: todayStr() }),
         check: (g, snap) => !!g.paperRead && g.paperRead >= snap.since &&
           Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.closed) },
@@ -2446,14 +2452,274 @@ const LOPEZ_STORY = {
   }],
 };
 
+/* ============================================================
+   IGOR · quinta campaña completa. Prólogo + 15 capítulos + final +
+   epílogo, sin cambios de motor: reutiliza tal cual la arquitectura de
+   Elisa/Milly/Yuna/López. Conocido desde el minuto uno (trigger:()=>
+   true) — su prólogo transcurre en el Restaurante, que se autodesbloquea
+   al encolarse esa misma escena (igual que "kiosco" con Milly).
+
+   Solo el pin final se registra como ITEM real ("keepsake", igual que
+   los demás). Receta/plato/delantal son símbolos narrativos con flags
+   propias (igorRecipe/igorSignatureDish/igorApron), tal como pide el
+   documento — guindilla/taza de café/mancuerna/libreta táctica ya
+   existen como objetos reutilizables de otras campañas y no necesitan
+   nada nuevo. */
+const IGOR_STORY = {
+  npc: "igor",
+  chapters: [{
+    id: "cap1",
+    title: "La historia de Igor",
+    trigger: () => true,
+    stages: [
+      /* PRÓLOGO — La cocina del delantero */
+      { title: "La cocina del delantero", zone: "restaurante",
+        objective: "Cumple tu objetivo de proteína en un día cerrado.",
+        intro: [
+          { m: "happy", t: "¡Ah! Tú eres el jugador del que me han hablado." },
+          { m: "happy", t: "Ven, ven. No te preocupes, no voy a juzgarte por lo que hayas comido hoy." },
+          { m: "idle", t: "Todavía." },
+          { m: "happy", t: "Soy Igor. Chef, cocinero, especialista en convertir una comida aburrida en una victoria táctica." },
+          { m: "happy", t: "Tú juegas los partidos. Yo intento que llegues a ellos con gasolina." },
+        ],
+        setFlags: ["igorMet", "metIgor", "igorStoryStarted"],
+        snap: () => ({ since: todayStr() }),
+        check: (g, snap) => Object.entries(g.logs || {}).some(([d, l]) =>
+          d >= snap.since && l.closed && (l.prot || 0) >= g.player.goals.protein) },
+      /* CAPÍTULO 1 — La alineación del plato */
+      { title: "La alineación del plato", zone: "restaurante",
+        objective: "Cumple el objetivo de proteína durante 3 días.",
+        intro: [
+          { m: "chef", t: "Mira esto." },
+          { m: "chef", t: "Proteína atrás. Carbohidratos en el medio. Grasas haciendo su trabajo sin llamar demasiado la atención." },
+          { m: "happy", t: "¿Ves? Un equipo." },
+          { m: "idle", t: "Si quitas una pieza, igual puedes jugar. Pero luego no me vengas diciendo que el segundo tiempo se te hizo largo." },
+        ],
+        setFlags: ["igorRecipe"],
+        snap: () => ({ since: todayStr() }),
+        check: (g, snap) => Object.entries(g.logs || {}).filter(([d, l]) =>
+          d >= snap.since && l.closed && (l.prot || 0) >= g.player.goals.protein).length >= 3 },
+      /* CAPÍTULO 2 — La receta */
+      { title: "La receta", zone: "casa",
+        objective: "Cumple el objetivo de proteína durante 3 días.",
+        intro: [
+          { m: "happy", t: "Te he traído algo." },
+          { m: "idle", t: "No es una dieta." },
+          { m: "happy", t: "Es una receta." },
+          { m: "serio", t: "Hay una diferencia enorme." },
+          { m: "happy", t: "Una dieta te dice qué tienes que hacer. Una receta te invita a querer hacerlo." },
+        ],
+        snap: () => ({ since: todayStr() }),
+        check: (g, snap) => Object.entries(g.logs || {}).filter(([d, l]) =>
+          d >= snap.since && l.closed && (l.prot || 0) >= g.player.goals.protein).length >= 3 },
+      /* CAPÍTULO 3 — La guindilla */
+      { title: "La guindilla", zone: "restaurante",
+        objective: "Completa un entrenamiento y una comida objetivo.",
+        intro: [
+          { m: "happy", t: "Hoy vamos a hablar de un ingrediente peligroso." },
+          { m: "happy", t: "La guindilla." },
+          { m: "idle", t: "Pequeña. Inocente. Mentira." },
+          { m: "happy", t: "En fútbol sería ese jugador que parece que no va a hacer nada y en el minuto noventa te destroza el partido." },
+        ],
+        snap: () => ({ since: todayStr() }),
+        check: (g, snap) => Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.gym) &&
+          Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.closed && (l.prot || 0) >= g.player.goals.protein) },
+      /* CAPÍTULO 4 — Cocina de dos */
+      { title: "Cocina de dos", zone: "casa",
+        objective: "Completa un día de objetivos y una comida objetivo.",
+        intro: [
+          { m: "chef", t: "Hoy no vienes a comer." },
+          { m: "happy", t: "Hoy vienes a trabajar." },
+          { m: "happy", t: "Tranquilo. Yo también empecé quemando cosas." },
+          { m: "serio", t: "La cocina tiene algo parecido al fútbol: no puedes aprender mirando." },
+          { m: "chef", t: "Así que ponte aquí. Y no toques eso." },
+        ],
+        setFlags: ["igorKitchen"],
+        snap: () => ({ since: todayStr() }),
+        check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 1 &&
+          Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.closed && (l.prot || 0) >= g.player.goals.protein) },
+      /* CAPÍTULO 5 — El plato estrella */
+      { title: "El plato estrella", zone: "restaurante",
+        objective: "Aumenta al menos 1 kg desde aquí o alcanza un hito de OVR.",
+        intro: [
+          { m: "chef", t: "Este es mi plato." },
+          { m: "orgulloso", t: "No porque sea el más caro. Ni el más complicado." },
+          { m: "orgulloso", t: "Porque lo hice cuando todavía estaba intentando demostrarme que podía ser chef." },
+          { m: "happy", t: "Y mira dónde hemos acabado." },
+        ],
+        setFlags: ["igorSignatureDish"],
+        snap: (g) => ({ weight: (g.player.weightLog || []).length ? g.player.weightLog[g.player.weightLog.length - 1].kg : g.player.weight0,
+          ovr: calcOVR(g.player.stats) }),
+        check: (g, snap) => {
+          const lastKg = (g.player.weightLog || []).length ? g.player.weightLog[g.player.weightLog.length - 1].kg : g.player.weight0;
+          return (lastKg - snap.weight) >= 1 || calcOVR(g.player.stats) > snap.ovr;
+        } },
+      /* CAPÍTULO 6 — El cuerpo también habla */
+      { title: "El cuerpo también habla", zone: "car",
+        objective: "Cumple objetivos de alimentación y sueño durante 4 días.",
+        intro: [
+          { m: "serio", t: "Hay una cosa que la gente olvida." },
+          { m: "serio", t: "El cuerpo habla." },
+          { m: "idle", t: "Cuando estás cansado, cuando duermes mal, cuando entrenas sin comer suficiente... te lo está diciendo." },
+          { m: "happy", t: "El problema es que no tiene subtítulos." },
+        ],
+        snap: () => ({ since: todayStr() }),
+        check: (g, snap) => Object.entries(g.logs || {}).filter(([d, l]) => d >= snap.since && l.closed &&
+          (l.prot || 0) >= g.player.goals.protein && l.sleep != null && l.sleep >= g.player.goals.sleepGoal).length >= 4 },
+      /* CAPÍTULO 7 — No todo es proteína */
+      { title: "No todo es proteína", zone: "restaurante",
+        objective: "Cierra un día sin caer en forma mala.",
+        intro: [
+          { m: "preocupado", t: "¿Cuánto has comido hoy?" },
+          { m: "preocupado", t: "No, espera. No me lo digas todavía." },
+          { m: "serio", t: "Si estás pensando en cada número que comes, ya no estás disfrutando de la comida." },
+          { m: "happy", t: "Y eso, amigo mío, es como jugar un partido mirando solo el marcador." },
+        ],
+        snap: () => ({ since: todayStr() }),
+        check: (g, snap) => Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.closed && l.form && l.form !== "caida") },
+      /* CAPÍTULO 8 — El chef agotado */
+      { title: "El chef agotado", zone: "restaurante",
+        objective: "Completa una racha de 5 días.",
+        intro: [
+          { m: "cansado", t: "Hoy la cocina me ha ganado por goleada." },
+          { m: "happy", t: "Pero no se lo digas a nadie." },
+          { m: "preocupado", t: "A veces me acuerdo de cuidar a todo el mundo y se me olvida que yo también necesito parar." },
+          { m: "cansado", t: "Qué ironía, ¿eh? El chef dando consejos y luego comiéndose el banquillo de su propia vida." },
+        ],
+        setFlags: ["igorBurnout"],
+        snap: () => ({}),
+        check: (g) => (g.player.streak || 0) >= 5 },
+      /* CAPÍTULO 9 — La receta que no está escrita */
+      { title: "La receta que no está escrita", zone: "barrio",
+        objective: "Gana un partido y completa 3 días de objetivos.",
+        intro: [
+          { m: "idle", t: "Antes de todo esto, yo no sabía exactamente qué quería." },
+          { m: "serio", t: "Solo sabía que me gustaba hacer comida para otras personas." },
+          { m: "happy", t: "Luego descubrí que eso podía ser un trabajo." },
+          { m: "orgulloso", t: "Y que un plato puede decir cosas que uno no sabe decir hablando." },
+        ],
+        snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3 &&
+          (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") },
+      /* CAPÍTULO 10 — Un día sin fútbol */
+      { title: "Un día sin fútbol", zone: "playa",
+        objective: "Completa un hito de carrera.",
+        intro: [
+          { m: "playa", t: "Hoy no soy chef." },
+          { m: "playa", t: "No soy nutricionista." },
+          { m: "playa", t: "Y definitivamente no soy tu entrenador." },
+          { m: "playa", t: "Hoy soy un señor con un coco intentando recordar cómo se descansaba." },
+        ],
+        setFlags: ["igorBeach"],
+        snap: (g) => ({ tierId: g.tier.id, seasonNum: g.season.num }),
+        check: (g, snap) => g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum },
+      /* CAPÍTULO 11 — Volver a la cocina */
+      { title: "Volver a la cocina", zone: "restaurante",
+        objective: "Completa una racha de 6 días.",
+        intro: [
+          { m: "chef", t: "¿Sabes qué he descubierto?" },
+          { m: "happy", t: "Que descansar no me quitó hambre." },
+          { m: "orgulloso", t: "Me devolvió las ganas de cocinar." },
+          { m: "chef", t: "Y eso es bastante importante." },
+        ],
+        setFlags: ["igorBalance"],
+        snap: () => ({}),
+        check: (g) => (g.player.streak || 0) >= 6 },
+      /* CAPÍTULO 12 — Tu receta */
+      { title: "Tu receta", zone: "casa",
+        objective: "Cumple objetivos de alimentación durante 4 días.",
+        intro: [
+          { m: "idle", t: "Hasta ahora siempre te he dicho qué comer." },
+          { m: "serio", t: "Hoy quiero que me digas tú qué quieres preparar." },
+          { m: "happy", t: "Sí. El chef pregunta al cliente." },
+          { m: "orgulloso", t: "Porque ya no eres el chico que vino a preguntarme cuánta proteína tenía todo." },
+        ],
+        snap: () => ({ since: todayStr() }),
+        check: (g, snap) => Object.entries(g.logs || {}).filter(([d, l]) =>
+          d >= snap.since && l.closed && (l.prot || 0) >= g.player.goals.protein).length >= 4 },
+      /* CAPÍTULO 13 — La gran noche */
+      { title: "La gran noche", zone: "estadio",
+        objective: "Gana un partido importante o alcanza un hito de temporada.",
+        intro: [
+          { m: "celebracion", t: "¡ESTO SE CELEBRA!" },
+          { m: "happy", t: "No me importa la dieta esta noche." },
+          { m: "chef", t: "Bueno, técnicamente sí me importa." },
+          { m: "celebracion", t: "¡PERO HOY GANAMOS!" },
+          { m: "orgulloso", t: "Y algunas victorias también hay que saborearlas." },
+        ],
+        snap: (g) => ({ matchCount: (g.matchHistory || []).length, tierId: g.tier.id, seasonNum: g.season.num }),
+        check: (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") ||
+          g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum },
+      /* CAPÍTULO 14 — Lo que realmente quería */
+      { title: "Lo que realmente quería", zone: "restaurante",
+        objective: "Mantén una racha de 7 días o supera tu mejor OVR.",
+        intro: [
+          { m: "serio", t: "Durante años pensé que tenía que hacer el plato perfecto." },
+          { m: "orgulloso", t: "Ahora creo que estaba equivocado." },
+          { m: "serio", t: "Lo importante no es que recuerden cada ingrediente." },
+          { m: "happy", t: "Es que quieran volver a sentarse contigo." },
+        ],
+        setFlags: ["igorFriend"],
+        snap: (g) => ({ ovr: calcOVR(g.player.stats) }),
+        check: (g, snap) => (g.player.streak || 0) >= 7 || calcOVR(g.player.stats) > snap.ovr },
+      /* CAPÍTULO 15 — El delantal */
+      { title: "El delantal", zone: "restaurante",
+        objective: "Cierra un día con entrenamiento, alimentación y sueño.",
+        intro: [
+          { m: "chef", t: "Esto no se regala a cualquiera." },
+          { m: "happy", t: "Bueno... quizá sí." },
+          { m: "orgulloso", t: "Pero contigo me apetece hacerlo." },
+          { m: "serio", t: "No porque sepas cocinar." },
+          { m: "happy", t: "Todavía." },
+          { m: "orgulloso", t: "Porque has aprendido a cuidarte sin convertirlo en una obligación." },
+        ],
+        setFlags: ["igorApron"],
+        snap: () => ({ since: todayStr() }),
+        check: (g, snap) => Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.closed &&
+          l.gym && (l.prot || 0) >= g.player.goals.protein && l.sleep != null && l.sleep >= g.player.goals.sleepGoal) },
+      /* FINAL — A la mesa */
+      { title: "A la mesa", zone: "restaurante",
+        objective: "Alcanza el nivel de élite.",
+        intro: [
+          { m: "happy", t: "Mira quién ha venido." },
+          { m: "happy", t: "Tengo dos noticias." },
+          { m: "idle", t: "La primera: la comida está lista." },
+          { m: "happy", t: "La segunda: no pienso preguntarte cuántas calorías tiene." },
+          { m: "orgulloso", t: "Ya sabes cuidarte." },
+          { m: "happy", t: "Así que siéntate. Hoy comemos." },
+          { m: "orgulloso", t: "Sin tácticas. Sin estadísticas. Solo nosotros." },
+        ],
+        snap: () => ({}),
+        check: (g) => g.tier.id >= TIERS[TIERS.length - 1].id },
+      /* EPÍLOGO — La receta (última etapa: final:true, entrega el pin y +1 NUT al entrar aquí) */
+      { title: "La receta", zone: "casa", final: true,
+        intro: [
+          { m: "idle", t: "¿Conservas la receta?" },
+          { m: "happy", t: "Sabía que sí." },
+          { m: "orgulloso", t: "Entonces ya está." },
+          { m: "happy", t: "Algunas recetas no son para cocinar." },
+          { m: "orgulloso", t: "Son para recordar cómo empezó todo." },
+        ],
+        setFlags: ["igorPinEarned", "igorStoryComplete"],
+        reward: (g) => {
+          const stats = { ...g.player.stats };
+          stats.NUT = Math.min(99, stats.NUT + 1);
+          const inv = { ...(g.inventory || {}) };
+          inv.igor_pin = (inv.igor_pin || 0) + 1;
+          return { ...g, player: { ...g.player, stats }, inventory: inv };
+        } },
+    ],
+  }],
+};
+
 /* separadas por mapa (para el registro de misiones de cada uno) y también fusionadas
    (para el motor, al que no le importa desde qué mapa se desbloqueó cada historia).
-   Las historias de Elisa, Milly, Yuna y López se añaden a los dos registros porque sus
-   escenas se reparten entre zonas de La Ciudad y de La Metrópolis: así el panel de
+   Las historias de Elisa, Milly, Yuna, López e Igor se añaden a los dos registros porque
+   sus escenas se reparten entre zonas de La Ciudad y de La Metrópolis: así el panel de
    Misiones las muestra estés donde estés, no solo desde el mapa donde tocara
    desbloquearlas. */
-const STORIES_CIUDAD = { ...toStories(QUESTS), elisa: ELISA_STORY, milly: MILLY_STORY, yuna: YUNA_STORY, lopez: LOPEZ_STORY };
-const STORIES_METRO = { ...toStories(METRO_QUESTS), elisa: ELISA_STORY, milly: MILLY_STORY, yuna: YUNA_STORY, lopez: LOPEZ_STORY };
+const STORIES_CIUDAD = { ...toStories(QUESTS), elisa: ELISA_STORY, milly: MILLY_STORY, yuna: YUNA_STORY, lopez: LOPEZ_STORY, igor: IGOR_STORY };
+const STORIES_METRO = { ...toStories(METRO_QUESTS), elisa: ELISA_STORY, milly: MILLY_STORY, yuna: YUNA_STORY, lopez: LOPEZ_STORY, igor: IGOR_STORY };
 const STORIES = { ...STORIES_CIUDAD, ...STORIES_METRO };
 
 /* ============================================================
@@ -2483,6 +2749,8 @@ const ITEMS = {
     desc: "El pin que te dio Yuna cuando por fin dejó de esconderse detrás de las excusas. No se usa ni se regala: es un recuerdo de todo el camino." },
   lopez_pin: { name: "Pin de López", icon: "📌", img: "/images/objects/lopez_pin.webp", kind: "keepsake",
     desc: "El pin que te dio López cuando dejaste de ser 'el nuevo'. No se usa ni se regala: es un recuerdo de todo el camino." },
+  igor_pin: { name: "Pin de Igor", icon: "📌", img: "/images/objects/igor_pin.webp", kind: "keepsake",
+    desc: "El pin que te dio Igor el día que dejó de tratarte como cliente. No se usa ni se regala: es un recuerdo de todo el camino." },
 };
 /* dar un objeto a su destinatario: reacción propia del personaje + el objeto se gasta */
 const ITEM_GIVE_REACTIONS = {
@@ -5354,11 +5622,12 @@ export default function App() {
       /* fecha de inicio de carrera (para aniversarios) y primer ascenso de categoría */
       out.signedAt = out.signedAt || todayStr();
       out = buildPaper(out); /* el día del fichaje ya tiene su edición, no un periódico vacío */
-      /* Milly te trae ese primer periódico en persona; se presenta solo la primera vez de tu carrera */
-      if (!out.metMilly) {
-        out.metMilly = true;
-        out = addScene(out, "Milly", MILLY_INTRO_BEATS.map((b) => ({ m: b.m, t: fillTpl(b.t, flavorCtx(out)) })));
-      } else {
+      /* Milly te trae el periódico de hoy en persona (ver comentario junto a
+         MILLY_PAPER_LINES): la primera presentación real ya la gestiona su propia
+         historia (ver MILLY_STORY, chapter.trigger:()=>true, se evalúa al final de esta
+         misma función vía checkStories) — aquí solo se asegura de que el día del fichaje
+         tenga su edición, sin repetir un saludo de "primera vez" que ya no le corresponde. */
+      {
         const c = flavorCtx(out);
         const mp = MILLY_PAPER_LINES.filter((y) => !y.w || (COND[y.w] && COND[y.w](c)));
         out = playPoolEntry(out, "Milly", mp[Math.floor(Math.random() * mp.length)], c);

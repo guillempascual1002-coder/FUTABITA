@@ -905,6 +905,29 @@ const NPCS = {
   /* López "fuera de servicio": su primera aparición en la Metrópolis, de vacaciones en la Playa. Solo idle. */
   lopez_playa: { name: "López", color: "#D65A2E", voice: "/audio/vozchico02.mp3", icon: "/images/lopez_icon.webp",
     arts: { idle: "/images/lopez_playa.webp" }, def: "idle" },
+  /* --- Zonas de La Ciudad sin retrato propio: son el mismo personaje que ya conoces,
+     visto en otro punto de la ciudad, así que reutilizan su arte de siempre (nada de
+     imágenes nuevas). Npc aparte solo para que la burbuja de "pendiente" se marque en
+     la zona correcta y no se mezcle con su charla habitual. --- */
+  lopez_car: { name: "López", color: "#D65A2E", voice: "/audio/vozchico02.mp3", icon: "/images/lopez_icon.webp",
+    arts: { idle: "/images/Lopez_idle.webp", happy: "/images/Lopez_happy.webp" }, def: "idle" },
+  karla_car: { name: "Karla", color: "#9C6BD6", voice: "/audio/vozchica02.mp3", icon: "/images/karla_icon.webp",
+    arts: { idle: "/images/karla_idle.webp", happy: "/images/karla_happy.webp", angry: "/images/karla_ego.webp" }, def: "idle" },
+  /* Milly también hace de periodista en la Sala de Prensa: mismo personaje, nuevo rol. */
+  milly_prensa: { name: "Milly", color: "#C97A2E", voice: "/audio/vozchica01.mp3", icon: "/images/milly_icon.webp",
+    arts: { idle: "/images/milly_idle.webp", happy: "/images/milly_happy.webp", periodico: "/images/milly_periodico.webp" }, def: "idle" },
+  lopez_cantera: { name: "López", color: "#D65A2E", voice: "/audio/vozchico02.mp3", icon: "/images/lopez_icon.webp",
+    arts: { idle: "/images/Lopez_idle.webp", happy: "/images/Lopez_happy.webp" }, def: "idle" },
+  yuna_tienda: { name: "Yuna", color: "#D4537E", voice: "/audio/vozchica01.mp3", icon: "/images/yuna_icon.webp",
+    arts: { idle: "/images/Yuna_Idle.webp", happy: "/images/Yuna_happy.webp", angry: "/images/Yuna_angry.webp" }, def: "idle" },
+  lopez_tienda: { name: "López", color: "#D65A2E", voice: "/audio/vozchico02.mp3", icon: "/images/lopez_icon.webp",
+    arts: { idle: "/images/Lopez_idle.webp", happy: "/images/Lopez_happy.webp" }, def: "idle" },
+  lopez_estadio: { name: "López", color: "#D65A2E", voice: "/audio/vozchico02.mp3", icon: "/images/lopez_icon.webp",
+    arts: { idle: "/images/Lopez_idle.webp", happy: "/images/Lopez_happy.webp" }, def: "idle" },
+  yuna_estadio: { name: "Yuna", color: "#D4537E", voice: "/audio/vozchica01.mp3", icon: "/images/yuna_icon.webp",
+    arts: { idle: "/images/Yuna_Idle.webp", happy: "/images/Yuna_happy.webp", angry: "/images/Yuna_angry.webp" }, def: "idle" },
+  elisa_estadio: { name: "Elisa", color: "#2E6ED6", voice: "/audio/vozchica02.mp3", icon: "/images/elisa_icon.webp",
+    arts: { idle: "/images/Elisa_idle.webp", happy: "/images/Elisa_happy.webp" }, def: "idle" },
 };
 const senderToNpc = (from) => {
   if (from === "Entrenador" || from === "Tu agente" || from === "Elisa") return "elisa";
@@ -919,6 +942,15 @@ const senderToNpc = (from) => {
   if (from === "Karla Playa") return "karla_playa";
   if (from === "Milly Playa") return "milly_playa";
   if (from === "López Playa") return "lopez_playa";
+  if (from === "López Entreno") return "lopez_car";
+  if (from === "Karla Entreno") return "karla_car";
+  if (from === "Milly Prensa") return "milly_prensa";
+  if (from === "López Cantera") return "lopez_cantera";
+  if (from === "Yuna Tienda") return "yuna_tienda";
+  if (from === "López Tienda") return "lopez_tienda";
+  if (from === "López Estadio") return "lopez_estadio";
+  if (from === "Yuna Estadio") return "yuna_estadio";
+  if (from === "Elisa Estadio") return "elisa_estadio";
   if (from === "López" || from.includes("Capitán") || from.includes("· Vestuario")) return "lopez";
   return null; /* prensa/afición/redes/club -> periódico */
 };
@@ -1483,6 +1515,128 @@ const KARLA_PLAYA_POOL = [
   { w: "hot", t: "{streak} días de racha y yo aquí sin mirar ni una estadística. Cuando vuelva seguro que ya me lo cuentan todo igual, para eso tengo contactos en todas partes." },
 ];
 
+/* --- CENTRO DE ALTO RENDIMIENTO · López y Karla entrenan aquí en serio, fuera de su
+   sitio habitual. Mismo personaje, mismo arte, solo que aquí hablan de trabajo físico
+   puro, sin patrocinios ni vestuario de por medio. --- */
+const LOPEZ_CAR_POOL = [
+  { beats: [
+    { m: "idle", t: "Vengo aquí cuando quiero currar en serio, sin público ni cámaras del club. Solo pesas y sudor." },
+    { m: "happy", t: "Me alegra verte por aquí también. Los que de verdad quieren llegar arriba acaban apareciendo en este sitio tarde o temprano." }] },
+  { w: "win", t: "Te vi entrenar aquí la semana pasada y luego el resultado no me sorprendió nada. Este sitio no falla, te lo digo yo, que llevo años viniendo." },
+  { beats: [
+    { m: "idle", t: "¿Sabes que Karla también entrena aquí? Al principio me chocó verla sudando como cualquiera, con la fama que se gasta." },
+    { m: "happy", t: "Luego entendí que por eso es tan buena. Aquí dentro no hay cámaras que impresionar, solo trabajo. Aprende de ella, aunque no se lo digas, que se le sube a la cabeza." }] },
+  { t: "Pregunta seria de vestuario trasladada aquí: ¿fuerza o resistencia, con qué disfrutas más entrenando?", replies: [
+    { t: "Fuerza, me gusta notar el progreso", r: ["Buena elección. Aquí se nota rápido quién mete horas de verdad y quién solo viene a hacerse la foto."] },
+    { t: "Resistencia, me despeja la cabeza", r: ["Respeto total. Yo empecé igual, y con los años entendí que la cabeza despejada rinde tanto como las piernas fuertes."] }] },
+  { w: "hot", t: "{streak} días de racha, y te veo aquí casi cada semana. Esto no es casualidad, esto es que te lo estás currando de verdad. Sigue así." },
+];
+const KARLA_CAR_POOL = [
+  { beats: [
+    { m: "idle", t: "Sí, entreno aquí, y no, no es para las cámaras. Aquí no hay ni una." },
+    { m: "angry", t: "Es de los pocos sitios donde nadie me mira esperando una entrevista. Aprovecho para currar de verdad, sin la careta de mánager de imagen puesta." }] },
+  { w: "win", t: "Te vi entrenar aquí antes del partido. Esa dedicación se nota luego en el resultado, y no me sorprende nada viniendo de mí decírtelo." },
+  { beats: [
+    { m: "idle", t: "López también viene por aquí, ¿lo sabías? Al principio pensé que sería de los que solo posan con las pesas." },
+    { m: "angry", t: "Me equivoqué. Currará bastante más de lo que aparenta con esa sonrisa de capitán simpático. No se lo digas, que ya tiene bastante ego él solo." }] },
+  { t: "Pregunta directa: ¿entrenas para verte bien o para rendir mejor?", replies: [
+    { t: "Para rendir, lo demás es secundario", m: "idle", r: ["Respuesta correcta. Aunque, siendo sincera, a mí las dos cosas me salen gratis, para que lo sepas."] },
+    { t: "Para las dos cosas, sin vergüenza", m: "angry", r: ["JA. Al menos eres sincero. Yo también, así que no te voy a juzgar por eso."] }] },
+  { w: "hot", t: "{streak} días de racha. Te veo aquí casi tanto como a mí misma, y eso ya es decir bastante. No te acostumbres al cumplido." },
+];
+
+/* --- SALA DE PRENSA · Milly también hace de periodista aquí, entrevistas de verdad,
+   formato pregunta-respuesta, distinto del cotilleo de mostrador del Kiosco. --- */
+const MILLY_PRENSA_POOL = [
+  { beats: [
+    { m: "periodico", t: "Sorpresa, ¿eh? No solo vendo periódicos, también los lleno. Hoy toca entrevista de verdad, con grabadora y todo." },
+    { m: "happy", t: "Tranquilo, no muerdo. Bueno, un poco, pero solo si me das titulares aburridos." }] },
+  { w: "win", t: "Pregunta de prensa oficial: ¿qué se siente ganar así? Y no me digas 'bien', que eso no me vale ni para un pie de foto." },
+  { t: "Pregunta de la casa, off the record si quieres: ¿presión o ambición, qué pesa más en tu cabeza antes de un partido?", replies: [
+    { t: "Ambición, sin dudarlo", m: "happy", r: ["Esa frase la uso de titular mañana mismo, palabra por palabra. Gracias por el material."] },
+    { t: "Presión, aunque no lo parezca", m: "idle", r: ["Sincero. Eso también vende, que lo sepas. La gente conecta más con lo real que con lo perfecto."] }] },
+  { w: "loss", t: "Pregunta incómoda, como manda el oficio: ¿qué le dirías a la afición después de ayer? Toma tu tiempo, esto también se publica." },
+  { beats: [
+    { m: "idle", t: "Entre tú y yo, esto de entrevistar se me da mejor que vender periódicos. No sé si alegrarme o preocuparme por ello." },
+    { m: "happy", t: "En fin, menos cháchara y más trabajo, que la sala de prensa no se llena sola de titulares." }] },
+  { w: "scorer", t: "{goals} goles esta temporada, para que conste en la hemeroteca oficial. Como periodista, tengo que preguntarlo: ¿a qué atribuyes la racha goleadora?" },
+];
+
+/* --- CANTERA · López habla aquí de otros futbolistas, sobre todo cantera y promesas
+   jóvenes del club, con su tono de veterano que ya ha visto pasar a unos cuantos. --- */
+const LOPEZ_CANTERA_POOL = [
+  { beats: [
+    { m: "idle", t: "Vengo por aquí a ver a los chavales del filial de vez en cuando. Hay un par que apuntan maneras serias." },
+    { m: "happy", t: "Uno de ellos, un central zurdo de dieciséis años, me recuerda a mí a esa edad. Con más talento, eso sí, no nos vamos a engañar." }] },
+  { t: "Pregunta de veterano a novato: ¿tú, con dieciséis años, sabías que ibas a llegar hasta aquí?", replies: [
+    { t: "Ni de broma, todo fue sorpresa", r: ["Como casi todos los que de verdad llegan. Los que lo tienen todo calculado desde crío suelen quedarse por el camino."] },
+    { t: "Sí, siempre lo tuve claro", r: ["Envidia sana. A mí me hizo falta que un entrenador creyera en mí antes que yo mismo. Cada uno con su camino."] }] },
+  { beats: [
+    { m: "idle", t: "Hay una extremo de la cantera femenina que está rompiendo categorías por goleada." },
+    { m: "happy", t: "Como siga así, en un par de años la vamos a tener entrenando con el primer equipo. Apunta el nombre, que te va a sonar pronto." }] },
+  { w: "win", t: "Traje a un par de canteranos a ver el partido de ayer desde la grada. Salieron con los ojos como platos. Así se contagia esto, viéndolo de cerca." },
+  { beats: [
+    { m: "idle", t: "Me preguntan mucho los chavales de aquí cómo llegué a capitán. Les cuento la verdad, sin adornarla." },
+    { m: "happy", t: "Currando cuando nadie miraba, como el que más. No hay atajo, y prefiero que lo sepan cuanto antes." }] },
+];
+
+/* --- TIENDA OFICIAL · Yuna de compras como la fan que es, López pasando a firmar
+   camisetas o revisar el género con su ojo de capitán. --- */
+const YUNA_TIENDA_POOL = [
+  { beats: [
+    { m: "idle", t: "No, no he venido a comprarme tu camiseta. He venido a ver si tienen la del Barça en importación, que aquí a veces llega antes que en Cataluña." },
+    { m: "angry", t: "...Bueno, puede que también haya mirado la tuya. Solo para comparar la calidad de la tela, nada más. Es un análisis textil." }] },
+  { w: "win", t: "Vine a comprar algo random y me encontré a media ciudad hablando de tu partido de ayer en la cola de la caja. Hasta la dependienta lo comentaba." },
+  { t: "Pregunta de tienda, nada de fútbol: ¿bufanda o gorra, qué merchandising prefieres?", replies: [
+    { t: "Bufanda, sin duda", m: "happy", r: ["Buen gusto. La mía del Barça la tengo desde hace años y no pienso soltarla jamás."] },
+    { t: "Gorra, más práctica", m: "idle", r: ["Práctico, sí, pero sin alma. Aunque bueno, cada cual con sus prioridades de fan."] }] },
+  { beats: [
+    { m: "idle", t: "He visto que aquí también venden bufandas personalizadas. Interesante dato, por si a alguien se le ocurre encargar una algún día." },
+    { m: "angry", t: "N-no lo digo por mí. Lo digo en general. Como información neutral. Olvida que lo he mencionado." }] },
+];
+const LOPEZ_TIENDA_POOL = [
+  { beats: [
+    { m: "idle", t: "Vengo de vez en cuando a firmar género nuevo, camisetas sobre todo. Es de las pocas cosas de capitán que de verdad disfruto." },
+    { m: "happy", t: "Ver a un chaval comprarse una camiseta con su nombre favorito detrás nunca pasa de moda, aunque lleve años en esto." }] },
+  { w: "win", t: "Después del partido de ayer, la dependienta me dijo que preguntaban por tu camiseta más que por la mía. Voy a fingir que no me ha dolido un poco." },
+  { t: "Pregunta de capitán con ojo comercial: ¿tú te comprarías tu propia camiseta si no jugaras aquí?", replies: [
+    { t: "Sinceramente, sí", r: ["Buena señal. Si tú mismo no te comprarías tu camiseta, mal vamos como equipo, así que me alegra oír eso."] },
+    { t: "Ni loco, qué vergüenza", r: ["JA, sincero al menos. Yo tampoco me compraría la mía, para que veas, y llevo el brazalete."] }] },
+  { beats: [
+    { m: "idle", t: "Estoy revisando el género nuevo de esta temporada. Entre nosotros, algunos diseños dejan bastante que desear." },
+    { m: "happy", t: "Pero bueno, no me pagan por opinar de moda, me pagan por meter goles. Cada uno a lo suyo." }] },
+];
+
+/* --- GRAN ESTADIO · zona de cierre, solo llega quien asciende a Primera. Aquí el tono
+   cambia: menos broma diaria, más peso del momento y de todo el camino recorrido. --- */
+const LOPEZ_ESTADIO_POOL = [
+  { beats: [
+    { m: "idle", t: "Llevo toda la carrera soñando con pisar un césped como este. Y ahora estás aquí conmigo, viviéndolo también." },
+    { m: "happy", t: "No se me olvida de dónde venimos, ¿eh? De un vestuario pequeño a esto. Guárdate este momento, que no se repite todos los días." }] },
+  { w: "win", t: "Ganar aquí, en este estadio, no se parece a nada de lo que hemos vivido antes juntos. Disfrútalo, que te lo has ganado a pulso." },
+  { beats: [
+    { m: "idle", t: "Cuando era canterano soñaba con esto mismo, de pie aquí, mirando las gradas vacías antes de un partido." },
+    { m: "happy", t: "Ahora que lo tengo delante, con gente como tú al lado, entiendo que mereció la pena cada entrenamiento perdido de fin de semana." }] },
+];
+const YUNA_ESTADIO_POOL = [
+  { beats: [
+    { m: "idle", t: "Nunca pensé que acabaría animando desde un estadio de Primera. Y mucho menos por ti, para que conste." },
+    { m: "barcelona", t: "Bueno, el Camp Nou sigue siendo el Camp Nou, no nos confundamos. Pero esto también impone, lo reconozco." }] },
+  { w: "win", t: "Grité tanto en este estadio que me quedé sin voz. No pienso admitir por qué exactamente, pero ahí queda el dato." },
+  { beats: [
+    { m: "idle", t: "Llevo siguiéndote desde que eras del filial de un club humilde. Y ahora te veo jugar aquí." },
+    { m: "angry", t: "N-no es que esté orgullosa ni nada de eso. Es puro seguimiento periodístico de una trayectoria. Aunque, vale, un poco sí." }] },
+];
+const ELISA_ESTADIO_POOL = [
+  { beats: [
+    { m: "idle", t: "De un club de cantera y sacrificio a este estadio. No sé tú, pero yo todavía no me lo creo del todo." },
+    { m: "happy", t: "Cuando te fiché, vi algo en ti. No te voy a mentir diciendo que sabía que llegaríamos hasta aquí exactamente, pero sabía que llegaríamos lejos." }] },
+  { w: "win", t: "Ganar en este estadio cierra un círculo que empezamos hace mucho, en un despacho mucho más humilde que este palco. Enhorabuena, de verdad." },
+  { beats: [
+    { m: "idle", t: "Como mánager tengo que decirte que esto es solo el principio de otra etapa, no el final del camino." },
+    { m: "happy", t: "Pero como persona que ha estado contigo desde el primer día, déjame decirte que estoy muy orgullosa de lo que hemos construido." }] },
+];
+
 /* goles a lo largo de TODA la carrera (todas las temporadas), para el hito del Centro de Alto Rendimiento */
 const careerGoals = (g) => (g.matchHistory || []).reduce((a, m) => a + (m.myGoals || 0), 0);
 /* hitos de constancia para desbloquear las zonas de La Metrópolis, contados sobre TODO el historial de logs */
@@ -1524,22 +1678,22 @@ const ZONES = [
   { id: "barrio", kind: "npc", npc: "yuna", label: "El Barrio", icon: "🌆", x: 53.16, y: 58.16,
     pts: "217.8 461 217.8 507.5 318.4 500 318.4 465.1 217.8 461",
     unlocked: (g) => !!g.yunaMet, reqLabel: "Marca tu primer gol" },
-  { id: "car", kind: "npc", npc: null, label: "Centro de Alto Rendimiento", icon: "🏋️", x: 61.35, y: 17.42,
+  { id: "car", kind: "npc", npc: ["lopez_car", "karla_car"], label: "Centro de Alto Rendimiento", icon: "🏋️", x: 61.35, y: 17.42,
     pts: "230 164.5 230 222 387.9 223.7 383.1 153.5 230 164.5",
     unlocked: (g) => careerGoals(g) >= 3, reqLabel: "Marca 3 goles en tu carrera" },
-  { id: "prensa", kind: "npc", npc: null, label: "Sala de Prensa", icon: "🎙️", x: 23.63, y: 31.90,
+  { id: "prensa", kind: "npc", npc: "milly_prensa", label: "Sala de Prensa", icon: "🎙️", x: 23.63, y: 31.90,
     pts: "131.9 245 187.7 293.5 168.3 358.9 91.1 337.4 98.3 259.3 131.9 245",
     unlocked: (g) => calcOVR(g.player.stats) >= 70, reqLabel: "Alcanza 70 de media" },
   { id: "patro", kind: "npc", npc: "lisa", label: "Zona de Patrocinadores", icon: "🏙️", x: 31.70, y: 81.56,
     pts: "131.2 570.8 86.3 660.7 163.3 715.5 190.8 690.4 214.2 702.1 245.3 669.4 185.9 599.7 131.2 570.8",
     unlocked: (g) => g.tier.id >= 2, reqLabel: "Asciende a Primera Federación", metFlag: "metLisa", intro: KARLA_INTRO_BEATS },
-  { id: "cantera", kind: "npc", npc: null, label: "Cantera", icon: "🎓", x: 86.33, y: 44.94,
+  { id: "cantera", kind: "npc", npc: "lopez_cantera", label: "Cantera", icon: "🎓", x: 86.33, y: 44.94,
     pts: "377.1 345.6 437.4 343.6 426.6 442.1 363.8 442.1 377.1 345.6",
     unlocked: (g) => calcOVR(g.player.stats) >= 78, reqLabel: "Alcanza 78 de media" },
-  { id: "tienda", kind: "npc", npc: null, label: "Tienda Oficial", icon: "🛍️", x: 81.25, y: 65.05,
+  { id: "tienda", kind: "npc", npc: ["yuna_tienda", "lopez_tienda"], label: "Tienda Oficial", icon: "🛍️", x: 81.25, y: 65.05,
     pts: "342.4 511.6 347 559.6 424.1 552.4 420 507.5 342.4 511.6",
     unlocked: (g) => g.tier.id >= 3, reqLabel: "Asciende a LaLiga Hypermotion / 2ª europea" },
-  { id: "estadio", kind: "npc", npc: null, label: "Gran Estadio", icon: "🏆", x: 74.57, y: 87.82,
+  { id: "estadio", kind: "npc", npc: ["lopez_estadio", "yuna_estadio", "elisa_estadio"], label: "Gran Estadio", icon: "🏆", x: 74.57, y: 87.82,
     pts: "384.1 634.1 295 657.5 262.9 677.7 290.1 764.2 384.1 764.2 431.1 715.5 384.1 634.1",
     unlocked: (g) => g.tier.id >= 4, reqLabel: "Asciende a Primera división · media tabla", big: true },
 ];
@@ -4524,6 +4678,25 @@ export default function App() {
             if (Math.random() < 0.5) candidates.push(["Karla Casual", KARLA_CASUAL_POOL]);
             else candidates.push(["Karla Playa", KARLA_PLAYA_POOL]);
           }
+        }
+        /* zonas de La Ciudad sin retrato propio: el mismo personaje, visto en otro punto
+           de la ciudad. Solo se les añade una vez esa zona concreta está desbloqueada,
+           para que no quede un mensaje pendiente en un sitio al que aún no puedes ir */
+        const zoneOk = (id) => (ZONES.find((z) => z.id === id) || {}).unlocked(out);
+        if (zoneOk("car")) {
+          candidates.push(["López Entreno", LOPEZ_CAR_POOL]);
+          if (out.metLisa) candidates.push(["Karla Entreno", KARLA_CAR_POOL]);
+        }
+        if (out.metMilly && zoneOk("prensa")) candidates.push(["Milly Prensa", MILLY_PRENSA_POOL]);
+        if (zoneOk("cantera")) candidates.push(["López Cantera", LOPEZ_CANTERA_POOL]);
+        if (zoneOk("tienda")) {
+          if (out.yunaMet) candidates.push(["Yuna Tienda", YUNA_TIENDA_POOL]);
+          candidates.push(["López Tienda", LOPEZ_TIENDA_POOL]);
+        }
+        if (zoneOk("estadio")) {
+          candidates.push(["López Estadio", LOPEZ_ESTADIO_POOL]);
+          if (out.yunaMet) candidates.push(["Yuna Estadio", YUNA_ESTADIO_POOL]);
+          candidates.push(["Elisa Estadio", ELISA_ESTADIO_POOL]);
         }
         candidates.push([null, null]); /* comodín: flavor genérico de vestuario/prensa/agente */
         const [name, pool] = candidates[Math.floor(Math.random() * candidates.length)];

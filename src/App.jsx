@@ -857,9 +857,12 @@ function pickEvent(g) {
 const NPCS = {
   lopez: { name: "López", color: "#D65A2E", voice: "/audio/vozchico02.mp3", icon: "/images/lopez_icon.webp",
     arts: { idle: "/images/Lopez_idle.webp", happy: "/images/Lopez_happy.webp" }, def: "idle" },
-  /* en Yuna, "angry" es en realidad SONROJADA: es su cara de tsundere pillada en falta */
+  /* en Yuna, "angry" es en realidad SONROJADA: es su cara de tsundere pillada en falta.
+     "preocupada" es su preocupación genuina, sin la careta puesta, antes de taparla con el
+     sonrojo/enfado. "barcelona" es su lado fan sin disimulo, para cuando habla del Barça en sí. */
   yuna: { name: "Yuna", color: "#D4537E", voice: "/audio/vozchica01.mp3", icon: "/images/yuna_icon.webp",
-    arts: { idle: "/images/Yuna_Idle.webp", happy: "/images/Yuna_happy.webp", angry: "/images/Yuna_angry.webp" }, def: "idle" },
+    arts: { idle: "/images/Yuna_Idle.webp", happy: "/images/Yuna_happy.webp", angry: "/images/Yuna_angry.webp",
+      preocupada: "/images/yuna_preocupada.webp", barcelona: "/images/yuna_barcelona.webp" }, def: "idle" },
   /* en Elisa, "angry" es su cara de decepción contenida: para semanas flojas o cuando habla de entrenadora estricta */
   elisa: { name: "Elisa", color: "#2E6ED6", voice: "/audio/vozchica02.mp3", icon: "/images/elisa_icon.webp",
     arts: { idle: "/images/Elisa_idle.webp", happy: "/images/Elisa_happy.webp", angry: "/images/Elisa_angry.webp" }, def: "idle" },
@@ -989,10 +992,11 @@ function hushVoices() {
 }
 
 /* --- YUNA · fan tsundere del Barça; conoce tus números "por sus fuentes" --- */
-/* escena de dos frases: se presenta tranquila y luego se le escapa el sonrojo */
+/* escena de dos frases: se presenta tranquila y luego se le escapa el sonrojo.
+   Aparece tras tu primer gol de la carrera, no tras tu primera victoria. */
 const YUNA_INTRO_BEATS = [
   { m: "idle", t: "¿Tú eres el nuevo del {club}, no? ...Yo pasaba por aquí. Soy Yuna. Fan del Barça, para que lo sepas: MI equipo juega en el Camp Nou. El tuyo es... aceptable." },
-  { m: "angry", t: "P-pero habéis ganado, así que... bien. Supongo. ¡No pienses que he venido a verte a TI! Solo pasaba. Por aquí. Casualmente." },
+  { m: "angry", t: "P-pero has marcado, así que... bien. Supongo. ¡No pienses que he venido a verte a TI! Solo pasaba. Por aquí. Casualmente." },
 ];
 const YUNA_POOL = [
   /* --- sonrojada (angry): pillada en falta, cumplidos que se le escapan --- */
@@ -1000,7 +1004,7 @@ const YUNA_POOL = [
     { m: "idle", t: "Vi el partido entero. Ayer, cuando jugasteis." },
     { m: "angry", t: "Y grité. En mi habitación. Sola. ...¡No te hagas ilusiones! Grité por el ESPECTÁCULO. El deporte rey. Eso es todo." }] },
   { w: "benched", beats: [
-    { m: "idle", t: "Me he enterado de que te dejaron en el banquillo el otro día." },
+    { m: "preocupada", t: "Me he enterado de que te dejaron en el banquillo el otro día." },
     { m: "angry", t: "¡¿BANQUILLO?! ¿Tu míster está ciego o qué le pasa?! ...N-no es que fuera a verte a TI. Fui a ver el partido. El fútbol. ¡EL DEPORTE!" }] },
   { w: "scorer", beats: [
     { m: "idle", t: "He estado revisando las estadísticas de la jornada. Por curiosidad periodística, nada más." },
@@ -1023,16 +1027,16 @@ const YUNA_POOL = [
   /* --- feliz --- */
   { w: "good", beats: [
     { m: "idle", t: "He estado mirando cifras de fichajes del Barça. Simple curiosidad de aficionada." },
-    { m: "happy", t: "Media de {ovr}... el Barça ficha gente de 89 para arriba, ¿sabes? Te queda camino. Pero llegarás. Lo sé desde... d-desde un punto de vista puramente estadístico." }] },
+    { m: "barcelona", t: "Media de {ovr}... el Barça ficha gente de 89 para arriba, ¿sabes? Te queda camino. Pero llegarás. Lo sé desde... d-desde un punto de vista puramente estadístico." }] },
   { beats: [
     { m: "idle", t: "Oye, tengo una petición a futuro. Quede constancia desde ya, por si acaso." },
-    { m: "happy", t: "Cuando juegues en el Camp Nou —que pasará— más te vale conseguirme una entrada. Primera fila. Es lo MÍNIMO después de todo mi apoyo incondicional. Digo... ocasional." }] },
+    { m: "barcelona", t: "Cuando juegues en el Camp Nou —que pasará— más te vale conseguirme una entrada. Primera fila. Es lo MÍNIMO después de todo mi apoyo incondicional. Digo... ocasional." }] },
   { w: "win", beats: [
     { m: "idle", t: "Vengo a decirte algo y solo lo voy a decir una vez, así que escucha bien." },
     { m: "happy", t: "Has jugado bien. Muy bien. ...Ya está. No lo repito. Disfrútalo, que no pasa a menudo." }] },
   /* --- normal --- */
   { w: "loss", beats: [
-    { m: "idle", t: "Perdisteis ayer. Ya lo sé, no hace falta que me lo repitas." },
+    { m: "preocupada", t: "Perdisteis ayer. Ya lo sé, no hace falta que me lo repitas." },
     { m: "happy", t: "El Barça también pierde a veces y yo sigo aquí, así que no te voy a soltar ningún discurso. Mañana entrenas más fuerte y ya está. Confío en ti." }] },
   { w: "good", beats: [
     { m: "idle", t: "Pasé por la ciudad deportiva el otro día. Por casualidad. Vivo a cuarenta minutos, pero fue casualidad." },
@@ -1053,7 +1057,7 @@ const YUNA_POOL = [
     { t: "Que tiene razón", m: "angry", r: ["¡¿QUÉ?! ...¡c-cállate! Eso no ha sido gracioso. Nada gracioso. Me voy. ME VOY YA.",
       "N-no digas eso ni en broma, mi corazón no está preparado para tus bromas a estas horas."] },
     { t: "Que solo somos amigos", m: "angry", r: ["...Sí. Eso. Amigos. Claro que sí. *silencio raro durante tres segundos* Bueno, me voy, que tengo cosas de fan. De fan del Barça. Adiós."] }] },
-  { m: "idle", t: "Hoy en clase de historia hablamos de grandes rivalidades y, sin que nadie preguntara, me puse a explicar el Clásico durante diez minutos seguidos. El profesor ha tenido que pararme. No me arrepiento. La cultura es importante." },
+  { m: "barcelona", t: "Hoy en clase de historia hablamos de grandes rivalidades y, sin que nadie preguntara, me puse a explicar el Clásico durante diez minutos seguidos. El profesor ha tenido que pararme. No me arrepiento. La cultura es importante." },
   { m: "happy", w: "good", t: "He estado pensando... si algún día llegas de verdad a lo más alto, ¿te acordarás de la fan pesada que te seguía desde una grada de provincias? Es una pregunta hipotética. Totalmente hipotética, que conste.", replies: [
     { t: "Siempre me acordaré de ti", m: "angry", r: ["...n-no digas eso así, tan tranquilo. Casi me haces creer que lo dices en serio. Idiota."] },
     { t: "Depende de si dejas de ser pesada", m: "angry", r: ["¡OYE! ...vale, me lo merecía un poco. Pero solo un poco, ¿eh? Que quede claro."] }] },
@@ -1443,7 +1447,7 @@ const ZONES = [
      algo pendiente ahora mismo (ver EXTRA_NPCS y CityMap); en reposo, el puntito de siempre */
   { id: "barrio", kind: "npc", npc: "yuna", label: "El Barrio", icon: "🌆", x: 53.16, y: 58.16,
     pts: "217.8 461 217.8 507.5 318.4 500 318.4 465.1 217.8 461",
-    unlocked: (g) => !!g.yunaMet, reqLabel: "Gánate tu primera victoria" },
+    unlocked: (g) => !!g.yunaMet, reqLabel: "Marca tu primer gol" },
   { id: "car", kind: "npc", npc: null, label: "Centro de Alto Rendimiento", icon: "🏋️", x: 61.35, y: 17.42,
     pts: "230 164.5 230 222 387.9 223.7 383.1 153.5 230 164.5",
     unlocked: (g) => careerGoals(g) >= 3, reqLabel: "Marca 3 goles en tu carrera" },
@@ -4554,8 +4558,8 @@ export default function App() {
       /* la crónica abre el periódico del día */
       const cr = cronicaDe(g, m);
       out = addMsg(out, pick(PRESS), cr.b, { h: cr.h, main: true, sec: "CRÓNICA" });
-      /* Yuna: aparece por primera vez tras tu primera victoria; después reacciona a veces */
-      if (!g.yunaMet && m.res === "V" && !m.benched) {
+      /* Yuna: aparece por primera vez tras marcar tu primer gol de la carrera; después reacciona a veces */
+      if (!g.yunaMet && (m.myGoals || 0) > 0) {
         out.yunaMet = true;
         out = addScene(out, "Yuna", YUNA_INTRO_BEATS.map((b) => ({ m: b.m, t: fillTpl(b.t, flavorCtx(out)) })));
       } else if (g.yunaMet && Math.random() < 0.45) {

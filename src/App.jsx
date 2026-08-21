@@ -1670,6 +1670,7 @@ const careerGoals = (g) => (g.matchHistory || []).reduce((a, m) => a + (m.myGoal
 const gymDaysCount = (g) => Object.values(g.logs || {}).filter((l) => l.gym).length;
 const habitDaysCount = (g) => Object.values(g.logs || {}).filter((l) => (l.habitsDone || []).length > 0).length;
 const kcalGoalHits = (g) => Object.values(g.logs || {}).filter((l) => (l.kcal || 0) >= (g.player.goals.kcal || Infinity)).length;
+const proteinGoalHits = (g) => Object.values(g.logs || {}).filter((l) => (l.prot || 0) >= (g.player.goals.protein || Infinity)).length;
 
 /* ============================================================
    LA CIUDAD · zonas del mapa, con su requisito de desbloqueo.
@@ -1746,25 +1747,27 @@ const EXTRA_NPCS = [
    LA METRÓPOLIS · segundo mapa, independiente del de La Ciudad
    (su propio viaje, sus propias zonas/personajes y sus propias
    misiones, para que el registro de misiones no las mezcle todas).
-   viewBox recortado igual que el de La Ciudad (mismo margen vacío
-   de sobra en el original): 65.19 64.02 411.15 728.26.
-   Las 4 zonas ya están mapeadas contra el SVG, pero todavía sin
-   personaje asignado (npc: null) — de momento, al visitarlas solo
-   se ve el fondo con el cartel de "no hay nadie". En cuanto lleguen
-   los personajes de cada una, basta con poner su npc/metFlag/intro
-   aquí, igual que en ZONES. */
-const METRO_MAP_VB = { x: 65.19, y: 64.02, w: 411.15, h: 728.26 };
+   viewBox recortado con margen de seguridad (el SVG tiene mucho
+   contenido decorativo fuera de las siluetas de zona con nombre, así
+   que en vez de recortar pegado a esas siluetas —como en La Ciudad—
+   se deja un margen amplio alrededor y se limita a los bordes reales
+   del lienzo, para que nada de la ilustración quede cortado): 31.19
+   30.02 448.81 792.72, sobre el lienzo original de 480x822.74. */
+const METRO_MAP_VB = { x: 31.19, y: 30.02, w: 448.81, h: 792.72 };
 const METRO_ZONES = [
-  { id: "parque", kind: "npc", npc: null, label: "Parque", icon: "🌳", x: 25.24, y: 15.17,
+  { id: "parque", kind: "npc", npc: null, label: "Parque", icon: "🌳", x: 30.70, y: 18.23,
     pts: "199.15 80.02 81.19 286.08 105.7 333.35 259.66 93.01 199.15 80.02",
     unlocked: (g) => gymDaysCount(g) >= 5, reqLabel: "Completa 5 días de gym" },
-  { id: "casino", kind: "npc", npc: "fortuna", label: "Casino", icon: "🎰", x: 43.72, y: 43.21,
+  { id: "casino", kind: "npc", npc: "fortuna", label: "Casino", icon: "🎰", x: 47.63, y: 43.99,
     pts: "220.6 343.57 206.85 417.61 281.87 429.86 294.89 358.89 220.6 343.57",
     unlocked: (g) => habitDaysCount(g) >= 20, reqLabel: "Registra hábitos 20 días", metFlag: "metFortuna", intro: FORTUNA_INTRO_BEATS },
-  { id: "atico", kind: "npc", npc: null, label: "Ático de Lujo", icon: "🌇", x: 75.52, y: 63.97,
+  { id: "enfermeria", kind: "npc", npc: null, label: "Enfermería", icon: "🏥", x: 85.72, y: 22.97,
+    pts: "402.89 159.68 353.11 256.96 460.34 286.08 460.34 197.98 402.89 159.68",
+    unlocked: (g) => proteinGoalHits(g) >= 10, reqLabel: "Llega a tu objetivo de proteína 10 veces" },
+  { id: "atico", kind: "npc", npc: null, label: "Ático de Lujo", icon: "🌇", x: 76.76, y: 63.06,
     pts: "353.11 469.13 347.74 507.48 294.89 602.97 445.02 666.29 460.34 464.53 353.11 469.13",
     unlocked: (g) => calcOVR(g.player.stats) >= 80, reqLabel: "Alcanza 80 de media" },
-  { id: "restaurante", kind: "npc", npc: "igor", label: "Restaurante", icon: "🍽️", x: 58.72, y: 84.24,
+  { id: "restaurante", kind: "npc", npc: "igor", label: "Restaurante", icon: "🍽️", x: 61.37, y: 81.68,
     pts: "284.94 620.02 223.66 727.26 294.89 776.28 377.62 688.96 335.49 662.91 344.68 647.24 284.94 620.02",
     unlocked: (g) => kcalGoalHits(g) >= 5, reqLabel: "Llega a tu objetivo de calorías 5 veces", metFlag: "metIgor", intro: IGOR_INTRO_BEATS },
 ];

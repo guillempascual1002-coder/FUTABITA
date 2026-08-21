@@ -1945,16 +1945,12 @@ const QUESTS = {
     npc: "lili",
     trigger: (g) => !!g.metLili && dayDiff(g.signedAt || todayStr(), todayStr()) >= 15,
     stages: [
-      { title: "La flor que no encontraba", objective: "Consigue nota 7+ en tu primer partido tras un banquillo",
+      { title: "La flor que no encontraba", objective: "Consigue nota 8+ en un partido",
         intro: [
-          { m: "idle", t: "Te veo algún día con cara de banquillo, y otros con cara de titular. Es curioso, se nota siempre en cómo entráis por la puerta." },
-          { m: "happy", t: "Quiero verte volver fuerte después de uno de esos días grises. Cuando te toque, dale la vuelta en el campo, y te preparo algo especial." }],
+          { m: "idle", t: "Cada día te preparo una flor distinta según cómo te veo entrar por la puerta. Todavía no he dado con la que encaja en tus mejores días." },
+          { m: "happy", t: "Quiero encontrarla ya. Sal ahí y dame una actuación de esas que solo pasan de vez en cuando. Nota 8 o más, y sabré exactamente qué flor es." }],
         snap: (g) => ({ matchCount: (g.matchHistory || []).length }),
-        check: (g, snap) => {
-          const hist = (g.matchHistory || []).slice(snap.matchCount);
-          for (let i = 0; i < hist.length - 1; i++) if (hist[i].benched && !hist[i + 1].benched && hist[i + 1].rating >= 7) return true;
-          return false;
-        } },
+        check: (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.rating >= 8) },
       { title: "Raíces nuevas", objective: "Gana 3 partidos",
         intro: [
           { m: "idle", t: "Me gusta pensar en el crecimiento como algo lento, casi invisible día a día, hasta que un día miras atrás y ya no reconoces la planta." },

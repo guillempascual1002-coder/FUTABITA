@@ -861,6 +861,11 @@ const NPCS = {
      solo para poder encolarla en esas zonas sin mezclarse con sus mensajes de oficina. Solo idle. */
   elisa_casual: { name: "Elisa", color: "#2E6ED6", voice: "/audio/vozchica02.mp3", icon: "/images/elisa_icon.webp",
     arts: { idle: "/images/elisa_casual.webp" }, def: "idle" },
+  /* Elisa en la Playa: mismo concepto que elisa_casual pero para esa zona en concreto, con su
+     propio retrato. Nunca coincide con elisa_casual: solo una de las dos puede estar "de
+     vacaciones" en la Metrópolis a la vez (ver processNewDays). Solo idle. */
+  elisa_playa: { name: "Elisa", color: "#2E6ED6", voice: "/audio/vozchica02.mp3", icon: "/images/elisa_icon.webp",
+    arts: { idle: "/images/elisa_playa.webp" }, def: "idle" },
   /* Dino: preparador físico-nutricional del Centro de Alto Rendimiento. Tímido, sin angry. */
   dino: { name: "Dino", color: "#3F8F5A", voice: "/audio/vozchico01.mp3", icon: "/images/dino_icon.webp",
     arts: { idle: "/images/dino_idle.webp", happy: "/images/dino_happy.webp" }, def: "idle" },
@@ -914,6 +919,7 @@ const senderToNpc = (from) => {
   if (from === "Igor") return "igor";
   if (from === "Fortuna") return "fortuna";
   if (from === "Elisa Casual") return "elisa_casual";
+  if (from === "Elisa Playa") return "elisa_playa";
   if (from === "López" || from.includes("Capitán") || from.includes("· Vestuario")) return "lopez";
   return null; /* prensa/afición/redes/club -> periódico */
 };
@@ -1702,6 +1708,32 @@ const ELISA_CASUAL_POOL = [
     { m: "happy", t: "Mañana en la oficina vuelvo a ser la que te aprieta con los números. Hoy no. Hoy déjame ser solo Elisa un rato." }] },
 ];
 
+/* --- ELISA EN LA PLAYA · vacaciones de verdad, no un rato libre entre reuniones. Nunca
+   coincide con ELISA_CASUAL_POOL (ver la exclusión en processNewDays): si está aquí, no
+   está en el Parque ni en el Restaurante. Solo idle. --- */
+const ELISA_PLAYA_POOL = [
+  { beats: [
+    { m: "idle", t: "No, no vengo a hablar de tu contrato. Vengo en bañador, literalmente no llevo ni el móvil de trabajo encima." },
+    { m: "happy", t: "Así que por una vez, disfruta el hecho de que tu mánager esté demasiado a gusto como para pensar en cláusulas." }] },
+  { w: "win", t: "Me enteré del resultado tumbada aquí, con los pies en la arena. Ni te imaginas lo bien que sienta una buena noticia sin tener que redactarla para nadie." },
+  { t: "Pregunta de playa, nada de oficina: ¿mar o piscina?", replies: [
+    { t: "Mar, sin dudarlo", m: "happy", r: ["Mi respuesta también. Hay algo en el mar que no se puede fingir en ningún despacho con vistas, por muy caro que sea."] },
+    { t: "Piscina, controlo mejor", m: "idle", r: ["JA, típico de alguien que también querría controlar el mercado de fichajes. Lo pillo, algo de control no viene mal de vez en cuando."] }] },
+  { w: "loss", beats: [
+    { m: "idle", t: "Me enteré de lo de ayer, sí. Pero mira, aquí el mar no entiende de derrotas, y hoy prefiero pensar como el mar." },
+    { m: "happy", t: "Mañana, oficina, análisis, lo que haga falta. Hoy no. Hoy toca desconectar del todo, para variar." }] },
+  { beats: [
+    { m: "idle", t: "¿Sabes lo raro que es para mí quedarme quieta? En la oficina no paro, siempre hay algo que mover." },
+    { m: "happy", t: "Aquí llevo media hora sin hacer absolutamente nada y no siento ni una pizca de culpa. Debería tomar nota de esto más a menudo." }] },
+  { w: "hot", t: "{streak} días de racha y yo aquí sin mirar ni una estadística. Cuando vuelva a la oficina seguro que ya lo sé todo igualmente, raro es que no me llegue el chisme hasta a la arena." },
+  { t: "Confesión de playa que no pienso repetir en la oficina: a veces me planteo si algún día dejaré esto y me dedicaré a no hacer nada, como ahora mismo.", replies: [
+    { t: "Nunca lo dejarías, se te nota que te encanta", m: "happy", r: ["Tienes razón, maldita sea. Ni un día entero de playa me dura la fantasía de dejarlo todo. Vale, punto para ti."] },
+    { t: "Todos necesitamos un plan B alguna vez", m: "idle", r: ["Cierto. Aunque el mío probablemente dure lo que tarde el sol en ponerse. Disfrutemos el ahora, anda."] }] },
+  { beats: [
+    { m: "idle", t: "La gente que trabaja conmigo no se cree que yo también sepa desconectar del todo." },
+    { m: "happy", t: "Pues aquí me tienes, prueba viviente. Ni cara de decepción contenida ni nada parecido, te lo prometo por hoy." }] },
+];
+
 /* goles a lo largo de TODA la carrera (todas las temporadas), para el hito del Centro de Alto Rendimiento */
 const careerGoals = (g) => (g.matchHistory || []).reduce((a, m) => a + (m.myGoals || 0), 0);
 /* hitos de constancia para desbloquear las zonas de La Metrópolis, contados sobre TODO el historial de logs */
@@ -1709,6 +1741,7 @@ const gymDaysCount = (g) => Object.values(g.logs || {}).filter((l) => l.gym).len
 const habitDaysCount = (g) => Object.values(g.logs || {}).filter((l) => (l.habitsDone || []).length > 0).length;
 const kcalGoalHits = (g) => Object.values(g.logs || {}).filter((l) => (l.kcal || 0) >= (g.player.goals.kcal || Infinity)).length;
 const proteinGoalHits = (g) => Object.values(g.logs || {}).filter((l) => (l.prot || 0) >= (g.player.goals.protein || Infinity)).length;
+const mealsLoggedCount = (g) => Object.values(g.logs || {}).reduce((a, l) => a + (l.meals || []).length, 0);
 
 /* ============================================================
    LA CIUDAD · zonas del mapa, con su requisito de desbloqueo.
@@ -1789,23 +1822,26 @@ const EXTRA_NPCS = [
    contenido decorativo fuera de las siluetas de zona con nombre, así
    que en vez de recortar pegado a esas siluetas —como en La Ciudad—
    se deja un margen amplio alrededor y se limita a los bordes reales
-   del lienzo, para que nada de la ilustración quede cortado): 31.19
-   30.02 448.81 792.72, sobre el lienzo original de 480x822.74. */
-const METRO_MAP_VB = { x: 31.19, y: 30.02, w: 448.81, h: 792.72 };
+   del lienzo, para que nada de la ilustración quede cortado): 0 30.02
+   480 792.72, sobre el lienzo original de 480x822.74. */
+const METRO_MAP_VB = { x: 0, y: 30.02, w: 480, h: 792.72 };
 const METRO_ZONES = [
-  { id: "parque", kind: "npc", npc: "elisa_casual", label: "Parque", icon: "🌳", x: 30.70, y: 18.23,
+  { id: "parque", kind: "npc", npc: "elisa_casual", label: "Parque", icon: "🌳", x: 35.20, y: 18.23,
     pts: "199.15 80.02 81.19 286.08 105.7 333.35 259.66 93.01 199.15 80.02",
     unlocked: (g) => gymDaysCount(g) >= 5, reqLabel: "Completa 5 días de gym" },
-  { id: "casino", kind: "npc", npc: "fortuna", label: "Casino", icon: "🎰", x: 47.63, y: 43.99,
+  { id: "casino", kind: "npc", npc: "fortuna", label: "Casino", icon: "🎰", x: 51.03, y: 43.99,
     pts: "220.6 343.57 206.85 417.61 281.87 429.86 294.89 358.89 220.6 343.57",
     unlocked: (g) => habitDaysCount(g) >= 20, reqLabel: "Registra hábitos 20 días", metFlag: "metFortuna", intro: FORTUNA_INTRO_BEATS },
-  { id: "enfermeria", kind: "npc", npc: null, label: "Enfermería", icon: "🏥", x: 85.72, y: 22.97,
+  { id: "enfermeria", kind: "npc", npc: null, label: "Enfermería", icon: "🏥", x: 86.65, y: 22.97,
     pts: "402.89 159.68 353.11 256.96 460.34 286.08 460.34 197.98 402.89 159.68",
     unlocked: (g) => proteinGoalHits(g) >= 10, reqLabel: "Llega a tu objetivo de proteína 10 veces" },
-  { id: "atico", kind: "npc", npc: null, label: "Ático de Lujo", icon: "🌇", x: 76.76, y: 63.06,
+  { id: "playa", kind: "npc", npc: "elisa_playa", label: "Playa", icon: "🏖️", x: 12.16, y: 49.44,
+    pts: "22.21 382.57 22.21 562.57 125.62 399.43 99.57 382.57 22.21 382.57",
+    unlocked: (g) => mealsLoggedCount(g) >= 100, reqLabel: "Registra 100 comidas" },
+  { id: "atico", kind: "npc", npc: null, label: "Ático de Lujo", icon: "🌇", x: 78.27, y: 63.06,
     pts: "353.11 469.13 347.74 507.48 294.89 602.97 445.02 666.29 460.34 464.53 353.11 469.13",
     unlocked: (g) => calcOVR(g.player.stats) >= 80, reqLabel: "Alcanza 80 de media" },
-  { id: "restaurante", kind: "npc", npc: ["igor", "elisa_casual"], label: "Restaurante", icon: "🍽️", x: 61.37, y: 81.68,
+  { id: "restaurante", kind: "npc", npc: ["igor", "elisa_casual"], label: "Restaurante", icon: "🍽️", x: 63.88, y: 81.68,
     pts: "284.94 620.02 223.66 727.26 294.89 776.28 377.62 688.96 335.49 662.91 344.68 647.24 284.94 620.02",
     unlocked: (g) => kcalGoalHits(g) >= 5, reqLabel: "Llega a tu objetivo de calorías 5 veces", metFlag: "metIgor", intro: IGOR_INTRO_BEATS },
 ];
@@ -4766,7 +4802,15 @@ export default function App() {
       /* y a veces, un personaje se pasa a verte al abrir la pestaña: se elige entre
          todos los que ya conoces (y también, a veces, algo genérico del vestuario/prensa) */
       if (Math.random() < 0.6) {
-        const candidates = [["López", LOPEZ_POOL], ["Elisa", ELISA_POOL], ["Elisa Casual", ELISA_CASUAL_POOL]];
+        const candidates = [["López", LOPEZ_POOL], ["Elisa", ELISA_POOL]];
+        /* Elisa "de vacaciones" en la Metrópolis: solo puede estar en un sitio a la vez
+           (Parque/Restaurante O Playa, nunca las dos), así que si ya tiene una aparición
+           casual pendiente de leer bajo cualquiera de los dos npc, no se le añade otra hoy */
+        const elisaMetroPending = (out.npcQueue || []).some((e) => e.npc === "elisa_casual" || e.npc === "elisa_playa");
+        if (!elisaMetroPending) {
+          if (Math.random() < 0.5) candidates.push(["Elisa Casual", ELISA_CASUAL_POOL]);
+          else candidates.push(["Elisa Playa", ELISA_PLAYA_POOL]);
+        }
         if (out.yunaMet) candidates.push(["Yuna", YUNA_POOL]);
         if (out.metDino) candidates.push(["Dino", DINO_POOL]);
         if (out.metPunky) candidates.push(["Punky", PUNKY_POOL]);

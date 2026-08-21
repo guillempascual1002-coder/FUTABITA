@@ -485,6 +485,7 @@ const COND = {
   metDino: (c) => c.metDino, metPunky: (c) => c.metPunky, metLisa: (c) => c.metLisa,
   metYuni: (c) => c.metYuni, metMilly: (c) => c.metMilly, metYuna: (c) => c.metYuna,
   metLili: (c) => c.metLili, metCubarsi: (c) => c.metCubarsi, metYamal: (c) => c.metYamal,
+  metIrina: (c) => c.metIrina,
   dinoTip: (c) => c.dinoTip, punkyMote: (c) => c.punkyMote, lisaTilin: (c) => c.lisaTilin,
   yuniTrain: (c) => c.yuniTrain, millySecret: (c) => c.millySecret,
   liliBouquet: (c) => c.liliBouquet,
@@ -733,6 +734,7 @@ function flavorCtx(g) {
   c.metDino = !!g.metDino; c.metPunky = !!g.metPunky; c.metLisa = !!g.metLisa;
   c.metYuni = !!g.metYuni; c.metMilly = !!g.metMilly; c.metYuna = !!g.yunaMet;
   c.metLili = !!g.metLili; c.metCubarsi = !!g.metCubarsi; c.metYamal = !!g.metYamal;
+  c.metIrina = !!g.metIrina;
   c.dinoTip = !!g.dinoTip; c.punkyMote = !!g.punkyMote; c.lisaTilin = !!g.lisaTilin;
   c.yuniTrain = !!g.yuniTrain; c.millySecret = !!g.millySecret;
   c.liliBouquet = !!g.liliBouquet;
@@ -879,6 +881,11 @@ const NPCS = {
   /* Yamal: estrella joven, aparece en el Gran Estadio dando la bienvenida a Primera. Cercano, confiado. Sin happy ni angry: solo hay retrato idle. */
   yamal: { name: "Yamal", color: "#F2C500", voice: "/audio/vozchico02.mp3", icon: "/images/yamal_icon.webp",
     arts: { idle: "/images/yamal_idle.webp" }, def: "idle" },
+  /* Irina: jugadora de élite, la encuentras en la Tienda Oficial. Chulería teatral en el campo,
+     torpe y vergonzosa en cuanto la elogian de verdad. Su "happy" es en realidad el sonrojo/torpeza,
+     no alegría pura. Sin angry: su armadura es la seguridad, no el enfado. */
+  irina: { name: "Irina", color: "#C8102E", voice: "/audio/vozchica02.mp3", icon: "/images/irina_icon.webp",
+    arts: { idle: "/images/irina_idle.webp", happy: "/images/irina_happy.webp" }, def: "idle" },
 };
 const senderToNpc = (from) => {
   if (from === "Entrenador" || from === "Tu agente" || from === "Elisa") return "elisa";
@@ -891,6 +898,7 @@ const senderToNpc = (from) => {
   if (from === "Lili") return "lili";
   if (from === "Cubarsí") return "cubarsi";
   if (from === "Yamal") return "yamal";
+  if (from === "Irina") return "irina";
   if (from === "López" || from.includes("Capitán") || from.includes("· Vestuario")) return "lopez";
   return null; /* prensa/afición/redes/club -> periódico */
 };
@@ -1539,6 +1547,43 @@ const YAMAL_POOL = [
   { w: "seasonStart", t: "Nueva temporada, nuevas ganas. Aquí arriba cada año se sube un poco más el nivel, así que prepárate para lo que viene." },
 ];
 
+/* --- IRINA · jugadora de élite, la encuentras en la Tienda Oficial. Chulería teatral y
+   provocadora dentro del campo; torpe y vergonzosa fuera, sobre todo si la elogian de
+   verdad. Su "happy" es en realidad el sonrojo/la torpeza escapándose, no alegría pura.
+   Sin angry: su armadura es la seguridad, no el enfado. --- */
+const IRINA_INTRO_BEATS = [
+  { m: "idle", t: "¿Qué miras? ¿Nunca has visto a alguien buscar algo en una tienda? ...Ah, espera. Tú eres el nuevo del que habla todo el mundo. Irina. Un placer, supongo." },
+  { m: "happy", t: "N-no estaba buscando nada importante, ¿vale? Nada que tenga que ver con... da igual, olvídalo. ¿Tú qué haces aquí, tienes tiempo libre o algo?" },
+];
+const IRINA_POOL = [
+  { w: "win", t: "Buen partido el de ayer. No te acostumbres a que te lo diga así, sin pullas de por medio. Hoy vengo generosa, disfrútalo mientras dure." },
+  { w: "loss", beats: [
+    { m: "idle", t: "Vi lo de ayer. No voy a hacer sangre, tranquilo, hoy no me apetece." },
+    { m: "happy", t: "...Vale, sí que me apetece un poco, pero me estoy conteniendo. Considéralo un regalo. No esperes que se repita." }] },
+  { t: "Te voy a hacer una pregunta directa: ¿te doy miedo cuando salto al campo, o solo un poco de respeto?", replies: [
+    { t: "Un poco de las dos cosas", m: "idle", r: ["Buena respuesta. Sincera. Me gusta más que la típica chulería fingida que sueltan los que de verdad tienen miedo.",
+      "Así me gusta, con la cabeza clara. El día que dejes de tenerme respeto, ahí sí que tendrás un problema."] },
+    { t: "Ninguna, la verdad", m: "happy", r: ["JA. Qué gracioso. Vale, un día de estos te voy a dejar sentado en el campo solo para que rectifiques esa respuesta.",
+      "Mira tú qué valiente. Me gusta el descaro, aunque el campo suele bajar los humos rápido."] }] },
+  { w: "hot", t: "{streak} días seguidos a este nivel. Vale, lo reconozco: impresiona un poco. Solo un poco. No te vengas arriba, que luego hay que aguantarte." },
+  { beats: [
+    { m: "idle", t: "La gente se cree que lo mío en el campo es fácil, que nací así de segura." },
+    { m: "happy", t: "N-no es verdad, ¿eh? Bueno, olvida que he dicho eso. Cambiemos de tema, anda, mira qué interesante esta vitrina de aquí." }] },
+  { w: "benched", t: "¿Banquillo? A mí también me ha tocado, aunque no lo cuente mucho. Levántate rápido de esa silla mental, que ahí no se gana nada." },
+  { t: "Pregunta indiscreta, porque hoy tengo el día curioso: ¿tú también entrenabas obsesivamente de pequeño, o te salió todo fácil?", replies: [
+    { t: "Obsesivamente, sin descanso", m: "happy", r: ["Entonces lo entiendes. Yo... llevo desde muy pequeña con la etiqueta de 'la próxima gran estrella' encima. Pesa más de lo que parece desde fuera.",
+      "Vaya, no me lo esperaba de ti. Puede que tengamos más en común de lo que me gustaría admitir."] },
+    { t: "La verdad, bastante fácil", m: "idle", r: ["Suertudo. A mí nadie me regaló nada, cada control lo repetí mil veces hasta que salió bien. Pero bueno, cada camino es distinto."] }] },
+  { w: "scorer", t: "{goals} goles ya. No está mal, para ser sincera. Vigila que no se te suba a la cabeza, que luego hay que bajar a los que se lo creen demasiado. Yo me ofrezco encantada." },
+  { w: "derbiSoon", t: "Con lo del {derbiRival} esta semana no pienso darte ningún consejo gratis, que luego me lo agradeces demasiado y me da vergüenza. Gánalo tú solito." },
+  { t: "Última cosa, y esta va en serio, aunque no se me note en la cara: ¿alguna vez sientes que no estás a la altura de lo que la gente espera de ti?", replies: [
+    { t: "Constantemente, si te soy sincero", m: "idle", r: ["...Yo también. Todo el rato, en realidad. No sé por qué te lo cuento a ti, con lo poco que te conozco. Olvídalo, anda, di que no he dicho nada."] },
+    { t: "Casi nunca, la verdad", m: "happy", r: ["Qué envidia me das, en serio. Yo cargo con eso desde que tengo memoria. Bueno, ya está, se acabó la parte sentimental del día, no te acostumbres."] }] },
+  { beats: [
+    { m: "idle", t: "Sigo sin encontrar el modelo exacto de lo que busco en esta tienda. Llevo semanas viniendo." },
+    { m: "happy", t: "No, no te voy a contar qué es. Es... personal. Muy personal. Deja de mirarme así, que me pones nerviosa." }] },
+];
+
 /* goles a lo largo de TODA la carrera (todas las temporadas), para el hito del Centro de Alto Rendimiento */
 const careerGoals = (g) => (g.matchHistory || []).reduce((a, m) => a + (m.myGoals || 0), 0);
 
@@ -1582,9 +1627,9 @@ const ZONES = [
   { id: "cantera", kind: "npc", npc: "yuni", label: "Cantera", icon: "🎓", x: 86.99, y: 47.88,
     pts: "581.84 317.81 642.1 315.77 631.37 414.32 568.57 414.32 581.84 317.81",
     unlocked: (g) => calcOVR(g.player.stats) >= 78, reqLabel: "Alcanza 78 de media", metFlag: "metYuni", intro: YUNI_INTRO_BEATS },
-  { id: "tienda", kind: "soon", npc: null, label: "Tienda Oficial", icon: "🛍️", x: 82.14, y: 66.90,
+  { id: "tienda", kind: "npc", npc: "irina", label: "Tienda Oficial", icon: "🛍️", x: 82.14, y: 66.90,
     pts: "547.12 483.77 551.72 531.77 628.82 524.62 624.74 479.69 547.12 483.77",
-    unlocked: (g) => g.tier.id >= 3, reqLabel: "Asciende a LaLiga Hypermotion / 2ª europea" },
+    unlocked: (g) => g.tier.id >= 3, reqLabel: "Asciende a LaLiga Hypermotion / 2ª europea", metFlag: "metIrina", intro: IRINA_INTRO_BEATS },
   { id: "estadio", kind: "npc", npc: "yamal", label: "Gran Estadio", icon: "🏆", x: 75.80, y: 88.46,
     pts: "588.81 606.32 499.76 629.73 467.63 649.9 494.8 736.45 588.81 736.45 635.81 687.73 588.81 606.32",
     unlocked: (g) => g.tier.id >= 4, reqLabel: "Asciende a Primera división · media tabla", metFlag: "metYamal", intro: YAMAL_INTRO_BEATS, big: true },
@@ -1997,6 +2042,39 @@ const QUESTS = {
           { m: "idle", t: "El derbi no salió como queríamos, pero tranquilo, aquí van a venir muchos más." },
           { m: "happy", t: "Lo que no cambia es dónde estás ahora mismo. Sigues siendo de aquí, pase lo que pase con un resultado." }],
         reward: (g) => { const stats = { ...g.player.stats }; stats.FUE = Math.min(99, stats.FUE + 1); return { ...g, player: { ...g.player, stats } }; } },
+    ],
+  },
+  irina: {
+    label: "El par que faltaba",
+    npc: "irina",
+    trigger: (g) => !!g.metIrina && dayDiff(g.signedAt || todayStr(), todayStr()) >= 25,
+    stages: [
+      { title: "La talla exacta", objective: "Sube tu media +2 puntos",
+        intro: [
+          { m: "idle", t: "Sigo sin encontrar el modelo exacto. Da igual, no es asunto tuyo. ¿Qué miras?" },
+          { m: "happy", t: "...Vale, perdona, no debería pagarlo contigo. Es solo que llevo semanas buscando algo y me está sacando de quicio. Oye, mejórate tú también, ¿no? A ver si así dejamos de hablar solo de mis dramas de tienda." }],
+        snap: (g) => ({ ovr: calcOVR(g.player.stats) }),
+        check: (g, snap) => calcOVR(g.player.stats) >= snap.ovr + 2 },
+      { title: "Provocación en serio", objective: "Gana 3 partidos",
+        intro: [
+          { m: "idle", t: "Te voy a proponer algo, a ver si estás a la altura. Gánate tres partidos... no hace falta que sean seguidos, no soy tan estricta. Solo demuéstrame que no eres flor de un día." },
+          { m: "happy", t: "Y no, no es que me importe especialmente cómo te vaya. Es pura curiosidad deportiva. ...Vale, un poco sí me importa. No se lo digas a nadie." }],
+        snap: (g) => ({ matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => (g.matchHistory || []).slice(snap.matchCount).filter((m) => m.res === "V").length >= 3 },
+      { title: "La confesión de la tienda", objective: "Encadena una racha de 6 días", deadlineDays: 30,
+        intro: [
+          { m: "idle", t: "Te voy a contar algo que no le cuento a cualquiera, así que no te acostumbres a esta versión mía." },
+          { m: "happy", t: "Lo que busco en la tienda son mis primeras botas, el modelo exacto de mi primer torneo importante. Las perdí hace años y desde entonces siento que me falta algo si no las tengo cerca. Suena ridículo dicho en voz alta. Bueno, ahora demuéstrame algo tú: seis días de racha seguidos, sin fallar." }],
+        snap: () => ({}),
+        check: (g) => (g.player.streak || 0) >= 6 },
+      { title: "El par que faltaba", final: true,
+        intro: [
+          { m: "happy", t: "Las encontré. Por fin. No te voy a mentir, casi se me escapa una lágrima en medio de la tienda, menos mal que no había nadie más mirando. Bueno, tú sí, pero cuentas como nadie." },
+          { m: "happy", t: "Gracias por aguantar mis dramas de tienda estas semanas. Eres de los pocos que no se ha reído de mí por esto. Eso... cuenta más de lo que te voy a admitir en voz alta." }],
+        introFail: [
+          { m: "idle", t: "Sigo sin encontrar el par exacto. A veces pienso que ya no existen en ningún sitio." },
+          { m: "happy", t: "Pero gracias por escucharme con esto igualmente. No mucha gente aguanta que le hable de un par de botas viejas durante semanas." }],
+        reward: (g) => { const stats = { ...g.player.stats }; stats.NUT = Math.min(99, stats.NUT + 1); return { ...g, player: { ...g.player, stats } }; } },
     ],
   },
 };
@@ -4420,6 +4498,7 @@ export default function App() {
         if (out.metLili) candidates.push(["Lili", LILI_POOL]);
         if (out.metCubarsi) candidates.push(["Cubarsí", CUBARSI_POOL]);
         if (out.metYamal) candidates.push(["Yamal", YAMAL_POOL]);
+        if (out.metIrina) candidates.push(["Irina", IRINA_POOL]);
         candidates.push([null, null]); /* comodín: flavor genérico de vestuario/prensa/agente */
         const [name, pool] = candidates[Math.floor(Math.random() * candidates.length)];
         if (!name) {

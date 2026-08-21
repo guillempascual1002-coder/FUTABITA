@@ -1662,14 +1662,28 @@ const EXTRA_NPCS = [
    LA METRÓPOLIS · segundo mapa, independiente del de La Ciudad
    (su propio viaje, sus propias zonas/personajes y sus propias
    misiones, para que el registro de misiones no las mezcle todas).
-   De momento no tiene zonas todavía: en cuanto llegue su SVG y sus
-   personajes, se rellenan METRO_ZONES/METRO_EXTRA_NPCS/METRO_QUESTS
-   con el mismo formato que ZONES/EXTRA_NPCS/QUESTS, sin tocar nada
-   más de la arquitectura (CityMap, ZoneScreen, QuestPanel... ya
-   están preparados para funcionar con cualquiera de los dos mapas).
-   ============================================================ */
-const METRO_MAP_VB = { x: 0, y: 0, w: 100, h: 100 };
-const METRO_ZONES = [];
+   viewBox recortado igual que el de La Ciudad (mismo margen vacío
+   de sobra en el original): 65.19 64.02 411.15 728.26.
+   Las 4 zonas ya están mapeadas contra el SVG, pero todavía sin
+   personaje asignado (npc: null) — de momento, al visitarlas solo
+   se ve el fondo con el cartel de "no hay nadie". En cuanto lleguen
+   los personajes de cada una, basta con poner su npc/metFlag/intro
+   aquí, igual que en ZONES. */
+const METRO_MAP_VB = { x: 65.19, y: 64.02, w: 411.15, h: 728.26 };
+const METRO_ZONES = [
+  { id: "parque", kind: "npc", npc: null, label: "Parque", icon: "🌳", x: 25.24, y: 15.17,
+    pts: "199.15 80.02 81.19 286.08 105.7 333.35 259.66 93.01 199.15 80.02",
+    unlocked: () => true },
+  { id: "casino", kind: "npc", npc: null, label: "Casino", icon: "🎰", x: 43.72, y: 43.21,
+    pts: "220.6 343.57 206.85 417.61 281.87 429.86 294.89 358.89 220.6 343.57",
+    unlocked: () => true },
+  { id: "atico", kind: "npc", npc: null, label: "Ático de Lujo", icon: "🌇", x: 75.52, y: 63.97,
+    pts: "353.11 469.13 347.74 507.48 294.89 602.97 445.02 666.29 460.34 464.53 353.11 469.13",
+    unlocked: () => true },
+  { id: "restaurante", kind: "npc", npc: null, label: "Restaurante", icon: "🍽️", x: 58.72, y: 84.24,
+    pts: "284.94 620.02 223.66 727.26 294.89 776.28 377.62 688.96 335.49 662.91 344.68 647.24 284.94 620.02",
+    unlocked: () => true },
+];
 const METRO_EXTRA_NPCS = [];
 const METRO_QUESTS = {};
 /* todas las zonas de ambos mapas juntas, solo para resolver "en qué zona estoy"

@@ -928,8 +928,13 @@ function pickEvent(g) {
    fuera-de-servicio, ahora fundidas aquí como un mood más. --- */
 const NPCS = {
   lopez: { name: "López", color: "#D65A2E", voice: "/audio/vozchico02.mp3", icon: "/images/lopez/lopez_icon.webp",
+    /* capitan: liderazgo, reservado para escenas clave. playa: outfit único, no se mezcla
+       con moods de uniforme dentro de una misma escena. */
     arts: { idle: "/images/lopez/Lopez_idle.webp", happy: "/images/lopez/Lopez_happy.webp",
-      playa: "/images/lopez/lopez_playa.webp" }, def: "idle" },
+      playa: "/images/lopez/lopez_playa.webp", serio: "/images/lopez/lopez_serio.webp",
+      preocupado: "/images/lopez/lopez_preocupado.webp", agotado: "/images/lopez/lopez_agotado.webp",
+      capitan: "/images/lopez/lopez_capitan.webp", orgulloso: "/images/lopez/lopez_orgulloso.webp",
+      celebracion: "/images/lopez/lopez_celebracion.webp" }, def: "idle" },
   /* en Yuna, "angry" es en realidad SONROJADA: es su cara de tsundere pillada en falta.
      "preocupada" es su preocupación genuina, sin la careta puesta, antes de taparla con el
      sonrojo/enfado. "barcelona" es su lado fan sin disimulo, para cuando habla del Barça en sí.
@@ -1123,8 +1128,9 @@ const AMBIENT_ELISA = [
     { m: "idle", t: "los contratos se firman con la cabeza fría y los partidos se juegan con la sangre caliente. No mezclar, que te conozco." }] },
 ];
 
-/* LÓPEZ tampoco tiene escena de primer encuentro: capitán del vestuario desde el minuto uno */
-/* AMBIENTE PLACEHOLDER — sustituir cuando se escriba la historia real de López */
+/* la escena de primer encuentro de López ya vive en LOPEZ_STORY (su prólogo, "El nuevo"):
+   esto es solo relleno genérico entre capítulos de su historia real, sin referencias a
+   objetos/momentos concretos de la campaña (llave, taquilla, foto, brazalete). */
 const AMBIENT_LOPEZ = [
   { beats: [
     { m: "idle", t: "Confesión de capitán: cuando llegué a este club tenía más miedo que tú el primer día. Me escondía en el baño para no hablar en las charlas tácticas." },
@@ -1246,12 +1252,12 @@ const ZONES = [
   /* npc: "yuna" — casa sigue siendo la pantalla de trofeos (HouseRoom) por defecto, pero
      ahora también admite una escena de personaje encima (ver ZoneScreen: isHome no excluye
      ya pendingNpc), para las escenas de intimidad emocional de su campaña en Casa del jugador */
-  { id: "casa", kind: "home", npc: "yuna", label: "Tu Casa", icon: "🏠", x: 18.87, y: 44.54,
+  { id: "casa", kind: "home", npc: ["yuna", "lopez"], label: "Tu Casa", icon: "🏠", x: 18.87, y: 44.54,
     pts: "91.1 348.2 163.7 373.2 152.4 429.4 76.8 405.4 91.1 348.2",
     unlocked: (g) => isZoneUnlocked(g, "casa") },
   /* varios personajes comparten esta zona de calle: la burbuja muestra a quien tenga
      algo pendiente ahora mismo (ver EXTRA_NPCS y CityMap); en reposo, el puntito de siempre */
-  { id: "barrio", kind: "npc", npc: ["yuna", "elisa", "milly"], label: "El Barrio", icon: "🌆", x: 53.16, y: 58.16,
+  { id: "barrio", kind: "npc", npc: ["yuna", "elisa", "milly", "lopez"], label: "El Barrio", icon: "🌆", x: 53.16, y: 58.16,
     pts: "217.8 461 217.8 507.5 318.4 500 318.4 465.1 217.8 461",
     unlocked: (g) => isZoneUnlocked(g, "barrio") },
   { id: "car", kind: "npc", npc: ["lopez", "lisa", "elisa"], label: "Centro de Alto Rendimiento", icon: "🏋️", x: 61.35, y: 17.42,
@@ -1307,7 +1313,7 @@ const EXTRA_NPCS = [];
    480 792.72, sobre el lienzo original de 480x822.74. */
 const METRO_MAP_VB = { x: 0, y: 30.02, w: 480, h: 792.72 };
 const METRO_ZONES = [
-  { id: "parque", kind: "npc", npc: ["elisa", "lisa", "milly", "yuna"], label: "Parque", icon: "🌳", x: 35.20, y: 18.23,
+  { id: "parque", kind: "npc", npc: ["elisa", "lisa", "milly", "yuna", "lopez"], label: "Parque", icon: "🌳", x: 35.20, y: 18.23,
     pts: "199.15 80.02 81.19 286.08 105.7 333.35 259.66 93.01 199.15 80.02",
     unlocked: (g) => isZoneUnlocked(g, "parque") },
   { id: "casino", kind: "npc", npc: "elisa", label: "Casino", icon: "🎰", x: 51.03, y: 43.99,
@@ -2164,13 +2170,290 @@ const YUNA_STORY = {
   }],
 };
 
+/* ============================================================
+   LÓPEZ · cuarta campaña completa. Prólogo + 15 capítulos + final +
+   epílogo, capitán del vestuario desde el minuto uno (trigger:()=>true,
+   como Elisa) — su prólogo ("El nuevo") exige que se haya jugado ya un
+   primer partido, así que aparece justo después de tu primer partido
+   de carrera, no antes.
+
+   Capítulo 11 ("La despedida") depende de un cambio de club real y no
+   lleva deadlineDays a propósito: si el jugador nunca cambia de club,
+   la campaña se queda esperando ahí para siempre — es el comportamiento
+   pedido por el documento, no un bloqueo. El resto de la campaña (cap.
+   12 en adelante) sigue funcionando igual tras un cambio de club, sin
+   necesitar ningún ajuste: la presencia de López en las zonas no
+   depende de game.club/game.squad, así que no hace falta simularlo
+   como "mensaje remoto".
+
+   Objetos: solo el pin final se registra como ITEM real (mismo patrón
+   "keepsake" que elisa_pin/milly_pin/yuna_pin). La llave de vestuario,
+   la foto y el brazalete son símbolos narrativos representados con
+   flags (lopezLocker/lopezTeamPhoto/lopezArmband), tal como pide el
+   documento explícitamente para el brazalete. */
+const LOPEZ_STORY = {
+  npc: "lopez",
+  chapters: [{
+    id: "cap1",
+    title: "La historia de López",
+    trigger: () => true,
+    stages: [
+      /* PRÓLOGO — El nuevo */
+      { title: "El nuevo", zone: "barrio",
+        objective: "Completa tu primer partido de carrera.",
+        intro: [
+          { m: "happy", t: "Tú eres el nuevo, ¿no?" },
+          { m: "happy", t: "Vale, tranquilo. Primera norma del vestuario: si alguien te dice que conoce todas las normas, está mintiendo." },
+          { m: "idle", t: "Soy López. Capitán." },
+          { m: "happy", t: "Y mi trabajo hoy es evitar que hagas alguna tontería antes de tu primer partido." },
+          { m: "happy", t: "Ven. Te enseño dónde vas a pasar demasiado tiempo durante los próximos meses." },
+        ],
+        setFlags: ["lopezMet", "lopezLocker"],
+        snap: () => ({}),
+        check: (g) => (g.matchHistory || []).length > 0 },
+      /* CAPÍTULO 1 — La taquilla */
+      { title: "La taquilla", zone: "ciudad-dep",
+        objective: "Completa 3 días cumpliendo objetivos.",
+        intro: [
+          { m: "idle", t: "Mira tu taquilla." },
+          { m: "happy", t: "Parece una tontería, pero el día que dejas de sentir que ese sitio es tuyo se nota." },
+          { m: "happy", t: "Aquí nadie empieza siendo importante." },
+          { m: "serio", t: "Primero eres el nuevo. Luego eres compañero. Y, si te lo ganas, un día eres uno de los que hacen que los demás estén bien." },
+          { m: "happy", t: "Pero de momento eres el nuevo. No te emociones." },
+        ],
+        setFlags: ["lopezStoryStarted"],
+        snap: (g) => ({ since: todayStr() }),
+        check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3 },
+      /* CAPÍTULO 2 — El código del vestuario */
+      { title: "El código del vestuario", zone: "ciudad-dep",
+        objective: "Gana un partido y completa 4 días de objetivos.",
+        intro: [
+          { m: "happy", t: "Un vestuario tiene memoria." },
+          { m: "idle", t: "Se acuerda de quién llega tarde, quién anima, quién desaparece cuando las cosas van mal..." },
+          { m: "serio", t: "Y también se acuerda de quién se queda cuando nadie sabe qué decir." },
+          { m: "happy", t: "No hace falta que seas el mejor. Pero intenta no ser el que desaparece." },
+        ],
+        snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 4 &&
+          (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") },
+      /* CAPÍTULO 3 — La foto */
+      { title: "La foto", zone: "ciudad-dep",
+        objective: "Completa un partido y consigue una valoración positiva.",
+        intro: [
+          { m: "happy", t: "¡Foto! Vamos, que luego todos decís que nunca salís bien." },
+          { m: "happy", t: "Ponte aquí." },
+          { m: "orgulloso", t: "Guárdala." },
+          { m: "idle", t: "No por postureo. Dentro de unos años vas a mirar esta foto y vas a pensar que parecías muchísimo más nuevo de lo que creías." },
+          { m: "happy", t: "Y yo voy a decir que ya sabía que ibas a llegar lejos." },
+        ],
+        setFlags: ["lopezTeamPhoto"],
+        snap: (g) => ({ matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => {
+          const ms = (g.matchHistory || []).slice(snap.matchCount);
+          return ms.length > 0 && ms.some((m) => (m.rating || 0) >= 7);
+        } },
+      /* CAPÍTULO 4 — Cuando el capitán habla */
+      { title: "Cuando el capitán habla", zone: "ciudad-dep",
+        objective: "Completa una racha de 5 días.",
+        intro: [
+          { m: "capitan", t: "Ser capitán no significa ser el que más grita." },
+          { m: "capitan", t: "Ni el que manda a los demás." },
+          { m: "serio", t: "Significa que cuando alguien tiene un mal día, alguien tiene que darse cuenta." },
+          { m: "serio", t: "Y cuando el equipo pierde, alguien tiene que seguir hablando con todos al día siguiente." },
+          { m: "happy", t: "Así que sí. Es bastante menos glamuroso de lo que parece." },
+        ],
+        setFlags: ["lopezCaptainTalk"],
+        snap: () => ({}),
+        check: (g) => (g.player.streak || 0) >= 5 },
+      /* CAPÍTULO 5 — La mala tarde */
+      { title: "La mala tarde", zone: "ciudad-dep",
+        objective: "Completa un entrenamiento y juega el siguiente partido.",
+        intro: [
+          { m: "agotado", t: "Hoy no me hagas correr más de la cuenta." },
+          { m: "happy", t: "Es una broma. Más o menos." },
+          { m: "preocupado", t: "Hay días en los que todo el mundo espera que estés bien porque eres el capitán." },
+          { m: "preocupado", t: "Y a veces simplemente no estás bien." },
+          { m: "idle", t: "Supongo que también tengo que aprender a decirlo." },
+        ],
+        snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.gym) &&
+          (g.matchHistory || []).length > snap.matchCount },
+      /* CAPÍTULO 6 — El vestuario después de una derrota */
+      { title: "El vestuario después de una derrota", zone: "ciudad-dep",
+        objective: "Pierde un partido y completa 2 días de objetivos después.",
+        intro: [
+          { m: "preocupado", t: "No me importa que hoy haya salido mal." },
+          { m: "serio", t: "Me importa lo que hagamos mañana." },
+          { m: "serio", t: "Cuando ganas, todo el mundo sabe abrazarse." },
+          { m: "capitan", t: "Cuando pierdes es cuando sabes quién forma parte del equipo." },
+          { m: "happy", t: "Así que mañana quiero verte aquí. Y con cara de no haber perdido la final del mundo." },
+        ],
+        snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "D") &&
+          daysGoalsCompletedSince(g, snap.since) >= 2 },
+      /* CAPÍTULO 7 — El brazalete */
+      { title: "El brazalete", zone: "ciudad-dep",
+        objective: "Alcanza un hito de OVR o gana 2 partidos.",
+        intro: [
+          { m: "capitan", t: "¿Sabes por qué guardo esto con tanto cuidado?" },
+          { m: "capitan", t: "Porque no es mío." },
+          { m: "serio", t: "Me lo dejaron. Igual que algún día yo se lo dejaré a otro." },
+          { m: "serio", t: "El brazalete no dice que eres el mejor." },
+          { m: "orgulloso", t: "Dice que la gente confía en ti cuando las cosas se ponen feas." },
+        ],
+        setFlags: ["lopezArmband"],
+        snap: (g) => ({ ovr: calcOVR(g.player.stats), matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => calcOVR(g.player.stats) > snap.ovr ||
+          (g.matchHistory || []).slice(snap.matchCount).filter((m) => m.res === "V").length >= 2 },
+      /* CAPÍTULO 8 — El nuevo líder */
+      { title: "El nuevo líder", zone: "parque",
+        objective: "Completa una racha de 6 días.",
+        intro: [
+          { m: "happy", t: "Tengo una noticia terrible." },
+          { m: "happy", t: "Ya no eres el nuevo." },
+          { m: "orgulloso", t: "Y eso significa que ahora me toca encontrar a otro al que molestar." },
+          { m: "serio", t: "Pero también significa que puedo confiarte cosas que antes no podía." },
+          { m: "orgulloso", t: "Eso es crecer dentro de un equipo." },
+        ],
+        setFlags: ["lopezTrust"],
+        snap: () => ({}),
+        check: (g) => (g.player.streak || 0) >= 6 },
+      /* CAPÍTULO 9 — Playa sin uniforme */
+      { title: "Playa sin uniforme", zone: "playa",
+        objective: "Completa un hito de carrera y una victoria.",
+        intro: [
+          { m: "playa", t: "Aquí hay una norma muy importante." },
+          { m: "playa", t: "Hoy no hablamos de fútbol." },
+          { m: "playa", t: "Si digo 'partido', me tiras al agua." },
+          { m: "playa", t: "Y no, no estoy bromeando." },
+        ],
+        snap: (g) => ({ tierId: g.tier.id, seasonNum: g.season.num, matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => (g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum) &&
+          (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") },
+      /* CAPÍTULO 10 — Cuando cambia el vestuario */
+      { title: "Cuando cambia el vestuario", zone: "ciudad-dep",
+        objective: "Alcanza el siguiente nivel de OVR o completa la temporada.",
+        intro: [
+          { m: "serio", t: "Puede que algún día te vayas." },
+          { m: "preocupado", t: "Y si llega ese día, no voy a ser el tío que te diga que te quedes solo porque me da pena." },
+          { m: "orgulloso", t: "Si tienes una oportunidad para crecer, tienes que cogerla." },
+          { m: "happy", t: "Eso sí: si te vas a un club mejor, mínimo me mandas una foto del vestuario." },
+        ],
+        snap: (g) => ({ tierId: g.tier.id, seasonNum: g.season.num }),
+        check: (g, snap) => {
+          const next = TIERS.find((t) => t.id === snap.tierId + 1);
+          return (next && calcOVR(g.player.stats) >= next.minOvr) || g.season.num !== snap.seasonNum;
+        } },
+      /* CAPÍTULO 11 — La despedida (sin deadlineDays a propósito: espera a un cambio de
+         club real, aunque tarde meses o no llegue nunca — ver nota al inicio del bloque) */
+      { title: "La despedida", zone: "ciudad-dep",
+        objective: "Cambia de club.",
+        intro: [
+          { m: "preocupado", t: "Bueno... ha llegado." },
+          { m: "serio", t: "No te voy a soltar un discurso de película." },
+          { m: "orgulloso", t: "Solo quiero que recuerdes una cosa: el primer vestuario siempre se queda contigo." },
+          { m: "happy", t: "Y ahora vete antes de que me ponga sentimental y pierda mi reputación." },
+        ],
+        setFlags: ["lopezOldClub"],
+        snap: (g) => ({ clubName: g.club.name }),
+        check: (g, snap) => g.club.name !== snap.clubName },
+      /* CAPÍTULO 12 — El nuevo vestuario */
+      { title: "El nuevo vestuario", zone: "ciudad-dep",
+        objective: "Completa un partido con el nuevo club.",
+        intro: [
+          { m: "happy", t: "Bueno, campeón. ¿Qué tal la nueva taquilla?" },
+          { m: "happy", t: "¿Ya te has aprendido los nombres o sigues llamando a todo el mundo 'tío'?" },
+          { m: "serio", t: "Te dije que un vestuario nuevo se construye desde cero." },
+          { m: "orgulloso", t: "Ahora te toca a ti hacer que otro jugador deje de sentirse nuevo." },
+        ],
+        snap: (g) => ({ matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => (g.matchHistory || []).length > snap.matchCount },
+      /* CAPÍTULO 13 — Tu turno */
+      { title: "Tu turno", zone: "ciudad-dep",
+        objective: "Gana tras una derrota o completa una racha de 5 días.",
+        intro: [
+          { m: "serio", t: "Tengo una pregunta." },
+          { m: "serio", t: "Si fueras tú el capitán, ¿qué harías después de una derrota así?" },
+          { m: "orgulloso", t: "No te lo pregunto por quedar bien." },
+          { m: "orgulloso", t: "Quiero saber qué harías tú." },
+        ],
+        setFlags: ["lopezMentorTurn"],
+        snap: (g) => ({ matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => {
+          const ms = (g.matchHistory || []).slice(snap.matchCount);
+          for (let i = 0; i < ms.length - 1; i++) if (ms[i].res === "D" && ms[i + 1].res === "V") return true;
+          return (g.player.streak || 0) >= 5;
+        } },
+      /* CAPÍTULO 14 — Lo que queda */
+      { title: "Lo que queda", zone: "parque",
+        objective: "Alcanza un nuevo máximo de OVR o de nota.",
+        intro: [
+          { m: "orgulloso", t: "¿Te acuerdas de cuando te enseñé la taquilla?" },
+          { m: "happy", t: "Parecías acojonado." },
+          { m: "orgulloso", t: "Ahora mírate." },
+          { m: "serio", t: "Eso es lo que más me gusta de esta historia." },
+          { m: "orgulloso", t: "No que seas mejor jugador. Que ya no necesitas que yo te diga dónde colocarte." },
+        ],
+        setFlags: ["lopezLeader"],
+        snap: (g) => ({ ovr: calcOVR(g.player.stats), bestRating: g.bestRating || 0 }),
+        check: (g, snap) => calcOVR(g.player.stats) > snap.ovr || (g.bestRating || 0) > snap.bestRating },
+      /* CAPÍTULO 15 — El brazalete pasa de mano */
+      { title: "El brazalete pasa de mano", zone: "ciudad-dep",
+        objective: "Completa una racha de 7 días y gana un partido.",
+        intro: [
+          { m: "capitan", t: "Te voy a decir algo que no digo mucho." },
+          { m: "capitan", t: "Estoy orgulloso de ti." },
+          { m: "serio", t: "No porque seas el mejor del vestuario." },
+          { m: "orgulloso", t: "Porque cuando te tocó estar abajo, aprendiste a quedarte." },
+          { m: "capitan", t: "Eso es lo que hace un capitán." },
+        ],
+        snap: (g) => ({ matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => (g.player.streak || 0) >= 7 &&
+          (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") },
+      /* FINAL — Ya no eres el nuevo */
+      { title: "Ya no eres el nuevo", zone: "ciudad-dep",
+        objective: "Alcanza el nivel de élite.",
+        intro: [
+          { m: "happy", t: "Mira quién ha venido." },
+          { m: "happy", t: "El nuevo." },
+          { m: "orgulloso", t: "Bueno... ya no." },
+          { m: "capitan", t: "He tenido compañeros que llegaron, se fueron, ganaron títulos y desaparecieron." },
+          { m: "serio", t: "Pero algunos se quedan contigo." },
+          { m: "orgulloso", t: "Tú eres uno de esos." },
+          { m: "happy", t: "Así que enhorabuena. Ya sabes dónde está tu taquilla." },
+          { m: "happy", t: "Aunque sigue sin gustarme cómo la tienes ordenada." },
+        ],
+        snap: () => ({}),
+        check: (g) => g.tier.id >= TIERS[TIERS.length - 1].id },
+      /* EPÍLOGO — La foto (última etapa: final:true, entrega el pin y +1 FIS al entrar aquí) */
+      { title: "La foto", zone: "casa", final: true,
+        intro: [
+          { m: "happy", t: "¿Sigues teniendo la foto?" },
+          { m: "orgulloso", t: "Entonces sí que has entendido algo." },
+          { m: "happy", t: "Guárdala." },
+          { m: "orgulloso", t: "Hay cosas que no sirven para subir de OVR." },
+          { m: "happy", t: "Pero hacen que todo lo demás haya merecido la pena." },
+        ],
+        setFlags: ["lopezPinEarned", "lopezStoryComplete"],
+        reward: (g) => {
+          const stats = { ...g.player.stats };
+          stats.FIS = Math.min(99, stats.FIS + 1);
+          const inv = { ...(g.inventory || {}) };
+          inv.lopez_pin = (inv.lopez_pin || 0) + 1;
+          return { ...g, player: { ...g.player, stats }, inventory: inv };
+        } },
+    ],
+  }],
+};
+
 /* separadas por mapa (para el registro de misiones de cada uno) y también fusionadas
    (para el motor, al que no le importa desde qué mapa se desbloqueó cada historia).
-   Las historias de Elisa, Milly y Yuna se añaden a los dos registros porque sus escenas
-   se reparten entre zonas de La Ciudad y de La Metrópolis: así el panel de Misiones las
-   muestra estés donde estés, no solo desde el mapa donde tocara desbloquearlas. */
-const STORIES_CIUDAD = { ...toStories(QUESTS), elisa: ELISA_STORY, milly: MILLY_STORY, yuna: YUNA_STORY };
-const STORIES_METRO = { ...toStories(METRO_QUESTS), elisa: ELISA_STORY, milly: MILLY_STORY, yuna: YUNA_STORY };
+   Las historias de Elisa, Milly, Yuna y López se añaden a los dos registros porque sus
+   escenas se reparten entre zonas de La Ciudad y de La Metrópolis: así el panel de
+   Misiones las muestra estés donde estés, no solo desde el mapa donde tocara
+   desbloquearlas. */
+const STORIES_CIUDAD = { ...toStories(QUESTS), elisa: ELISA_STORY, milly: MILLY_STORY, yuna: YUNA_STORY, lopez: LOPEZ_STORY };
+const STORIES_METRO = { ...toStories(METRO_QUESTS), elisa: ELISA_STORY, milly: MILLY_STORY, yuna: YUNA_STORY, lopez: LOPEZ_STORY };
 const STORIES = { ...STORIES_CIUDAD, ...STORIES_METRO };
 
 /* ============================================================
@@ -2198,6 +2481,8 @@ const ITEMS = {
     desc: "El pin que te dio Milly al publicar su gran reportaje. No se usa ni se regala: es un recuerdo de todo el camino." },
   yuna_pin: { name: "Pin de Yuna", icon: "📌", img: "/images/objects/yuna_pin.webp", kind: "keepsake",
     desc: "El pin que te dio Yuna cuando por fin dejó de esconderse detrás de las excusas. No se usa ni se regala: es un recuerdo de todo el camino." },
+  lopez_pin: { name: "Pin de López", icon: "📌", img: "/images/objects/lopez_pin.webp", kind: "keepsake",
+    desc: "El pin que te dio López cuando dejaste de ser 'el nuevo'. No se usa ni se regala: es un recuerdo de todo el camino." },
 };
 /* dar un objeto a su destinatario: reacción propia del personaje + el objeto se gasta */
 const ITEM_GIVE_REACTIONS = {

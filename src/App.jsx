@@ -1943,6 +1943,15 @@ function PlayerCard({ player, photo, club, small, crest, crestScale }) {
 function IntroScreen({ onDone, onRestore }) {
   const [showR, setShowR] = useState(false);
   const [txt, setTxt] = useState("");
+  const fileRef = useRef();
+  const onFile = (e) => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => onRestore(String(reader.result || ""));
+    reader.readAsText(file);
+  };
   return (
     <div className="screen intro-bg" style={{ padding: "48px 26px", display: "flex", flexDirection: "column", justifyContent: "center" }}>
       <div className="fade-seq" style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
@@ -1964,6 +1973,10 @@ function IntroScreen({ onDone, onRestore }) {
         onClick={() => setShowR(!showR)}>¿Ya tenías una partida? Restaurar respaldo</button>
       {showR && (
         <div className="pop-in" style={{ marginTop: 10 }}>
+          <input ref={fileRef} type="file" accept=".json,application/json" style={{ display: "none" }} onChange={onFile} />
+          <button className="btn-gold" style={{ width: "100%", marginBottom: 8 }}
+            onClick={() => fileRef.current?.click()}>📁 Subir archivo de respaldo</button>
+          <div style={{ fontSize: 11, color: "#6F7563", textAlign: "center", margin: "0 0 8px" }}>o pega el texto a mano</div>
           <textarea className="inp" rows={4} placeholder="Pega aquí el texto de tu copia de seguridad"
             value={txt} onChange={(e) => setTxt(e.target.value)} />
           <button className="btn-ghost" style={{ width: "100%" }} onClick={() => onRestore(txt)}>Restaurar mi carrera</button>
@@ -3786,6 +3799,7 @@ function BackupPanel({ getBackup, onRestore }) {
   const [show, setShow] = useState(false);
   const [txt, setTxt] = useState("");
   const [downloaded, setDownloaded] = useState(false);
+  const fileRef = useRef();
   /* archivo descargado, no portapapeles: un respaldo largo (muchos días de registro)
      se puede cortar al copiar/pegar entre apps sin avisar; un archivo no tiene ese riesgo */
   const download = () => {
@@ -3800,11 +3814,22 @@ function BackupPanel({ getBackup, onRestore }) {
     setDownloaded(true);
     setTimeout(() => setDownloaded(false), 2500);
   };
+  /* subir el archivo directamente (en vez de pegar su contenido a mano) evita el mismo
+     corte silencioso del que ya avisa el comentario de arriba: un respaldo con muchos
+     días de registro pega su texto de golpe, sin ese riesgo. */
+  const onFile = (e) => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => onRestore(String(reader.result || ""));
+    reader.readAsText(file);
+  };
   return (
     <div className="panel" style={{ borderColor: "#B8E02E", borderWidth: 2 }}>
       <div className="ptitle">💾 Copia de seguridad</div>
       <div style={{ fontSize: 12, color: "#6F7563", marginBottom: 10, lineHeight: 1.5 }}>
-        Descarga tu partida como archivo y guárdalo donde quieras. Si la app se resetea, pégalo (o su contenido)
+        Descarga tu partida como archivo y guárdalo donde quieras. Si la app se resetea, sube ese archivo
         en "Restaurar" (o en la pantalla inicial) y recuperas tu carrera entera: stats, temporada, mensajes y misiones.
         (La foto de perfil y el escudo no se incluyen, para no hacer el archivo gigante — tendrás que
         volver a ponerlos a mano si los usabas.)
@@ -3815,6 +3840,10 @@ function BackupPanel({ getBackup, onRestore }) {
       </div>
       {show && (
         <div style={{ marginTop: 8 }}>
+          <input ref={fileRef} type="file" accept=".json,application/json" style={{ display: "none" }} onChange={onFile} />
+          <button className="btn-gold sm" style={{ width: "100%", marginBottom: 8 }}
+            onClick={() => fileRef.current?.click()}>📁 Subir archivo de respaldo</button>
+          <div style={{ fontSize: 11, color: "#9a9e8e", textAlign: "center", margin: "0 0 8px" }}>o pega el texto a mano</div>
           <textarea className="inp" rows={4} placeholder="Pega aquí tu respaldo" value={txt} onChange={(e) => setTxt(e.target.value)} />
           <button className="btn-ghost" style={{ width: "100%" }} onClick={() => onRestore(txt)}>Restaurar partida</button>
         </div>)}
@@ -4884,7 +4913,13 @@ export default function App() {
   const restoreBackup = (txt) => {
     try {
       const b = JSON.parse(txt.trim());
-      if (!b.game || !b.game.player) throw new Error("bad");
+      /* además de player, se comprueban los campos que el resto de la app da por hecho
+         sin fallback (club.name, tier.league, season.num...): un archivo que no sea de
+         verdad un respaldo de FUTABITA (o uno corrupto) debe rechazarse aquí, ANTES de
+         guardarlo, porque si llega a setGame la pantalla se queda en blanco y ya no hay
+         forma de volver a abrir "Restaurar" para intentarlo con el archivo correcto. */
+      if (!b.game || !b.game.player || !b.game.player.stats || !b.game.club || !b.game.club.name ||
+        !b.game.tier || !b.game.tier.league || !b.game.season || b.game.season.num == null) throw new Error("bad");
       const g = processNewDays(sanitizeGame(b.game));
       setGame(g); stSet("game", g);
       if (b.photo) savePhoto(b.photo);
@@ -4892,7 +4927,7 @@ export default function App() {
       if (b.crestScale) saveCrestScale(b.crestScale);
       setTab("home");
       pushToast("✓ Carrera restaurada. ¡Bienvenido de vuelta!");
-    } catch (e) { pushToast("✗ Ese texto no es un respaldo válido"); }
+    } catch (e) { pushToast("✗ Ese archivo no es un respaldo válido de FUTABITA"); }
   };
 
   if (!loaded || !game) return (

@@ -1063,6 +1063,9 @@ const YUNA_POOL = [
     { t: "Gracias, Yuna, de verdad", m: "angry", r: ["N-no hace falta que lo digas así de sincero, quedamos en que era un favor sin importancia. Pero... de nada.",
       "¡No te acostumbres! Fue un acto puntual de generosidad excepcional. Único e irrepetible."] },
     { t: "¿Seguro que no la hiciste para mí?", m: "angry", r: ["¡P-por supuesto que no! Yo... e-en fin, da igual. Úsala o no la uses, allá tú. Grosero."] }] },
+  { t: "Estaba ordenando cosas viejas del Barça en casa y encontré esto. No sé por qué, pero algo me dice que no es mío. ¿Te suena?", replies: [
+    { t: "Me la quedo, gracias", m: "happy", giveItem: "pulsera_vieja_escuela", r: ["N-no es que me diera pena tirarla ni nada. Simplemente... me pareció que debía volver a su sitio. Ya está. No le des más vueltas."] },
+    { t: "No sé de quién será", m: "idle", r: ["Ya, yo tampoco lo sé del todo. Pero la voy a guardar por si acaso. Uno nunca sabe."] }] },
 ];
 
 /* --- ELISA · tu mánager: ánimo, despachos y fichajes.
@@ -1120,6 +1123,9 @@ const ELISA_POOL = [
   { beats: [
     { m: "idle", t: "A veces me preguntan cómo puedo ser entrenadora y mánager a la vez sin volverme loca." },
     { m: "happy", t: "Fácil: en el campo exijo, fuera del campo negocio, y en los dos sitios cuido de los míos. Tú entras en esa categoría, para que lo sepas." }] },
+  { t: "Te he pedido al fisio del club que prepare un par de kits de recuperación de sobra. Uno es para ti.", replies: [
+    { t: "Gracias, lo usaré cuando toque", m: "happy", giveItem: "botiquin", r: ["Bien. No lo dejes cogiendo polvo en la taquilla, que para eso te lo he conseguido."] },
+    { t: "No hacía falta, pero gracias", m: "idle", giveItem: "botiquin", r: ["Ya lo sé que no hacía falta. Cógelo igual, que prevenir cuesta menos que lesionarse."] }] },
 ];
 
 /* --- LÓPEZ · capitán y colega de siempre; animado, gracioso, anécdotas de vestuario.
@@ -1165,6 +1171,9 @@ const LOPEZ_POOL = [
     { m: "idle", t: "Llevo de capitán aquí más temporadas de las que me gustaría admitir en público." },
     { m: "happy", t: "Pero cada vez que llega alguien como tú, con hambre de verdad, se me recarga la energía entera. Gracias por eso, en serio." }] },
   { w: "seasonEnd", t: "Se acaba otra temporada, {season}. No sé tú, pero yo siempre me pongo un poco sentimental estos días. Buen año el nuestro, pase lo que pase en las últimas jornadas." },
+  { t: "Estaba revolviendo el almacén del club buscando unos conos y encontré esto. Una cámara antigua, de las de carrete. Ni sé de quién es ya.", replies: [
+    { t: "Se la doy a Punky, seguro que le encanta", m: "happy", giveItem: "camara_vintage", r: ["Buena idea, con lo periodista que es. Anda, llévasela, aquí solo cría polvo."] },
+    { t: "Me la quedo yo", m: "idle", r: ["Tú mismo, aunque dudo que le saques la mitad de partido que le sacaría ella."] }] },
 ];
 
 /* --- PUNKY · periodista del periódico local, trabaja la Sala de prensa.
@@ -1310,6 +1319,9 @@ const MILLY_POOL = [
     { m: "happy", t: "Aunque, entre nosotras, yo gano casi siempre. No se lo digas. Toma tu periódico, edición de hoy." }] },
   { w: "metLisa", t: "Esa futbolista, Lisa, entró una vez al kiosco y preguntó si tenía la prensa deportiva internacional. Le dije que sí por no quedar mal. No la tenía. Toma, tu periódico de hoy, este si lo tengo seguro." },
   { w: "seasonEnd", t: "Se acaba la temporada {season} y no sabes lo que voy a echar de menos nuestra charla de las mañanas. Bueno, la próxima empieza pronto, así que tampoco te libras de mí. Toma, tu último periódico de esta campaña." },
+  { t: "Tengo un frasco de perfume carísimo que me regalaron y no uso nunca, se me queda grande para el kiosco. ¿Se lo doy a alguien que le pegue más?", replies: [
+    { t: "A Lisa le encajaría perfecto", m: "happy", giveItem: "perfume_lujo", r: ["¡Genial elección! Toma, dáselo tú de mi parte. Y de paso, toma tu periódico de hoy, que casi se me olvida."] },
+    { t: "Mejor guárdalo tú", m: "idle", r: ["Ya, tienes razón, a saber cuándo lo voy a usar. Toma tu periódico, anda, que se hace tarde."] }] },
 ];
 
 /* --- IRINA · jugadora de élite, la encuentras en la Tienda Oficial. Chulería teatral y
@@ -1389,6 +1401,9 @@ const IGOR_POOL = [
   { beats: [
     { m: "idle", t: "La gente cree que cocinar sano es aburrido, sin sabor, todo a la plancha." },
     { m: "idle", t: "Y no, eso es cocinar mal con excusa de salud. Una buena especia cambia el partido entero sin sumar ni una caloría de más." }] },
+  { t: "Me han llegado unas especias de un mercado que ni te cuento cómo conseguí. Te preparo una bolsita, ¿la quieres para experimentar en casa?", replies: [
+    { t: "Claro, dámela", m: "happy", giveItem: "especias_raras", r: ["¡Así me gusta! Úsalas con cabeza, que pican más de lo que parece a simple vista."] },
+    { t: "Mejor no, no sé cocinar", m: "idle", r: ["Ja, justo por eso te la iba a dar, para que empieces a practicar. Pero bueno, tú decides."] }] },
 ];
 
 /* --- FORTUNA · croupier del Casino (Metrópolis). Misteriosa, coqueta, segura de sí misma.
@@ -1664,7 +1679,9 @@ const QUESTS = {
         introFail: [
           { m: "idle", t: "La llamada se enfrió. No pasa nada, estas cosas llevan su tiempo y no siempre dependen de una sola actuación." },
           { m: "happy", t: "Lo que sí tengo claro es que la apuesta que hice por ti sigue en pie. Vamos a por la siguiente oportunidad, que seguro que llega." }],
-        reward: (g) => { const stats = { ...g.player.stats }; stats.REC = Math.min(99, stats.REC + 1); return { ...g, player: { ...g.player, stats } }; } },
+        reward: (g) => { const stats = { ...g.player.stats }; stats.REC = Math.min(99, stats.REC + 1);
+          const inv = { ...(g.inventory || {}) }; inv.libreta_tactica = (inv.libreta_tactica || 0) + 1;
+          return { ...g, player: { ...g.player, stats }, inventory: inv }; } },
     ],
   },
   lopez: {
@@ -1767,7 +1784,9 @@ const QUESTS = {
         introFail: [
           { m: "idle", t: "El ascenso no llegó a tiempo para cerrar el reportaje como quería, así que lo he adaptado un poco." },
           { m: "happy", t: "Igualmente ha salido publicado, con otro final, pero igual de sincero. Esta historia todavía no ha terminado, y yo sigo aquí para contarla." }],
-        reward: (g) => { const stats = { ...g.player.stats }; stats.MEN = Math.min(99, stats.MEN + 1); return { ...g, player: { ...g.player, stats } }; } },
+        reward: (g) => { const stats = { ...g.player.stats }; stats.MEN = Math.min(99, stats.MEN + 1);
+          const inv = { ...(g.inventory || {}) }; inv.edicion_especial = (inv.edicion_especial || 0) + 1;
+          return { ...g, player: { ...g.player, stats }, inventory: inv }; } },
     ],
   },
   lisa: {
@@ -1870,6 +1889,55 @@ const QUESTS = {
     ],
   },
 };
+
+/* ============================================================
+   OBJETOS COLECCIONABLES · dos tipos: "consumable" (los usas, dan
+   XP de una stat y se gastan) y "gift" (se los das a un personaje
+   concreto: reacciona con un mensaje propio y el objeto desaparece
+   del inventario). game.inventory = { itemId: cantidad }.
+   ============================================================ */
+const ITEMS = {
+  botiquin: { name: "Botiquín de Recuperación", icon: "🩹", kind: "consumable", stat: "REC", xp: 12,
+    desc: "Un kit de recuperación rápida. Lo usas y notas las piernas más frescas al instante." },
+  libreta_tactica: { name: "Libreta Táctica", icon: "📓", kind: "consumable", stat: "RES", xp: 10,
+    desc: "Llena de anotaciones de Elisa sobre cómo aguantar los noventa minutos sin bajar el ritmo." },
+  especias_raras: { name: "Especias Raras", icon: "🌶️", kind: "consumable", stat: "NUT", xp: 10,
+    desc: "Una mezcla que Igor trae de sus viajes de cocina. Nadie sabe bien qué lleva, pero funciona." },
+  amuleto_suerte: { name: "Amuleto de la Suerte", icon: "🍀", kind: "consumable", stat: "random", xp: 15,
+    desc: "Un premio raro de la ruleta de Fortuna. Nadie sabe si de verdad trae suerte, pero por probar..." },
+  camara_vintage: { name: "Cámara Vintage", icon: "📷", kind: "gift", giveTo: "punky",
+    desc: "Una cámara analógica que encontró López revolviendo el almacén del club. Le encantaría a Punky." },
+  perfume_lujo: { name: "Perfume de Lujo", icon: "🧴", kind: "gift", giveTo: "lisa",
+    desc: "Un frasco carísimo que Milly guardaba 'para una ocasión especial'. Le pega mucho a Lisa." },
+  edicion_especial: { name: "Edición Especial", icon: "🗞️", kind: "gift", giveTo: "milly",
+    desc: "Un ejemplar de coleccionista que Punky guardaba desde sus inicios. A Milly le encantaría tenerlo." },
+  pulsera_vieja_escuela: { name: "Pulsera Vieja Escuela", icon: "📿", kind: "gift", giveTo: "irina",
+    desc: "Una pulsera desgastada que Yuna encontró entre sus cosas del Barça. Algo le dice que es de Irina." },
+};
+/* dar un objeto a su destinatario: reacción propia del personaje + el objeto se gasta */
+const ITEM_GIVE_REACTIONS = {
+  punky: { npc: "punky", text: "¡¿Esto es para mí?! Una cámara de verdad, no el móvil de siempre. Le voy a sacar un partido increíble a esto, ya verás." },
+  lisa: { npc: "lisa", text: "Vaya... tienes buen gusto para los detalles, para ser sincera. No esperaba esto de ti. Gracias, de verdad." },
+  milly: { npc: "milly", text: "¡NO ME LO PUEDO CREER! Llevo años buscando este ejemplar. Le voy a hacer un hueco de honor en el kiosco, ya verás." },
+  irina: { npc: "irina", text: "Espera... ¿de dónde has sacado esto? Da igual, no lo preguntes. Gracias. En serio. No sabes lo que significa para mí." },
+};
+
+/* --- CARTAS DE PERSONAJE · galería sin efecto de juego: retrato + bio corta.
+   Se desbloquean solas al conocer a cada uno (mismos flags que ya existen). --- */
+const CARDS = [
+  { npc: "elisa", unlocked: () => true,
+    bio: "Mánager y entrenadora. Dura en el despacho, blanda cuando cree que nadie mira. Siempre tiene un plan, aunque no siempre lo comparta." },
+  { npc: "yuna", unlocked: (g) => !!g.yunaMet,
+    bio: "Superfan del Barça con fama de tsundere. Sabe tus estadísticas mejor que tú, aunque jure que 'solo pasaba por aquí'." },
+  { npc: "lopez", unlocked: () => true,
+    bio: "Capitán del vestuario. El brazalete le queda grande a cualquiera, pero a él le queda perfecto." },
+  { npc: "punky", unlocked: (g) => !!g.metPunky, bio: "Periodista de la Sala de Prensa. Enérgica, curiosa, con una libreta que nunca deja de llenar." },
+  { npc: "milly", unlocked: (g) => !!g.metMilly, bio: "Del Kiosco. Te trae el periódico en persona cada día, con más cotilleos de los que pediste." },
+  { npc: "lisa", unlocked: (g) => !!g.metLisa, bio: "Futbolista profesional, gestiona patrocinios. Engreída de cara al público, exigente de puertas para adentro." },
+  { npc: "irina", unlocked: (g) => !!g.metIrina, bio: "Jugadora de élite. Chulería teatral en el campo, torpeza sincera en cuanto alguien la elogia de verdad." },
+  { npc: "igor", unlocked: (g) => !!g.metIgor, bio: "Chef estrella del Restaurante. Trata la nutrición como táctica de fútbol, con datos curiosos siempre a mano." },
+  { npc: "fortuna", unlocked: (g) => !!g.metFortuna, bio: "Croupier del Casino. Misteriosa, coqueta, regenta la ruleta diaria como si conociera el destino de antemano." },
+];
 
 /* --- EL PERIÓDICO · plantillas con titular y cuerpo, por secciones.
    Mínimo ~20 por sección para que la edición diaria no se repita enseguida. --- */
@@ -2745,13 +2813,19 @@ function Newspaper({ game, onRead }) {
    siempre hay periódico, así que en vez de cartel ofrece abrirlo.
    Fondo real: si existe /images/zones/{id}.webp se usa; si no (todavía no se ha
    subido), cae a un degradado de marcador de posición sin romper nada. */
-function ZoneScreen({ zone, pendingNpc, onBack, onOpenPaper, game, onSpin }) {
+function ZoneScreen({ zone, pendingNpc, onBack, onOpenPaper, game, onSpin, onBuy }) {
   const [imgOk, setImgOk] = useState(true);
   const npc = pendingNpc ? NPCS[pendingNpc] : null;
   const showPaperPrompt = zone.kind === "paper" && !pendingNpc;
   const isHome = zone.kind === "home";
   const isCasino = zone.id === "casino";
   const spunToday = game && game.casinoSpinDay === todayStr();
+  const lastSpin = game && game.casinoLastSpin;
+  const lastSpinText = !lastSpin ? "" :
+    lastSpin.kind === "xp" ? `Te tocaron +${lastSpin.amount} XP en ${lastSpin.stat}.` :
+    lastSpin.kind === "fichas" ? `Te tocaron +${lastSpin.amount} 🪙 fichas.` :
+    `¡Premio especial: ${ITEMS[lastSpin.itemId].name}!`;
+  const SHOP = [["especias_raras", 8], ["botiquin", 6]];
   return (
     <div className="zone-screen">
       {imgOk ? (
@@ -2772,16 +2846,35 @@ function ZoneScreen({ zone, pendingNpc, onBack, onOpenPaper, game, onSpin }) {
           🗞️ Leer el periódico de hoy</button>)}
       {isHome && <HouseRoom game={game} />}
       {isCasino && !pendingNpc && (
-        spunToday ? (
-          <div className="zone-empty-card">
-            <div style={{ fontSize: 30, marginBottom: 6 }}>🎰</div>
-            Ya has girado la ruleta hoy.
-            {game.casinoLastSpin && <><br />Te tocaron +{game.casinoLastSpin.amount} XP en {game.casinoLastSpin.stat}.</>}
-            <br />Vuelve mañana para otra tirada.</div>
-        ) : (
-          <button className="zone-empty-card zone-paper-btn" onClick={onSpin}>
-            🎰 Girar la ruleta (tirada gratis de hoy)</button>
-        ))}
+        <div className="house-room">
+          <div className="house-card">
+            <div className="house-title">🎰 Ruleta de Fortuna · 🪙 {game.fichas || 0}</div>
+            {spunToday ? (
+              <div style={{ fontSize: 13, color: "#EFEEE3", lineHeight: 1.5 }}>
+                Ya has girado la ruleta hoy.<br />{lastSpinText}<br />Vuelve mañana para otra tirada.</div>
+            ) : (
+              <button className="btn-gold sm" style={{ width: "100%" }} onClick={onSpin}>
+                🎰 Girar la ruleta (tirada gratis de hoy)</button>
+            )}
+          </div>
+          <div className="house-card">
+            <div className="house-title">🛒 Tienda de fichas</div>
+            {SHOP.map(([id, cost]) => {
+              const it = ITEMS[id];
+              const can = (game.fichas || 0) >= cost;
+              return (
+                <div key={id} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                  <span style={{ fontSize: 22 }}>{it.icon}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12.5, color: "#EFEEE3" }}>{it.name}</div>
+                    <div style={{ fontSize: 10.5, color: "#9a9e8e" }}>🪙 {cost}</div>
+                  </div>
+                  <button className="btn-ghost sm" disabled={!can} style={!can ? { opacity: 0.4 } : {}}
+                    onClick={() => onBuy(id, cost)}>Comprar</button>
+                </div>);
+            })}
+          </div>
+        </div>)}
     </div>);
 }
 
@@ -3900,12 +3993,14 @@ function BackupPanel({ getBackup, onRestore }) {
 
 /* ---------- PERFIL / OBJETIVOS ---------- */
 function ProfileTab({ game, photo, onWeight, onPhoto, onRemovePhoto, crest, onCrest, onRemoveCrest,
-  crestScale, onCrestScale, onGoals, getBackup, onRestore, haptics, onHaptics, voices, onVoices }) {
+  crestScale, onCrestScale, onGoals, getBackup, onRestore, haptics, onHaptics, voices, onVoices,
+  onUseItem, onGiveItem }) {
   const p = game.player;
   const [kg, setKg] = useState("");
   const [edit, setEdit] = useState(false);
   const [newHabit, setNewHabit] = useState("");
   const [g, setG] = useState({ ...p.goals, gymDays: [...p.goals.gymDays] });
+  const [openItem, setOpenItem] = useState(null); /* id del objeto abierto en el inventario */
   /* redimensiona una imagen subida y devuelve un dataURL, para foto o escudo.
      forcePng: el escudo se guarda siempre en PNG para conservar la transparencia (el JPEG la rellenaría de blanco) */
   const processImg = (e, cb, max = 420, forcePng = false) => {
@@ -4054,6 +4149,68 @@ function ProfileTab({ game, photo, onWeight, onPhoto, onRemovePhoto, crest, onCr
               <span style={{ fontSize: 10.5, color: "#9a9e8e", width: 44, textAlign: "right", fontFamily: "'Oswald',sans-serif" }}>{m.n}</span>
             </div>));
         })()}
+      </div>
+      <div className="panel">
+        <div className="ptitle">🎒 Inventario</div>
+        {(() => {
+          const inv = Object.entries(game.inventory || {}).filter(([, qty]) => qty > 0);
+          if (!inv.length) return (
+            <div className="empty"><span className="em-ico">🎒</span>
+              Todavía no tienes ningún objeto.<br />Los consigues completando misiones, en regalos sueltos de la ciudad o en la tienda del Casino.</div>);
+          return inv.map(([id, qty]) => {
+            const it = ITEMS[id];
+            if (!it) return null;
+            const isOpen = openItem === id;
+            const recipient = it.kind === "gift" ? CARDS.find((c) => c.npc === it.giveTo) : null;
+            const canGive = recipient && recipient.unlocked(game);
+            return (
+              <div key={id} style={{ marginBottom: 8, background: "#F0EFE5", borderRadius: 12, overflow: "hidden" }}>
+                <button style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "10px 12px",
+                  background: "none", border: "none", cursor: "pointer", textAlign: "left" }}
+                  onClick={() => setOpenItem(isOpen ? null : id)}>
+                  <span style={{ fontSize: 22 }}>{it.icon}</span>
+                  <span style={{ flex: 1, fontSize: 13, color: "#26291D" }}>{it.name}</span>
+                  <span style={{ fontSize: 12, color: "#6F7563", fontFamily: "'Oswald',sans-serif" }}>×{qty}</span>
+                </button>
+                {isOpen && (
+                  <div style={{ padding: "0 12px 12px" }}>
+                    <div style={{ fontSize: 12, color: "#4A4E3F", lineHeight: 1.5, marginBottom: 10 }}>{it.desc}</div>
+                    {it.kind === "consumable" && (
+                      <button className="btn-gold sm" style={{ width: "100%" }} onClick={() => { onUseItem(id); setOpenItem(null); }}>
+                        Usar · +{it.xp} XP {it.stat === "random" ? "(stat al azar)" : it.stat}</button>)}
+                    {it.kind === "gift" && (
+                      canGive ? (
+                        <button className="btn-gold sm" style={{ width: "100%" }} onClick={() => { onGiveItem(id); setOpenItem(null); }}>
+                          Regalar a {NPCS[it.giveTo].name}</button>
+                      ) : (
+                        <div style={{ fontSize: 11.5, color: "#9a9e8e" }}>Todavía no conoces a {NPCS[it.giveTo].name} para dárselo.</div>
+                      ))}
+                  </div>)}
+              </div>);
+          });
+        })()}
+      </div>
+      <div className="panel">
+        <div className="ptitle">🃏 Cartas de personaje</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+          {CARDS.map((c) => {
+            const npc = NPCS[c.npc];
+            const on = c.unlocked(game);
+            return (
+              <div key={c.npc} style={{ background: "#F0EFE5", borderRadius: 12, padding: "10px 6px", textAlign: "center" }}>
+                {on ? (
+                  <img src={npc.icon} alt={npc.name} style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover",
+                    border: "1.5px solid #16190F" }} />
+                ) : (
+                  <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#D8D6C6", margin: "0 auto",
+                    display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, color: "#9a9e8e" }}>❓</div>
+                )}
+                <div style={{ fontSize: 11, fontFamily: "'Oswald',sans-serif", marginTop: 6, color: on ? "#26291D" : "#9a9e8e" }}>
+                  {on ? npc.name : "???"}</div>
+                {on && <div style={{ fontSize: 9.5, color: "#6F7563", lineHeight: 1.35, marginTop: 3 }}>{c.bio}</div>}
+              </div>);
+          })}
+        </div>
       </div>
       <div className="panel">
         <div className="ptitle">⚙️ Ajustes</div>
@@ -4240,6 +4397,8 @@ export default function App() {
     /* algunas respuestas dejan una marca que otro personaje puede recordar más adelante
        (p.ej. le cuentas un secreto a Milly y luego Yuna "se entera" por su cuenta) */
     if (opt.setFlag) out[opt.setFlag] = true;
+    /* algunas respuestas también regalan un objeto de colección (ver ITEMS) */
+    if (opt.giveItem) out = { ...out, inventory: { ...(out.inventory || {}), [opt.giveItem]: ((out.inventory || {})[opt.giveItem] || 0) + 1 } };
     return out;
   });
   const answerOffer = (id, accept) => {
@@ -4609,23 +4768,72 @@ export default function App() {
   }); pushToast("💾 Guardada en comidas frecuentes"); };
   const deleteSavedMeal = (name) => setGame((g) => ({ ...g, savedMeals: (g.savedMeals || []).filter((m) => m.name !== name) }));
   /* ruleta de Fortuna en el Casino: una tirada gratis al día, +5..20 XP a una stat al azar */
+  /* la ruleta tiene 3 premios posibles: XP de una stat (lo normal), fichas del casino
+     (para gastar en la tiendecita de Fortuna) o, muy de vez en cuando, un objeto especial */
   const spinCasino = () => {
     if (game.casinoSpinDay === todayStr()) return; /* ya se ha usado hoy, botón no debería ni estar visible */
-    const stat = pick(["FIS", "FUE", "RES", "NUT", "REC", "MEN"]);
-    const amount = Math.floor(rnd(5, 21));
+    const roll = Math.random();
+    const result = roll < 0.65 ? { kind: "xp", stat: pick(["FIS", "FUE", "RES", "NUT", "REC", "MEN"]), amount: Math.floor(rnd(5, 21)) }
+      : roll < 0.9 ? { kind: "fichas", amount: Math.floor(rnd(5, 16)) }
+      : { kind: "item", itemId: "amuleto_suerte" };
     setGame((g) => {
       const p = g.player;
-      const stats = { ...p.stats }, xp = { ...p.xp };
-      xp[stat] = (xp[stat] || 0) + amount;
-      let upped = false;
-      while (stats[stat] < 99 && xp[stat] >= xpToNext(stats[stat])) { xp[stat] -= xpToNext(stats[stat]); stats[stat] += 1; upped = true; }
-      if (upped) setTimeout(() => pushToast(`📈 ¡${stat} sube a ${stats[stat]}!`), 700);
-      return { ...g, casinoSpinDay: todayStr(), casinoLastSpin: { stat, amount },
-        player: { ...p, stats, xp } };
+      let out = { ...g, casinoSpinDay: todayStr(), casinoLastSpin: result };
+      if (result.kind === "xp") {
+        const stats = { ...p.stats }, xp = { ...p.xp };
+        xp[result.stat] = (xp[result.stat] || 0) + result.amount;
+        let upped = false;
+        while (stats[result.stat] < 99 && xp[result.stat] >= xpToNext(stats[result.stat])) { xp[result.stat] -= xpToNext(stats[result.stat]); stats[result.stat] += 1; upped = true; }
+        if (upped) setTimeout(() => pushToast(`📈 ¡${result.stat} sube a ${stats[result.stat]}!`), 700);
+        out.player = { ...p, stats, xp };
+      } else if (result.kind === "fichas") {
+        out.fichas = (g.fichas || 0) + result.amount;
+      } else {
+        const inv = { ...(g.inventory || {}) };
+        inv[result.itemId] = (inv[result.itemId] || 0) + 1;
+        out.inventory = inv;
+      }
+      return out;
     });
     buzz(15);
-    pushToast(`🎰 ¡+${amount} XP en ${stat}!`);
+    if (result.kind === "xp") pushToast(`🎰 ¡+${result.amount} XP en ${result.stat}!`);
+    else if (result.kind === "fichas") pushToast(`🎰 ¡+${result.amount} 🪙 fichas!`);
+    else pushToast(`🎰 ¡Premio especial: ${ITEMS[result.itemId].name}!`);
   };
+  /* tiendecita de Fortuna: gasta fichas ganadas en la ruleta en un par de objetos fijos */
+  const buyShopItem = (itemId, cost) => setGame((g) => {
+    if ((g.fichas || 0) < cost) return g;
+    const inv = { ...(g.inventory || {}) };
+    inv[itemId] = (inv[itemId] || 0) + 1;
+    return { ...g, fichas: g.fichas - cost, inventory: inv };
+  });
+  /* usar un objeto consumible: XP a la stat indicada (o una al azar si stat:"random") y se gasta */
+  const useItem = (itemId) => setGame((g) => {
+    const def = ITEMS[itemId];
+    if (!def || def.kind !== "consumable" || !(g.inventory || {})[itemId]) return g;
+    const stat = def.stat === "random" ? pick(["FIS", "FUE", "RES", "NUT", "REC", "MEN"]) : def.stat;
+    const p = g.player;
+    const stats = { ...p.stats }, xp = { ...p.xp };
+    xp[stat] = (xp[stat] || 0) + def.xp;
+    let upped = false;
+    while (stats[stat] < 99 && xp[stat] >= xpToNext(stats[stat])) { xp[stat] -= xpToNext(stats[stat]); stats[stat] += 1; upped = true; }
+    const inv = { ...g.inventory, [itemId]: g.inventory[itemId] - 1 };
+    if (inv[itemId] <= 0) delete inv[itemId];
+    if (upped) setTimeout(() => pushToast(`📈 ¡${stat} sube a ${stats[stat]}!`), 700);
+    pushToast(`✅ ${def.name} usado · +${def.xp} XP ${stat}`);
+    return { ...g, inventory: inv, player: { ...p, stats, xp } };
+  });
+  /* regalar un objeto: reacción del destinatario en su cola de diálogos + se gasta */
+  const giveItemTo = (itemId) => setGame((g) => {
+    const def = ITEMS[itemId];
+    if (!def || def.kind !== "gift" || !(g.inventory || {})[itemId]) return g;
+    const inv = { ...g.inventory, [itemId]: g.inventory[itemId] - 1 };
+    if (inv[itemId] <= 0) delete inv[itemId];
+    const reaction = ITEM_GIVE_REACTIONS[def.giveTo];
+    let out = { ...g, inventory: inv };
+    if (reaction) out = addMsg(out, NPCS[reaction.npc].name, reaction.text, { mood: "happy" });
+    return out;
+  });
   const addWeight = (kg) => { setGame((g) => {
     const p = g.player;
     const stats = { ...p.stats }, xp = { ...p.xp };
@@ -4843,7 +5051,7 @@ export default function App() {
             {tab === "me" && <ProfileTab game={game} photo={photo} onWeight={addWeight} onPhoto={savePhoto} onRemovePhoto={removePhoto}
               crest={crest} onCrest={saveCrest} onRemoveCrest={removeCrest} crestScale={crestScale} onCrestScale={saveCrestScale}
               onGoals={setGoals} getBackup={getBackup} onRestore={restoreBackup} haptics={haptics} onHaptics={setHapticsPref}
-              voices={voicesOn} onVoices={setVoicesPref} />}
+              voices={voicesOn} onVoices={setVoicesPref} onUseItem={useItem} onGiveItem={giveItemTo} />}
           </div>
           <nav className="tabbar">
             {[["home", "🏠", "Inicio"], ["log", "📝", "Registro"], ["gym", "🏋️", "Gym"], ["league", "🏆", "Liga"], ["chat", "🏙️", "Ciudad"], ["me", "👤", "Yo"]].map(([id, ic, lb]) => (
@@ -4860,7 +5068,7 @@ export default function App() {
       {/* visitar una zona: fondo a toda pantalla + flecha para volver */}
       {tab === "chat" && visitedZoneObj && (
         <ZoneScreen zone={visitedZoneObj} pendingNpc={visitedActiveNpc} game={game}
-          onBack={() => setVisitedZone(null)} onOpenPaper={() => setShowPaper(true)} onSpin={spinCasino} />)}
+          onBack={() => setVisitedZone(null)} onOpenPaper={() => setShowPaper(true)} onSpin={spinCasino} onBuy={buyShopItem} />)}
       {/* diálogo de personaje: overlay a nivel de App (fuera de .tab-in), aparece encima
           del fondo de la zona en cuanto hay alguien esperando ahí (visitedActiveNpc) */}
       {tab === "chat" && visitedActiveNpc && (() => {

@@ -856,6 +856,11 @@ const NPCS = {
   /* en Elisa, "angry" es su cara de decepción contenida: para semanas flojas o cuando habla de entrenadora estricta */
   elisa: { name: "Elisa", color: "#2E6ED6", voice: "/audio/vozchica02.mp3", icon: "/images/elisa_icon.webp",
     arts: { idle: "/images/Elisa_idle.webp", happy: "/images/Elisa_happy.webp", angry: "/images/Elisa_angry.webp" }, def: "idle" },
+  /* Elisa "fuera de servicio": la misma Elisa, pero pillada relajada en el Parque o el
+     Restaurante de la Metrópolis, sin la careta de mánager puesta. Npc separado de "elisa"
+     solo para poder encolarla en esas zonas sin mezclarse con sus mensajes de oficina. Solo idle. */
+  elisa_casual: { name: "Elisa", color: "#2E6ED6", voice: "/audio/vozchica02.mp3", icon: "/images/elisa_icon.webp",
+    arts: { idle: "/images/elisa_casual.webp" }, def: "idle" },
   /* Dino: preparador físico-nutricional del Centro de Alto Rendimiento. Tímido, sin angry. */
   dino: { name: "Dino", color: "#3F8F5A", voice: "/audio/vozchico01.mp3", icon: "/images/dino_icon.webp",
     arts: { idle: "/images/dino_idle.webp", happy: "/images/dino_happy.webp" }, def: "idle" },
@@ -908,6 +913,7 @@ const senderToNpc = (from) => {
   if (from === "Irina") return "irina";
   if (from === "Igor") return "igor";
   if (from === "Fortuna") return "fortuna";
+  if (from === "Elisa Casual") return "elisa_casual";
   if (from === "López" || from.includes("Capitán") || from.includes("· Vestuario")) return "lopez";
   return null; /* prensa/afición/redes/club -> periódico */
 };
@@ -1664,6 +1670,38 @@ const FORTUNA_POOL = [
     { m: "happy", t: "Ninguna lo ha hecho todavía. Tú tampoco lo vas a hacer, aunque me hace gracia que lo intentes." }] },
 ];
 
+/* --- ELISA "FUERA DE SERVICIO" · la misma Elisa, pillada relajada en el Parque o el
+   Restaurante de la Metrópolis, sin la careta de mánager puesta. Tono más personal y
+   cercano que su versión de oficina. Solo idle: aquí no hay cara de decepción que valga. --- */
+const ELISA_CASUAL_POOL = [
+  { beats: [
+    { m: "idle", t: "Ay... no esperaba verte por aquí. Fuera de horario, quiero decir. Dame un segundo, que recompongo la cara de jefa." },
+    { m: "happy", t: "...Vale, no, mentira, hoy no tengo ganas de ponerme seria. Siéntate un momento, si quieres." }] },
+  { beats: [
+    { m: "idle", t: "¿Sabes qué es lo raro de este trabajo? Que la gente se sorprende al verme comer o pasear, como si el despacho fuera mi hábitat natural." },
+    { m: "happy", t: "Pues no, también tengo vida fuera de los contratos. Eso sí, mañana en la oficina no me acuerdo de esta conversación, que conste." }] },
+  { w: "win", t: "Vi el resultado desde aquí fuera, sin estar de servicio, para que conste. Buen partido. Ahora déjame disfrutarlo un rato sin hablar de cláusulas." },
+  { t: "¿Puedo hacerte una pregunta que no tenga nada que ver con fútbol?", replies: [
+    { t: "Claro, dispara", m: "happy", r: ["¿Qué haces tú por aquí cuando nadie te está mirando fichar nada? Tengo curiosidad genuina, no es pregunta de trabajo."] },
+    { t: "Mejor otro día", m: "idle", r: ["Vale, respeto el misterio. Aunque algún día te la voy a hacer igual, aviso desde ya."] }] },
+  { w: "loss", beats: [
+    { m: "idle", t: "Sé lo de ayer. Aquí fuera no te voy a soltar el sermón de mánager, tranquilo." },
+    { m: "happy", t: "Aquí solo te digo que mañana es otro día. El sermón, si hace falta, te lo guardo para el despacho." }] },
+  { beats: [
+    { m: "idle", t: "Curiosidad de oficina: cuando salgo de allí, de verdad se me olvida ser la que negocia tu próximo contrato." },
+    { m: "happy", t: "Aquí soy solo... yo. Rarísimo decirlo en voz alta, la verdad." }] },
+  { w: "hot", t: "{streak} días de racha, y te lo digo sin la calculadora delante, para variar. Simplemente... bien hecho." },
+  { beats: [
+    { m: "idle", t: "La gente se piensa que los mánagers no tenemos días libres." },
+    { m: "happy", t: "Los tenemos, lo que pasa es que se nos nota menos porque seguimos pensando en vosotros igualmente. Ocupacional, supongo." }] },
+  { t: "¿Te incomoda que te vea fuera del despacho?", replies: [
+    { t: "Un poco, sí", m: "idle", r: ["Lo entiendo. Yo también tardé en acostumbrarme a que la gente me viera sin la chaqueta de trabajo puesta, literal y figuradamente."] },
+    { t: "Para nada, prefiero verte así", m: "happy", r: ["Vaya... gracias. No sé si es el cumplido más raro que me han hecho, pero me lo quedo."] }] },
+  { beats: [
+    { m: "idle", t: "Oye, esto que quede entre nosotros, ¿vale? Lo de verme por aquí tan relajada." },
+    { m: "happy", t: "Mañana en la oficina vuelvo a ser la que te aprieta con los números. Hoy no. Hoy déjame ser solo Elisa un rato." }] },
+];
+
 /* goles a lo largo de TODA la carrera (todas las temporadas), para el hito del Centro de Alto Rendimiento */
 const careerGoals = (g) => (g.matchHistory || []).reduce((a, m) => a + (m.myGoals || 0), 0);
 /* hitos de constancia para desbloquear las zonas de La Metrópolis, contados sobre TODO el historial de logs */
@@ -1755,7 +1793,7 @@ const EXTRA_NPCS = [
    30.02 448.81 792.72, sobre el lienzo original de 480x822.74. */
 const METRO_MAP_VB = { x: 31.19, y: 30.02, w: 448.81, h: 792.72 };
 const METRO_ZONES = [
-  { id: "parque", kind: "npc", npc: null, label: "Parque", icon: "🌳", x: 30.70, y: 18.23,
+  { id: "parque", kind: "npc", npc: "elisa_casual", label: "Parque", icon: "🌳", x: 30.70, y: 18.23,
     pts: "199.15 80.02 81.19 286.08 105.7 333.35 259.66 93.01 199.15 80.02",
     unlocked: (g) => gymDaysCount(g) >= 5, reqLabel: "Completa 5 días de gym" },
   { id: "casino", kind: "npc", npc: "fortuna", label: "Casino", icon: "🎰", x: 47.63, y: 43.99,
@@ -1767,7 +1805,7 @@ const METRO_ZONES = [
   { id: "atico", kind: "npc", npc: null, label: "Ático de Lujo", icon: "🌇", x: 76.76, y: 63.06,
     pts: "353.11 469.13 347.74 507.48 294.89 602.97 445.02 666.29 460.34 464.53 353.11 469.13",
     unlocked: (g) => calcOVR(g.player.stats) >= 80, reqLabel: "Alcanza 80 de media" },
-  { id: "restaurante", kind: "npc", npc: "igor", label: "Restaurante", icon: "🍽️", x: 61.37, y: 81.68,
+  { id: "restaurante", kind: "npc", npc: ["igor", "elisa_casual"], label: "Restaurante", icon: "🍽️", x: 61.37, y: 81.68,
     pts: "284.94 620.02 223.66 727.26 294.89 776.28 377.62 688.96 335.49 662.91 344.68 647.24 284.94 620.02",
     unlocked: (g) => kcalGoalHits(g) >= 5, reqLabel: "Llega a tu objetivo de calorías 5 veces", metFlag: "metIgor", intro: IGOR_INTRO_BEATS },
 ];
@@ -4728,7 +4766,7 @@ export default function App() {
       /* y a veces, un personaje se pasa a verte al abrir la pestaña: se elige entre
          todos los que ya conoces (y también, a veces, algo genérico del vestuario/prensa) */
       if (Math.random() < 0.6) {
-        const candidates = [["López", LOPEZ_POOL], ["Elisa", ELISA_POOL]];
+        const candidates = [["López", LOPEZ_POOL], ["Elisa", ELISA_POOL], ["Elisa Casual", ELISA_CASUAL_POOL]];
         if (out.yunaMet) candidates.push(["Yuna", YUNA_POOL]);
         if (out.metDino) candidates.push(["Dino", DINO_POOL]);
         if (out.metPunky) candidates.push(["Punky", PUNKY_POOL]);

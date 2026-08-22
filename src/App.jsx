@@ -1246,7 +1246,10 @@ const mealsLoggedCount = (g) => Object.values(g.logs || {}).reduce((a, l) => a +
    de esa zona (coordenadas absolutas, sin tocar), para pintarla de gris con su
    silueta exacta cuando está bloqueada. Los nombres ya están dibujados en el propio
    SVG, así que aquí NO se repite ninguna etiqueta de texto. */
-const CITY_MAP_VB = { x: 36.3, y: 60.2, w: 417.1, h: 720 };
+/* mapa único: La Metrópolis se fusionó dentro de La Ciudad (mismo SVG, mismo lienzo
+   480x822.74), así que el viewBox recortado ahora cubre las 18 zonas de golpe en vez
+   de repartirlas en dos mapas independientes. */
+const CITY_MAP_VB = { x: 15, y: 60, w: 438, h: 720.3 };
 /* ============================================================
    DESBLOQUEO DE ZONAS · ya NO depende de estadísticas ni progreso del
    jugador (OVR, goles, temporada, hábitos, comidas...). Esas estadísticas
@@ -1257,7 +1260,10 @@ const CITY_MAP_VB = { x: 36.3, y: 60.2, w: 417.1, h: 720 };
    todavía (no se ha diseñado qué historia abre qué zona), así que solo
    Casa y Barrio están disponibles desde el principio y el resto se queda
    bloqueado hasta que el sistema de historias las abra más adelante. */
-const DEFAULT_UNLOCKED_ZONES = ["casa", "barrio"];
+/* discoteca: zona nueva en el SVG fusionado, todavía sin personaje ni historia asignada
+   (pendiente de contenido) — se deja siempre visible pero vacía, en vez de bloqueada sin
+   ningún evento narrativo que pueda desbloquearla nunca */
+const DEFAULT_UNLOCKED_ZONES = ["casa", "barrio", "discoteca"];
 const isZoneUnlocked = (g, zoneId) => (g.unlockedZones || DEFAULT_UNLOCKED_ZONES).includes(zoneId);
 const unlockZone = (g, zoneId) => {
   const cur = g.unlockedZones || DEFAULT_UNLOCKED_ZONES;
@@ -1265,49 +1271,79 @@ const unlockZone = (g, zoneId) => {
   return { ...g, unlockedZones: [...cur, zoneId] };
 };
 const ZONE_LOCKED_MSG = "Esta zona todavía no está disponible.";
+/* mapa único (ver comentario junto a CITY_MAP_VB): las 11 zonas que ya vivían en La
+   Ciudad conservan sus coordenadas (el SVG fusionado no las movió), y las 6 zonas que
+   antes eran de La Metrópolis (parque/casino/enfermeria/playa/atico/restaurante) se
+   añaden aquí con sus posiciones nuevas dentro del mismo lienzo — mismos id que ya
+   usaban las STORIES como stage.zone/alsoUnlock, así que ningún capítulo necesita
+   tocarse. "discoteca" es zona nueva del SVG sin personaje ni historia asignada todavía
+   (ver DEFAULT_UNLOCKED_ZONES): se deja visible y vacía a la espera de contenido. */
 const ZONES = [
-  { id: "oficina", kind: "npc", npc: "elisa", label: "Oficina", icon: "🏢", x: 18.62, y: 6.04,
-    pts: "52.3 87.7 55.7 137.4 204.8 129.6 204.8 76.2 52.3 87.7",
+  { id: "oficina", kind: "npc", npc: "elisa", label: "Oficina", icon: "🏢", x: 26.11, y: 6.63,
+    pts: "52.25 87.74 55.66 137.44 204.76 129.61 204.76 76.16 52.25 87.74",
     unlocked: (g) => isZoneUnlocked(g, "oficina") },
-  { id: "ciudad-dep", kind: "npc", npc: ["lopez", "elisa", "milly"], label: "Ciudad Deportiva", icon: "🏟️", x: 63.22, y: 30.73,
-    pts: "226.9 245 214.2 284.3 257.1 333.4 437.4 333.4 437.4 247.6 226.9 245",
+  { id: "ciudad-dep", kind: "npc", npc: ["lopez", "elisa", "milly"], label: "Ciudad Deportiva", icon: "🏟️", x: 68.40, y: 31.75,
+    pts: "226.89 245.01 214.21 284.33 257.1 333.35 437.36 333.35 437.36 247.57 226.89 245.01",
     unlocked: (g) => isZoneUnlocked(g, "ciudad-dep") },
-  { id: "kiosco", kind: "paper", npc: "milly", label: "Kiosco", icon: "📰", x: 69.23, y: 43.44,
-    pts: "303.1 345.6 367.9 345.6 356.7 410.5 320.6 406.9 299 383.4 303.1 345.6",
+  { id: "kiosco", kind: "paper", npc: "milly", label: "Kiosco", icon: "📰", x: 71.79, y: 44.20,
+    pts: "303.06 345.61 367.91 345.61 356.68 410.46 320.59 406.89 298.97 383.4 303.06 345.61",
     unlocked: (g) => isZoneUnlocked(g, "kiosco") },
   /* Tu Casa: sin personaje, es la pantalla de trofeos y estadísticas de tu carrera. Siempre disponible. */
   /* npc: "yuna" — casa sigue siendo la pantalla de trofeos (HouseRoom) por defecto, pero
      ahora también admite una escena de personaje encima (ver ZoneScreen: isHome no excluye
      ya pendingNpc), para las escenas de intimidad emocional de su campaña en Casa del jugador */
-  { id: "casa", kind: "home", npc: ["yuna", "lopez", "igor", "lisa"], label: "Tu Casa", icon: "🏠", x: 18.87, y: 44.54,
-    pts: "91.1 348.2 163.7 373.2 152.4 429.4 76.8 405.4 91.1 348.2",
+  { id: "casa", kind: "home", npc: ["yuna", "lopez", "igor", "lisa"], label: "Tu Casa", icon: "🏠", x: 24.20, y: 45.68,
+    pts: "91.14 348.16 163.66 373.18 152.42 429.35 76.85 405.35 91.14 348.16",
     unlocked: (g) => isZoneUnlocked(g, "casa") },
   /* varios personajes comparten esta zona de calle: la burbuja muestra a quien tenga
      algo pendiente ahora mismo (ver EXTRA_NPCS y CityMap); en reposo, el puntito de siempre */
-  { id: "barrio", kind: "npc", npc: ["yuna", "elisa", "milly", "lopez", "igor"], label: "El Barrio", icon: "🌆", x: 53.16, y: 58.16,
-    pts: "217.8 461 217.8 507.5 318.4 500 318.4 465.1 217.8 461",
+  { id: "barrio", kind: "npc", npc: ["yuna", "elisa", "milly", "lopez", "igor"], label: "El Barrio", icon: "🌆", x: 57.78, y: 58.78,
+    pts: "217.78 461.01 217.78 507.48 318.38 500 318.38 465.1 217.78 461.01",
     unlocked: (g) => isZoneUnlocked(g, "barrio") },
-  { id: "car", kind: "npc", npc: ["lopez", "lisa", "elisa", "igor"], label: "Centro de Alto Rendimiento", icon: "🏋️", x: 61.35, y: 17.42,
-    pts: "230 164.5 230 222 387.9 223.7 383.1 153.5 230 164.5",
+  { id: "car", kind: "npc", npc: ["lopez", "lisa", "elisa", "igor"], label: "Centro de Alto Rendimiento", icon: "🏋️", x: 66.84, y: 18.18,
+    pts: "229.95 164.5 229.95 222.03 387.91 223.74 383.14 153.52 229.95 164.5",
     unlocked: (g) => isZoneUnlocked(g, "car") },
-  { id: "prensa", kind: "npc", npc: ["milly", "lisa"], label: "Sala de Prensa", icon: "🎙️", x: 23.63, y: 31.90,
-    pts: "131.9 245 187.7 293.5 168.3 358.9 91.1 337.4 98.3 259.3 131.9 245",
+  { id: "prensa", kind: "npc", npc: ["milly", "lisa"], label: "Sala de Prensa", icon: "🎙️", x: 27.50, y: 33.16,
+    pts: "131.91 245.01 187.66 293.52 168.25 358.89 91.14 337.44 98.29 259.31 131.91 245.01",
     unlocked: (g) => isZoneUnlocked(g, "prensa") },
   /* la presentación de Karla ya no depende de metFlag/intro (eso duplicaba el prólogo real
      de KARLA_STORY en cuanto se desbloqueara la zona, igual que le pasaba a Igor/restaurante
      y le pasó de verdad a Milly antes de detectarlo): su propia historia ya se encarga */
-  { id: "patro", kind: "npc", npc: ["lisa", "elisa", "milly"], label: "Zona de Patrocinadores", icon: "🏙️", x: 31.70, y: 81.56,
-    pts: "131.2 570.8 86.3 660.7 163.3 715.5 190.8 690.4 214.2 702.1 245.3 669.4 185.9 599.7 131.2 570.8",
+  { id: "patro", kind: "npc", npc: ["lisa", "elisa", "milly"], label: "Zona de Patrocinadores", icon: "🏙️", x: 36.27, y: 83.07,
+    pts: "131.25 570.8 86.31 660.67 163.35 715.53 190.77 690.44 214.21 702.11 245.34 669.43 185.86 599.69 131.25 570.8",
     unlocked: (g) => isZoneUnlocked(g, "patro") },
-  { id: "cantera", kind: "npc", npc: "lopez", label: "Cantera", icon: "🎓", x: 86.33, y: 44.94,
-    pts: "377.1 345.6 437.4 343.6 426.6 442.1 363.8 442.1 377.1 345.6",
+  { id: "cantera", kind: "npc", npc: "lopez", label: "Cantera", icon: "🎓", x: 88.18, y: 46.28,
+    pts: "377.1 345.61 437.36 343.57 426.63 442.12 363.83 442.12 377.1 345.61",
     unlocked: (g) => isZoneUnlocked(g, "cantera") },
-  { id: "tienda", kind: "npc", npc: ["yuna", "lopez"], label: "Tienda Oficial", icon: "🛍️", x: 81.25, y: 65.05,
-    pts: "342.4 511.6 347 559.6 424.1 552.4 420 507.5 342.4 511.6",
+  { id: "tienda", kind: "npc", npc: ["yuna", "lopez"], label: "Tienda Oficial", icon: "🛍️", x: 84.10, y: 65.63,
+    pts: "342.38 511.57 346.97 559.57 424.08 552.42 420 507.48 342.38 511.57",
     unlocked: (g) => isZoneUnlocked(g, "tienda") },
-  { id: "estadio", kind: "npc", npc: ["lopez", "yuna", "elisa", "milly", "igor"], label: "Gran Estadio", icon: "🏆", x: 74.57, y: 87.82,
-    pts: "384.1 634.1 295 657.5 262.9 677.7 290.1 764.2 384.1 764.2 431.1 715.5 384.1 634.1",
+  { id: "estadio", kind: "npc", npc: ["lopez", "yuna", "elisa", "milly", "igor"], label: "Gran Estadio", icon: "🏆", x: 74.47, y: 89.16,
+    pts: "384.07 634.12 295.02 657.52 262.89 677.69 290.06 764.25 384.07 764.25 431.07 715.53 384.07 634.12",
     unlocked: (g) => isZoneUnlocked(g, "estadio"), big: true },
+  { id: "parque", kind: "npc", npc: ["elisa", "lisa", "milly", "yuna", "lopez"], label: "Parque", icon: "🌳", x: 47.99, y: 42.84,
+    pts: "204.76 310.38 181.53 393.1 289.27 402.29 204.76 310.38",
+    unlocked: (g) => isZoneUnlocked(g, "parque") },
+  { id: "casino", kind: "npc", npc: ["elisa", "lisa"], label: "Casino", icon: "🎰", x: 63.79, y: 72.25,
+    pts: "262.21 525.86 321.95 522.8 333.44 636.16 297.83 644.33 256.59 572.84 262.21 525.86",
+    unlocked: (g) => isZoneUnlocked(g, "casino") },
+  { id: "enfermeria", kind: "npc", npc: ["elisa", "milly"], label: "Enfermería", icon: "🏥", x: 70.56, y: 8.09,
+    pts: "269.53 96.59 375.7 85.45 379.45 140.6 271.57 150.46 269.53 96.59",
+    unlocked: (g) => isZoneUnlocked(g, "enfermeria") },
+  { id: "playa", kind: "npc", npc: ["elisa", "milly", "lopez", "lisa", "yuna", "igor"], label: "Playa", icon: "🏖️", x: 18.88, y: 62.76,
+    pts: "76.85 417.61 148.34 442.12 135.57 514.12 96.25 602.97 31.4 583.57 76.85 417.61",
+    unlocked: (g) => isZoneUnlocked(g, "playa") },
+  { id: "atico", kind: "npc", npc: ["elisa", "lisa"], label: "Ático de Lujo", icon: "🌇", x: 34.48, y: 19.29,
+    pts: "55.66 150.46 206.12 142.03 208.17 229.52 194.21 273.78 55.66 150.46",
+    unlocked: (g) => isZoneUnlocked(g, "atico") },
+  /* la presentación de Igor ya no depende de metFlag/intro (eso duplicaba el prólogo real
+     de IGOR_STORY en cuanto se desbloqueara la zona): su propia historia ya se encarga */
+  { id: "restaurante", kind: "npc", npc: ["igor", "elisa"], label: "Restaurante", icon: "🍽️", x: 51.41, y: 50.53,
+    pts: "295.06 414.55 314.29 442.12 171.83 437.01 179.49 402.29 295.06 414.55",
+    unlocked: (g) => isZoneUnlocked(g, "restaurante") },
+  { id: "discoteca", kind: "npc", npc: [], label: "Discoteca", icon: "🪩", x: 83.21, y: 57.68,
+    pts: "335.1 454.89 340.21 497.27 418.46 497.27 424.08 452.33 335.1 454.89",
+    unlocked: (g) => isZoneUnlocked(g, "discoteca") },
 ];
 /* home zone de cada personaje: dónde "vive" por defecto si una escena no especifica zona
    explícita (varios personajes están asignados a más de una zona ahora que la zona es
@@ -1332,52 +1368,7 @@ const zonePending = (z, game) => {
 const EXTRA_NPCS = [];
 
 /* ============================================================
-   LA METRÓPOLIS · segundo mapa, independiente del de La Ciudad
-   (su propio viaje, sus propias zonas/personajes y sus propias
-   misiones, para que el registro de misiones no las mezcle todas).
-   viewBox recortado con margen de seguridad (el SVG tiene mucho
-   contenido decorativo fuera de las siluetas de zona con nombre, así
-   que en vez de recortar pegado a esas siluetas —como en La Ciudad—
-   se deja un margen amplio alrededor y se limita a los bordes reales
-   del lienzo, para que nada de la ilustración quede cortado): 0 30.02
-   480 792.72, sobre el lienzo original de 480x822.74. */
-const METRO_MAP_VB = { x: 0, y: 30.02, w: 480, h: 792.72 };
-const METRO_ZONES = [
-  { id: "parque", kind: "npc", npc: ["elisa", "lisa", "milly", "yuna", "lopez"], label: "Parque", icon: "🌳", x: 35.20, y: 18.23,
-    pts: "199.15 80.02 81.19 286.08 105.7 333.35 259.66 93.01 199.15 80.02",
-    unlocked: (g) => isZoneUnlocked(g, "parque") },
-  { id: "casino", kind: "npc", npc: ["elisa", "lisa"], label: "Casino", icon: "🎰", x: 51.03, y: 43.99,
-    pts: "220.6 343.57 206.85 417.61 281.87 429.86 294.89 358.89 220.6 343.57",
-    unlocked: (g) => isZoneUnlocked(g, "casino") },
-  { id: "enfermeria", kind: "npc", npc: ["elisa", "milly"], label: "Enfermería", icon: "🏥", x: 86.65, y: 22.97,
-    pts: "402.89 159.68 353.11 256.96 460.34 286.08 460.34 197.98 402.89 159.68",
-    unlocked: (g) => isZoneUnlocked(g, "enfermeria") },
-  { id: "playa", kind: "npc", npc: ["elisa", "milly", "lopez", "lisa", "yuna", "igor"], label: "Playa", icon: "🏖️", x: 12.16, y: 49.44,
-    pts: "22.21 382.57 22.21 562.57 125.62 399.43 99.57 382.57 22.21 382.57",
-    unlocked: (g) => isZoneUnlocked(g, "playa") },
-  { id: "atico", kind: "npc", npc: ["elisa", "lisa"], label: "Ático de Lujo", icon: "🌇", x: 78.27, y: 63.06,
-    pts: "353.11 469.13 347.74 507.48 294.89 602.97 445.02 666.29 460.34 464.53 353.11 469.13",
-    unlocked: (g) => isZoneUnlocked(g, "atico") },
-  /* la presentación de Igor ya no depende de metFlag/intro (eso duplicaba el prólogo real
-     de IGOR_STORY en cuanto se desbloqueara la zona): su propia historia ya se encarga */
-  { id: "restaurante", kind: "npc", npc: ["igor", "elisa"], label: "Restaurante", icon: "🍽️", x: 63.88, y: 81.68,
-    pts: "284.94 620.02 223.66 727.26 294.89 776.28 377.62 688.96 335.49 662.91 344.68 647.24 284.94 620.02",
-    unlocked: (g) => isZoneUnlocked(g, "restaurante") },
-];
-const METRO_EXTRA_NPCS = [];
-/* METRO_QUESTS + QUESTS (más abajo) son la fuente de datos de STORIES.
-   Vacías a propósito: las misiones/diálogos anteriores se han retirado
-   para que las historias reales de cada personaje se diseñen desde cero
-   más adelante, sin contenido antiguo de por medio. El motor (toStories,
-   checkStories, QuestPanel) ya está listo para recibir personaje →
-   capítulos → etapas en cuanto se escriban. */
-const METRO_QUESTS = {};
-/* todas las zonas de ambos mapas juntas, solo para resolver "en qué zona estoy"
-   sin que importe desde qué mapa se abrió (los id no se repiten entre mapas) */
-const ALL_ZONES = [...ZONES, ...METRO_ZONES];
-
-/* ============================================================
-   MISIONES · vacías a propósito (ver comentario junto a METRO_QUESTS).
+   MISIONES · vacías a propósito (ver comentario más abajo).
    Las 4 misiones de 4 etapas que había aquí antes (Elisa, López, Yuna,
    Karla, Milly) se han retirado por completo: eran contenido narrativo
    provisional, y la idea es escribir las historias reales desde cero
@@ -1394,7 +1385,7 @@ const QUESTS = {};
    etapas/objetivos/escenas) → CAPÍTULO SIGUIENTE.
 
    Por ahora cada personaje tiene exactamente UN capítulo (el que antes
-   era su "misión de 4 etapas" en QUESTS/METRO_QUESTS) — se conserva
+   era su "misión de 4 etapas" en QUESTS) — se conserva
    sin reescribir ni una línea, solo envuelto en la forma de capítulo,
    para que el motor de aquí abajo (checkStories) ya funcione sobre la
    estructura definitiva y las futuras historias completas (varios
@@ -3197,15 +3188,9 @@ const KARLA_STORY = {
   }],
 };
 
-/* separadas por mapa (para el registro de misiones de cada uno) y también fusionadas
-   (para el motor, al que no le importa desde qué mapa se desbloqueó cada historia).
-   Las historias de Elisa, Milly, Yuna, López, Igor y Karla se añaden a los dos registros
-   porque sus escenas se reparten entre zonas de La Ciudad y de La Metrópolis: así el panel
-   de Misiones las muestra estés donde estés, no solo desde el mapa donde tocara
-   desbloquearlas. */
-const STORIES_CIUDAD = { ...toStories(QUESTS), elisa: ELISA_STORY, milly: MILLY_STORY, yuna: YUNA_STORY, lopez: LOPEZ_STORY, igor: IGOR_STORY, lisa: KARLA_STORY };
-const STORIES_METRO = { ...toStories(METRO_QUESTS), elisa: ELISA_STORY, milly: MILLY_STORY, yuna: YUNA_STORY, lopez: LOPEZ_STORY, igor: IGOR_STORY, lisa: KARLA_STORY };
-const STORIES = { ...STORIES_CIUDAD, ...STORIES_METRO };
+/* registro único: desde la fusión de La Metrópolis dentro de La Ciudad ya no hace
+   falta separar por mapa (todas las zonas conviven en el mismo SVG). */
+const STORIES = { ...toStories(QUESTS), elisa: ELISA_STORY, milly: MILLY_STORY, yuna: YUNA_STORY, lopez: LOPEZ_STORY, igor: IGOR_STORY, lisa: KARLA_STORY };
 
 /* ============================================================
    OBJETOS COLECCIONABLES · dos tipos: "consumable" (los usas, dan
@@ -5717,21 +5702,18 @@ export default function App() {
   const [openCard, setOpenCard] = useState(null); // npc de la carta de personaje abierta en la galería
   const [showQuests, setShowQuests] = useState(false); // registro de misiones
   const [showInventory, setShowInventory] = useState(false); // objetos coleccionables
-  const [activeMap, setActiveMap] = useState("ciudad"); // "ciudad" o "metropoli": qué mapa se ve en la pestaña Ciudad
   const saveTimer = useRef();
 
   const pushToast = (t) => { setToast(t); setTimeout(() => setToast(null), 3200); };
-  /* como el periódico: al salir de la pestaña Ciudad, cualquier visita/periódico/registro abierto se cierra,
-     y se vuelve al mapa de La Ciudad para no dejarte "perdido" en la Metrópolis la próxima vez que entres */
-  useEffect(() => { if (tab !== "chat") { setVisitedZone(null); setShowPaper(false); setShowQuests(false); setShowInventory(false); setActiveMap("ciudad"); } }, [tab]);
+  /* al salir de la pestaña Ciudad, cualquier visita/periódico/registro abierto se cierra */
+  useEffect(() => { if (tab !== "chat") { setVisitedZone(null); setShowPaper(false); setShowQuests(false); setShowInventory(false); } }, [tab]);
   /* quién tiene algo pendiente en la zona que estás visitando ahora: se recalcula solo
      en cada render, así que en cuanto se vacía su cola la pantalla pasa sola al cartel
-     de "no hay nadie" sin necesidad de un efecto aparte que pueda desincronizarse.
-     ALL_ZONES junta las zonas de los dos mapas, así da igual desde cuál se abrió. */
+     de "no hay nadie" sin necesidad de un efecto aparte que pueda desincronizarse. */
   /* comprobación extra de bloqueo aquí también (no solo en el clic del mapa): una zona
      bloqueada nunca debe poder "visitarse" aunque algo dejara visitedZone con su id. */
   const visitedZoneObj = visitedZone && game && isZoneUnlocked(game, visitedZone)
-    ? ALL_ZONES.find((z) => z.id === visitedZone) : null;
+    ? ZONES.find((z) => z.id === visitedZone) : null;
   const visitedActiveNpc = visitedZoneObj ? zoneActiveNpc(visitedZoneObj, game ? (game.npcQueue || []) : []) : null;
 
   /* mensajes en 2ª persona -> cola de diálogos NPC; 3ª persona -> artículo del periódico.
@@ -5805,7 +5787,7 @@ export default function App() {
      acción que pueda mover el requisito: media, goles de carrera o ascenso de categoría. */
   const checkZoneUnlocks = (g) => {
     let out = g;
-    [...ZONES, ...EXTRA_NPCS, ...METRO_ZONES, ...METRO_EXTRA_NPCS].forEach((z) => {
+    [...ZONES, ...EXTRA_NPCS].forEach((z) => {
       if (!z.metFlag || out[z.metFlag] || (out.introQueued && out.introQueued[z.metFlag]) || !z.unlocked(out)) return;
       /* el flag "ya lo conoces" no se marca aquí: se marca cuando el jugador lee la escena
          de verdad (applyOnRead), para no dar por vista una conversación que se perdió */
@@ -6570,12 +6552,9 @@ export default function App() {
               notify={pushToast} onGoGym={() => setTab("gym")} onAddNote={addNote} onDelNote={delNote} />}
             {tab === "gym" && <GymTab game={game} api={gymApi} notify={pushToast} />}
             {tab === "league" && <LeagueTab game={game} onPlayMatch={playMatch} crest={crest} crestScale={crestScale} />}
-            {tab === "chat" && activeMap === "ciudad" && (
+            {tab === "chat" && (
               <CityMap game={game} onVisit={setVisitedZone} zones={ZONES} vb={CITY_MAP_VB}
                 svgSrc="/images/city-map.svg" mapLabel="La Ciudad" />)}
-            {tab === "chat" && activeMap === "metropoli" && (
-              <CityMap game={game} onVisit={setVisitedZone} zones={METRO_ZONES} vb={METRO_MAP_VB}
-                svgSrc="/images/metropolis-map.svg" mapLabel="La Metrópolis" />)}
             {tab === "me" && <ProfileTab game={game} photo={photo} onWeight={addWeight} onPhoto={savePhoto} onRemovePhoto={removePhoto}
               crest={crest} onCrest={saveCrest} onRemoveCrest={removeCrest} crestScale={crestScale} onCrestScale={saveCrestScale}
               onGoals={setGoals} getBackup={getBackup} onRestore={restoreBackup} haptics={haptics} onHaptics={setHapticsPref}
@@ -6615,13 +6594,9 @@ export default function App() {
         <div className="quest-fab-wrap">
           <button className="quest-fab" onClick={() => setShowQuests(true)} aria-label="Misiones">📜</button>
           <button className="quest-fab" onClick={() => setShowInventory(true)} aria-label="Inventario">🎒</button>
-          <button className="quest-fab" onClick={() => setActiveMap(activeMap === "ciudad" ? "metropoli" : "ciudad")}
-            aria-label={activeMap === "ciudad" ? "Viajar a la Metrópolis" : "Volver a La Ciudad"}>
-            {activeMap === "ciudad" ? "🌆" : "🏙️"}</button>
         </div>)}
       {tab === "chat" && showQuests && (
-        <QuestPanel game={game} onClose={() => setShowQuests(false)}
-          storiesRegistry={activeMap === "ciudad" ? STORIES_CIUDAD : STORIES_METRO} />)}
+        <QuestPanel game={game} onClose={() => setShowQuests(false)} storiesRegistry={STORIES} />)}
       {tab === "chat" && showInventory && (
         <InventoryPanel game={game} onClose={() => setShowInventory(false)} onUseItem={useItem} onGiveItem={giveItemTo} />)}
       {game.pendingSummary && !liveMatch && (

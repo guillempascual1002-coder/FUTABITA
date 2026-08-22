@@ -6946,10 +6946,21 @@ export default function App() {
          se iba encolando. Las ofertas y los mensajes que confirman un hito (applyOnRead)
          nunca se descartan: si se perdieran, el estado avanzaría sin que el jugador hubiera
          leído la escena. */
-      if (q.length >= 12) { const i = q.findIndex((e) => e.kind !== "offer" && !e.applyOnRead); if (i >= 0) q.splice(i, 1); }
+      /* el desalojo debe llevarse la escena ENTERA (mismo sceneId), nunca una frase suelta:
+         si solo se descartara la frase encontrada, una escena larga podía perder sus primeras
+         frases y dejar solo la última (protegida por su applyOnRead) — el jugador entraba a
+         la burbuja y "saltaba" directo al cierre, sin ver el resto de la conversación. */
+      if (q.length >= 12) {
+        const bad = q.find((e) => e.kind !== "offer" && !e.applyOnRead
+          && !q.some((o) => e.sceneId && o.sceneId === e.sceneId && o.applyOnRead));
+        if (bad) {
+          if (bad.sceneId) { for (let i = q.length - 1; i >= 0; i--) if (q[i].sceneId === bad.sceneId) q.splice(i, 1); }
+          else q.splice(q.indexOf(bad), 1);
+        }
+      }
       q.push({ id: Date.now() + Math.random(), npc, mood: extra.mood || moodOf(npc, text), text,
         kind: extra.kind, offer: extra.offer, replies: extra.replies, applyOnRead: extra.applyOnRead, zone: extra.zone,
-        fish: extra.fish, afterBeats: extra.afterBeats, freeFish: extra.freeFish });
+        fish: extra.fish, afterBeats: extra.afterBeats, freeFish: extra.freeFish, sceneId: extra.sceneId });
       return { ...g, npcQueue: q };
     }
     const today = todayStr();
@@ -6967,8 +6978,10 @@ export default function App() {
      cuente la escena entera y no solo su último mensaje. */
   const addScene = (g, from, beats, extra = {}) => {
     let out = g;
+    const sceneId = beats.length > 1 ? Date.now() + Math.random() : undefined;
     beats.forEach((b, i) => {
-      out = addMsg(out, from, b.t, i === beats.length - 1 ? { mood: b.m, ...extra } : { mood: b.m, zone: extra.zone });
+      out = addMsg(out, from, b.t, i === beats.length - 1
+        ? { mood: b.m, ...extra, sceneId } : { mood: b.m, zone: extra.zone, sceneId });
     });
     return out;
   };

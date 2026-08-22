@@ -1028,6 +1028,14 @@ const NPCS = {
     arts: { happy: "/images/nina/nina_happy.webp", orgullosa: "/images/nina/nina_orgullosa.webp",
       seria: "/images/nina/nina_seria.webp", sorprendida: "/images/nina/nina_sorprendida.webp",
       "lanzandocaña": "/images/nina/nina_lanzandocaña.webp" }, def: "seria" },
+  /* Coco: la tendera errante (ver COCO_STORY y game.cocoVisit/refreshCocoVisit — no tiene
+     zona fija, cambia de localización cada 5 días). El documento solo define idle/blush/
+     sorprendida (y pide explícitamente "no hacen falta más poses por ahora"), pero su
+     guion sí usa [seria] varias veces sin asset propio — sustituido por "idle", su
+     registro neutro, en vez de dejar una imagen rota o inventar un asset nuevo. */
+  coco: { name: "Coco", color: "#2EA88A", voice: "/audio/vozchica01.mp3", icon: "/images/coco/coco_icon.webp",
+    arts: { idle: "/images/coco/coco_idle.webp", blush: "/images/coco/coco_blush.webp",
+      sorprendida: "/images/coco/coco_sorprendida.webp" }, def: "idle" },
 };
 /* el sender siempre es el nombre real del personaje ahora (la zona ya no crea una
    identidad de sender distinta: es contexto de la escena, ver campo "zone" en addMsg/addScene) */
@@ -1040,6 +1048,7 @@ const senderToNpc = (from) => {
   if (from === "López" || from.includes("Capitán") || from.includes("· Vestuario")) return "lopez";
   if (from === "Beka") return "beka";
   if (from === "Nina") return "nina";
+  if (from === "Coco") return "coco";
   return null; /* prensa/afición/redes/club -> periódico */
 };
 const paperSec = (from) =>
@@ -1317,7 +1326,7 @@ const ZONES = [
     unlocked: (g) => isZoneUnlocked(g, "casa") },
   /* varios personajes comparten esta zona de calle: la burbuja muestra a quien tenga
      algo pendiente ahora mismo (ver EXTRA_NPCS y CityMap); en reposo, el puntito de siempre */
-  { id: "barrio", kind: "npc", npc: ["yuna", "elisa", "milly", "lopez", "igor", "beka"], label: "El Barrio", icon: "🌆", x: 57.78, y: 58.78,
+  { id: "barrio", kind: "npc", npc: ["yuna", "elisa", "milly", "lopez", "igor", "beka", "coco"], label: "El Barrio", icon: "🌆", x: 57.78, y: 58.78,
     pts: "217.78 461.01 217.78 507.48 318.38 500 318.38 465.1 217.78 461.01",
     unlocked: (g) => isZoneUnlocked(g, "barrio") },
   { id: "car", kind: "npc", npc: ["lopez", "lisa", "elisa", "igor", "beka"], label: "Centro de Alto Rendimiento", icon: "🏋️", x: 66.84, y: 18.18,
@@ -1379,10 +1388,19 @@ const zoneNpcList = (z) => (Array.isArray(z.npc) ? z.npc : z.npc ? [z.npc] : [])
 /* una entrada de npcQueue cuenta para una zona si su "zone" explícito coincide, o si no
    lleva zone y esta es la home zone del personaje (compat con escenas sin contexto de zona) */
 const entryMatchesZone = (e, zoneId) => e.zone ? e.zone === zoneId : HOME_ZONE[e.npc] === zoneId;
-/* quién de esa zona tiene algo pendiente que contar AHORA MISMO (null si nadie) */
-const zoneActiveNpc = (z, npcQueue) => zoneNpcList(z).find((n) => npcQueue.some((e) => e.npc === n && entryMatchesZone(e, z.id))) || null;
+/* quién de esa zona tiene algo pendiente que contar AHORA MISMO (null si nadie).
+   Coco no tiene zona fija (ver game.cocoVisit/refreshCocoVisit): mientras esté de
+   visita en esta zona, aparece como "activa" aquí igual que cualquier personaje con
+   una escena pendiente, tenga o no diálogo de historia en la cola ahora mismo (así su
+   tienda ambulante siempre se ve en el mapa durante toda la visita, no solo el rato en
+   que hay una frase nueva que leer). */
+const zoneActiveNpc = (z, npcQueue, game) => {
+  if (game && game.cocoVisit && game.cocoVisit.zone === z.id) return "coco";
+  return zoneNpcList(z).find((n) => npcQueue.some((e) => e.npc === n && entryMatchesZone(e, z.id))) || null;
+};
 const zonePending = (z, game) => {
   const npcQueue = game.npcQueue || [];
+  if (game.cocoVisit && game.cocoVisit.zone === z.id) return true;
   if (z.kind === "paper") return (!!game.paper && game.paperRead !== todayStr()) || (z.npc && npcQueue.some((e) => e.npc === z.npc && entryMatchesZone(e, z.id)));
   return zoneNpcList(z).some((n) => npcQueue.some((e) => e.npc === n && entryMatchesZone(e, z.id)));
 };
@@ -3878,9 +3896,241 @@ const NINA_STORY = {
   }],
 };
 
+/* ============================================================
+   COCO · la tendera errante. No tiene zona fija: cada 5 días reaparece
+   en una localización desbloqueada al azar (ver refreshCocoVisit,
+   llamado desde checkZoneUnlocks — así se comprueba en cada punto en
+   el que ya se comprobaban zonas/historias, sin tocar cada llamada
+   una a una). Su función principal es la tienda (comprar/vender
+   objetos, ver CocoShop/buyFromCoco/sellToCoco más abajo en App);
+   su historia es un hilo secundario sobre esa misma tienda.
+
+   game.cocoVisit = { day, zone, products: [{ id, price, sold }] } —
+   generado una vez cada 5 días y fijo hasta la siguiente visita (el
+   documento pide explícitamente que abrir/cerrar la tienda no
+   rerollee nada). game.cocoLog = últimas transacciones (compra/venta,
+   con precio, día, zona y a qué visita pertenecían) — es lo que usan
+   los check() de las etapas para detectar "compra algo", "vende
+   algo", "compra por 40 o menos", etc., exactamente igual que
+   matchHistory se usa para los objetivos de partido en el resto de
+   personajes. */
+const COCO_CONSUMABLES = ["botiquin", "libreta_tactica", "especias_raras", "bebida_energetica", "amuleto_suerte", "zapatillas"];
+const refreshCocoVisit = (g) => {
+  const today = todayStr();
+  if (g.cocoVisit && dayDiff(g.cocoVisit.day, today) < 5) return g;
+  const validZones = ZONES.filter((z) => z.unlocked(g));
+  if (!validZones.length) return g;
+  const zone = pick(validZones).id;
+  const ids = [...COCO_CONSUMABLES].sort(() => Math.random() - 0.5).slice(0, 3);
+  const products = ids.map((id) => ({ id, price: Math.floor(rnd(30, 61)), sold: false }));
+  return { ...g, cocoVisit: { day: today, zone, products } };
+};
+/* precio de venta al azar dentro del rango del pez (ver ITEMS[id].sellMin/sellMax) —
+   se roza una sola vez por apertura del panel VENDER (ver CocoShop), no en cada render,
+   para que el precio mostrado y el cobrado sean siempre el mismo número. */
+const rollSellPrice = (itemId) => {
+  const it = ITEMS[itemId];
+  if (!it || it.sellMin == null) return 0;
+  return Math.floor(rnd(it.sellMin, it.sellMax + 1));
+};
+/* cuántas visitas DISTINTAS (por día de visita) tienen alguna entrada del tipo pedido
+   desde una fecha — para "en 2/3 visitas diferentes" (capítulos 4 y 9) */
+const cocoDistinctVisits = (g, since, types) =>
+  new Set((g.cocoLog || []).filter((e) => e.day >= since && types.includes(e.type)).map((e) => e.visitDay)).size;
+const COCO_STORY = {
+  npc: "coco",
+  chapters: [{
+    id: "cap1",
+    title: "La historia de Coco",
+    trigger: () => true,
+    stages: [
+      /* PRÓLOGO — La chica que vende cosas (único punto con zona fija: el resto de
+         capítulos ocurre allá donde Coco esté de visita, ver queueStageScene) */
+      { title: "La chica que vende cosas", zone: "barrio",
+        objective: "Consigue 20 monedas y vuelve a hablar con Coco.",
+        intro: [
+          { m: "idle", t: "¿Tú eres nuevo por aquí?" },
+          { m: "happy", t: "No pongas esa cara. No te estoy intentando vender nada todavía." },
+          { m: "blush", t: "Bueno... todavía." },
+          { m: "idle", t: "Me llamo Coco. Voy de un sitio a otro vendiendo cosas." },
+          { m: "happy", t: "Cosas útiles, cosas raras y cosas que la gente dice que no necesita hasta que las necesita." },
+          { m: "idle", t: "Llevo mucho tiempo haciendo esto." },
+          { m: "happy", t: "Es una vida bastante cómoda si no te importa dormir cada noche en un sitio distinto." },
+          { m: "idle", t: "Aunque tiene una ventaja." },
+          { m: "happy", t: "Siempre encuentras algo nuevo." },
+        ],
+        setFlags: ["cocoMet"],
+        snap: (g) => ({ fichas: g.fichas || 0 }),
+        check: (g, snap) => (g.fichas || 0) >= snap.fichas + 20 },
+      /* CAPÍTULO 1 — Primera compra */
+      { title: "Primera compra",
+        objective: "Compra un consumible a Coco.",
+        intro: [
+          { m: "happy", t: "Mira, justo a tiempo." },
+          { m: "idle", t: "Hoy tengo algunas cosas que podrían interesarte." },
+          { m: "blush", t: "Y no, no lo digo porque quiera venderte algo." },
+          { m: "happy", t: "Bueno, sí. Exactamente por eso." },
+          { m: "idle", t: "Lo consumes y notas el efecto." },
+          { m: "happy", t: "Mucho más práctico que llevar una piedra de recuerdo en el bolsillo." },
+        ],
+        snap: () => ({ since: todayStr() }),
+        check: (g, snap) => (g.cocoLog || []).some((e) => e.type === "buy" && e.day >= snap.since) },
+      /* CAPÍTULO 2 — También compro */
+      { title: "También compro",
+        objective: "Vende un objeto a Coco.",
+        intro: [
+          { m: "idle", t: "¿Sabes cuál es la otra mitad de mi trabajo?" },
+          { m: "happy", t: "Comprar cosas." },
+          { m: "blush", t: "Sí, ya sé que parece demasiado obvio." },
+          { m: "idle", t: "Pero si quieres que siga trayendo mercancía, necesito que alguien me venda cosas a mí." },
+          { m: "happy", t: "Y ahí entras tú." },
+          { m: "happy", t: "Tú consigues monedas y yo consigo mercancía." },
+          { m: "blush", t: "Los dos salimos ganando. En teoría." },
+        ],
+        snap: () => ({ since: todayStr() }),
+        check: (g, snap) => (g.cocoLog || []).some((e) => e.type === "sell" && e.day >= snap.since) },
+      /* CAPÍTULO 3 — No todo vale lo mismo */
+      { title: "No todo vale lo mismo",
+        objective: "Compra un objeto cuyo precio sea de 40 monedas o menos.",
+        intro: [
+          { m: "idle", t: "Te voy a enseñar algo importante." },
+          { m: "idle", t: "Los precios cambian." },
+          { m: "happy", t: "No me mires así. El mundo funciona de esa manera." },
+          { m: "blush", t: "Bueno... mi mundo, por lo menos." },
+          { m: "idle", t: "Cada vez que vuelvo puedo haber conseguido la misma cosa a un precio distinto." },
+          { m: "happy", t: "Si ves una ganga, cómprala. Si está cara, quizá quieras esperar." },
+        ],
+        snap: () => ({ since: todayStr() }),
+        check: (g, snap) => (g.cocoLog || []).some((e) => e.type === "buy" && e.day >= snap.since && e.price <= 40) },
+      /* CAPÍTULO 4 — ¿De dónde sacas todo esto? */
+      { title: "¿De dónde sacas todo esto?",
+        objective: "Compra 2 consumibles en dos visitas diferentes.",
+        intro: [
+          { m: "idle", t: "Siempre me preguntáis lo mismo." },
+          { m: "happy", t: "¿De dónde saco las cosas?" },
+          { m: "blush", t: "De sitios." },
+          { m: "happy", t: "Muy concretamente, de sitios." },
+          { m: "idle", t: "Hay cosas que encuentro, cosas que intercambio y cosas que compro antes de que nadie sepa que las quiere." },
+          { m: "happy", t: "Ese último método es mi favorito." },
+        ],
+        snap: () => ({ since: todayStr() }),
+        check: (g, snap) => cocoDistinctVisits(g, snap.since, ["buy"]) >= 2 },
+      /* CAPÍTULO 5 — Lo que llevas encima */
+      { title: "Lo que llevas encima",
+        objective: "Vende objetos hasta conseguir 100 monedas acumuladas.",
+        intro: [
+          { m: "idle", t: "Tienes más cosas de las que pensaba." },
+          { m: "happy", t: "¿Guardas todo?" },
+          { m: "blush", t: "¿Incluso cosas que claramente no vas a usar?" },
+          { m: "idle", t: "No te preocupes. Yo no juzgo." },
+          { m: "happy", t: "Bueno, un poquito." },
+          { m: "idle", t: "No necesitas convertir cada cosa en dinero." },
+          { m: "idle", t: "Pero si no vas a usar algo, quizá otra persona pueda aprovecharlo." },
+        ],
+        snap: () => ({ since: todayStr() }),
+        check: (g, snap) => (g.cocoLog || []).filter((e) => e.type === "sell" && e.day >= snap.since)
+          .reduce((sum, e) => sum + e.price, 0) >= 100 },
+      /* CAPÍTULO 6 — La mercancía rara */
+      { title: "La mercancía rara",
+        objective: "Compra un consumible y consúmelo.",
+        intro: [
+          { m: "sorprendida", t: "Espera." },
+          { m: "sorprendida", t: "¿Sabes lo que tengo hoy?" },
+          { m: "happy", t: "No. Mejor dicho: lo que conseguí hoy." },
+          { m: "idle", t: "No aparece todos los días." },
+          { m: "blush", t: "Y tampoco voy a contarte cómo lo conseguí." },
+          { m: "happy", t: "¿Ves? A veces merece la pena guardar monedas." },
+        ],
+        snap: (g) => ({ since: todayStr(), itemsUsedCount: g.itemsUsedCount || 0 }),
+        subs: [
+          (g, snap) => (g.cocoLog || []).some((e) => e.type === "buy" && e.day >= snap.since),
+          (g, snap) => (g.itemsUsedCount || 0) > snap.itemsUsedCount,
+        ],
+        check: (g, snap) => (g.cocoLog || []).some((e) => e.type === "buy" && e.day >= snap.since) &&
+          (g.itemsUsedCount || 0) > snap.itemsUsedCount },
+      /* CAPÍTULO 7 — Una ciudad llena de cosas */
+      { title: "Una ciudad llena de cosas",
+        objective: "Encuentra a Coco en una localización distinta a la visita anterior y compra o vende un objeto.",
+        intro: [
+          { m: "happy", t: "¿Te sorprende verme aquí?" },
+          { m: "idle", t: "A mí no." },
+          { m: "happy", t: "Si vendo siempre en el mismo sitio, dejo de ser una tendera errante." },
+          { m: "seria", t: "Además, cada barrio tiene cosas diferentes." },
+          { m: "happy", t: "Y clientes diferentes." },
+        ],
+        snap: (g) => ({ since: todayStr(), prevZone: g.cocoVisit ? g.cocoVisit.zone : null }),
+        check: (g, snap) => (g.cocoLog || []).some((e) => (e.type === "buy" || e.type === "sell") &&
+          e.day >= snap.since && e.zone !== snap.prevZone) },
+      /* CAPÍTULO 8 — Una buena oportunidad */
+      { title: "Una buena oportunidad",
+        objective: "Compra un consumible por 30–35 monedas.",
+        intro: [
+          { m: "idle", t: "Hoy estás de suerte." },
+          { m: "happy", t: "No porque hayas ganado en el casino." },
+          { m: "blush", t: "Aunque tampoco voy a preguntarte cómo te fue." },
+          { m: "idle", t: "Tengo una cosa que normalmente vendería mucho más cara." },
+          { m: "happy", t: "Pero voy a hacerte un precio especial." },
+          { m: "blush", t: "No digas que nunca hago descuentos." },
+        ],
+        snap: () => ({ since: todayStr() }),
+        check: (g, snap) => (g.cocoLog || []).some((e) => e.type === "buy" && e.day >= snap.since && e.price >= 30 && e.price <= 35) },
+      /* CAPÍTULO 9 — La ruta de Coco */
+      { title: "La ruta de Coco",
+        objective: "Realiza compras o ventas con Coco en 3 visitas diferentes.",
+        intro: [
+          { m: "seria", t: "¿Sabes qué es lo más cansado de ir de un sitio a otro?" },
+          { m: "happy", t: "Que todo el mundo cree que es divertido." },
+          { m: "seria", t: "Y sí, lo es." },
+          { m: "seria", t: "Pero también significa que nunca tienes un lugar que sea realmente tuyo." },
+          { m: "idle", t: "Supongo que por eso me gusta volver aquí." },
+          { m: "blush", t: "Ya conozco algunas caras." },
+          { m: "happy", t: "Y algunas personas incluso compran cosas." },
+        ],
+        snap: () => ({ since: todayStr() }),
+        check: (g, snap) => cocoDistinctVisits(g, snap.since, ["buy", "sell"]) >= 3 },
+      /* CAPÍTULO 10 — Lo que realmente busca */
+      { title: "Lo que realmente busca",
+        objective: "Compra un objeto y vende otro en la misma visita.",
+        intro: [
+          { m: "seria", t: "Te voy a contar un secreto." },
+          { m: "blush", t: "Pero si se lo cuentas a todo el mundo, voy a negarlo." },
+          { m: "seria", t: "No empecé a viajar para vender cosas." },
+          { m: "idle", t: "Empecé porque buscaba algo." },
+          { m: "happy", t: "Una cosa concreta." },
+          { m: "seria", t: "Nunca lo encontré." },
+          { m: "happy", t: "Y con el tiempo me di cuenta de que quizá la gracia era seguir buscando." },
+          { m: "idle", t: "Cada ciudad, cada tienda, cada persona... siempre aparece algo que no esperabas." },
+          { m: "happy", t: "Eso es lo que hacemos tú y yo." },
+          { m: "blush", t: "Tú me traes cosas. Yo te traigo cosas." },
+          { m: "happy", t: "Y ninguno sabe exactamente qué vamos a encontrar la próxima vez." },
+        ],
+        snap: () => ({ since: todayStr() }),
+        check: (g, snap) => {
+          const entries = (g.cocoLog || []).filter((e) => e.day >= snap.since);
+          const buys = new Set(entries.filter((e) => e.type === "buy").map((e) => e.visitDay));
+          const sells = new Set(entries.filter((e) => e.type === "sell").map((e) => e.visitDay));
+          return [...buys].some((v) => sells.has(v));
+        } },
+      /* FINAL — Nos vemos en cinco días (última etapa: final:true, sin recompensa de
+         objeto — el documento no pide ninguna, solo el flag de cierre) */
+      { title: "Nos vemos en cinco días", final: true,
+        intro: [
+          { m: "happy", t: "Bueno, ya sabes cómo funciona." },
+          { m: "idle", t: "Cada cinco días volveré a aparecer." },
+          { m: "happy", t: "Puede que traiga algo increíble." },
+          { m: "blush", t: "Puede que traiga basura." },
+          { m: "happy", t: "Y puede que te pida una cantidad absurda de dinero por cualquiera de las dos." },
+          { m: "seria", t: "Pero siempre puedes esperar a la siguiente visita." },
+          { m: "happy", t: "Aunque si ves una ganga... yo no esperaría demasiado." },
+        ],
+        setFlags: ["cocoStoryComplete"] },
+    ],
+  }],
+};
+
 /* registro único: desde la fusión de La Metrópolis dentro de La Ciudad ya no hace
    falta separar por mapa (todas las zonas conviven en el mismo SVG). */
-const STORIES = { ...toStories(QUESTS), elisa: ELISA_STORY, milly: MILLY_STORY, yuna: YUNA_STORY, lopez: LOPEZ_STORY, igor: IGOR_STORY, lisa: KARLA_STORY, beka: BEKA_STORY, nina: NINA_STORY };
+const STORIES = { ...toStories(QUESTS), elisa: ELISA_STORY, milly: MILLY_STORY, yuna: YUNA_STORY, lopez: LOPEZ_STORY, igor: IGOR_STORY, lisa: KARLA_STORY, beka: BEKA_STORY, nina: NINA_STORY, coco: COCO_STORY };
 
 /* ============================================================
    OBJETOS COLECCIONABLES · dos tipos: "consumable" (los usas, dan
@@ -3924,26 +4174,28 @@ const ITEMS = {
   beka_pin: { name: "Pin de Beka", icon: "📌", img: "/images/objects/beka_pin.webp", kind: "keepsake",
     desc: "El pin que te dio Beka el día que dejasteis de fingir que solo erais rivales. No se usa ni se regala: es un recuerdo de todo el camino." },
   /* capturas de Nina: objetos normales del inventario (kind:"fish"), sin sistema aparte —
-     ver FishingSequence y FISH_RARITY para cómo se muestran en la pantalla de captura. */
-  pez_sardina: { name: "Sardina", icon: "🐟", img: "/images/peces/sardina.webp", kind: "fish", rarity: "comun",
+     ver FishingSequence y FISH_RARITY para cómo se muestran en la pantalla de captura.
+     sellMin/sellMax: precio al que Coco los compra (ver sellPriceFor/COCO_STORY) — son
+     los únicos objetos vendibles por ahora, tal como especifica el documento de Coco. */
+  pez_sardina: { name: "Sardina", icon: "🐟", img: "/images/peces/sardina.webp", kind: "fish", rarity: "comun", sellMin: 8, sellMax: 12,
     desc: "Tu primera captura. No parece gran cosa, pero todo el mundo empieza por algo pequeño." },
-  pez_caballa: { name: "Caballa", icon: "🐟", img: "/images/peces/caballa.webp", kind: "fish", rarity: "comun",
+  pez_caballa: { name: "Caballa", icon: "🐟", img: "/images/peces/caballa.webp", kind: "fish", rarity: "comun", sellMin: 10, sellMax: 15,
     desc: "El primer paso para dejar de ser completamente nuevo en esto." },
-  pez_lubina: { name: "Lubina", icon: "🐟", img: "/images/peces/lubina.webp", kind: "fish", rarity: "poco_comun",
+  pez_lubina: { name: "Lubina", icon: "🐟", img: "/images/peces/lubina.webp", kind: "fish", rarity: "poco_comun", sellMin: 15, sellMax: 20,
     desc: "Ya tiene otra pinta. Empiezas a tener mano." },
-  pez_dorada: { name: "Dorada", icon: "🐟", img: "/images/peces/dorada.webp", kind: "fish", rarity: "poco_comun",
+  pez_dorada: { name: "Dorada", icon: "🐟", img: "/images/peces/dorada.webp", kind: "fish", rarity: "poco_comun", sellMin: 18, sellMax: 25,
     desc: "Esta sí que merece una buena comida." },
-  pez_trucha: { name: "Trucha", icon: "🐟", img: "/images/peces/trucha.webp", kind: "fish", rarity: "raro",
+  pez_trucha: { name: "Trucha", icon: "🐟", img: "/images/peces/trucha.webp", kind: "fish", rarity: "raro", sellMin: 25, sellMax: 35,
     desc: "No la forzaste. Eso es más importante de lo que parece." },
-  pez_atun: { name: "Atún", icon: "🐟", img: "/images/peces/atun.webp", kind: "fish", rarity: "raro",
+  pez_atun: { name: "Atún", icon: "🐟", img: "/images/peces/atun.webp", kind: "fish", rarity: "raro", sellMin: 40, sellMax: 60,
     desc: "¿Eso estaba ahí abajo? El primer gran salto de tamaño." },
-  pez_espada: { name: "Pez espada", icon: "🐟", img: "/images/peces/pezespada.webp", kind: "fish", rarity: "epico",
+  pez_espada: { name: "Pez espada", icon: "🐟", img: "/images/peces/pezespada.webp", kind: "fish", rarity: "epico", sellMin: 70, sellMax: 100,
     desc: "Ya nadie puede llamarte principiante después de esto." },
-  pez_tiburon: { name: "Tiburón", icon: "🦈", img: "/images/peces/tiburon.webp", kind: "fish", rarity: "legendario",
+  pez_tiburon: { name: "Tiburón", icon: "🦈", img: "/images/peces/tiburon.webp", kind: "fish", rarity: "legendario", sellMin: 100, sellMax: 150,
     desc: "Cinco años de vida perdidos. Ha valido la pena." },
-  pez_luna: { name: "Pez luna", icon: "🐡", img: "/images/peces/pezluna.webp", kind: "fish", rarity: "legendario",
+  pez_luna: { name: "Pez luna", icon: "🐡", img: "/images/peces/pezluna.webp", kind: "fish", rarity: "legendario", sellMin: 200, sellMax: 300,
     desc: "El pez que Nina nunca olvidó. Lo habéis conseguido juntos." },
-  cangrejo: { name: "Cangrejo", icon: "🦀", img: "/images/peces/cangrejo.webp", kind: "fish", rarity: "especial",
+  cangrejo: { name: "Cangrejo", icon: "🦀", img: "/images/peces/cangrejo.webp", kind: "fish", rarity: "especial", sellMin: 15, sellMax: 25,
     desc: "Técnicamente no es un pez. Pero ha mordido el anzuelo, así que cuenta como captura." },
 };
 /* metadatos de rareza para la pantalla de captura de Nina (ver FishingSequence): etiqueta
@@ -3994,6 +4246,8 @@ const CARDS = [
     bio: "Futbolista de otro club. Rival directa, competitiva y algo macarra — aunque de noche, en la Discoteca, deja de competir durante unas horas." },
   { npc: "nina", unlocked: (g) => !!g.ninaMet,
     bio: "La pescadora de la Playa. Nunca tiene prisa — y poco a poco te enseña que tampoco hace falta tenerla siempre." },
+  { npc: "coco", unlocked: (g) => !!g.cocoMet,
+    bio: "Tendera errante. Aparece cada cinco días en un sitio distinto con mercancía nueva — y siempre compra lo que ya no quieres." },
 ];
 
 /* --- EL PERIÓDICO · plantillas con titular y cuerpo, por secciones.
@@ -4935,12 +5189,18 @@ function Newspaper({ game, onRead }) {
    siempre hay periódico, así que en vez de cartel ofrece abrirlo.
    Fondo real: si existe /images/zones/{id}.webp se usa; si no (todavía no se ha
    subido), cae a un degradado de marcador de posición sin romper nada. */
-function ZoneScreen({ zone, pendingNpc, onBack, onOpenPaper, game, onSpin, onFish }) {
+function ZoneScreen({ zone, pendingNpc, onBack, onOpenPaper, game, onSpin, onFish, onBuyCoco, onSellCoco }) {
   const [imgOk, setImgOk] = useState(true);
+  const [showCocoShop, setShowCocoShop] = useState(false);
   const npc = pendingNpc ? NPCS[pendingNpc] : null;
   const showPaperPrompt = zone.kind === "paper" && !pendingNpc;
   const isHome = zone.kind === "home";
   const isCasino = zone.id === "casino";
+  /* Coco está "activa" en su zona durante toda la visita (ver zoneActiveNpc/zonePending),
+     tenga o no una frase de historia pendiente ahora mismo — si la tiene, su diálogo
+     normal (a nivel de App) se pinta encima y tapa este panel; si no, el jugador ve
+     directamente el acceso a la tienda. */
+  const isCoco = !!(game.cocoVisit && game.cocoVisit.zone === zone.id);
   /* pesca libre: solo tras completar la campaña de Nina (ver NINA_STORY, FINAL/EPÍLOGO) */
   const isPlaya = zone.id === "playa" && !!game.ninaStoryComplete;
   const fishedToday = isPlaya && game.ninaFishDay === todayStr();
@@ -4965,7 +5225,7 @@ function ZoneScreen({ zone, pendingNpc, onBack, onOpenPaper, game, onSpin, onFis
       <div className="zone-shade" />
       <button className="zone-back" onClick={onBack}>← Volver</button>
       <div className="zone-label">{zone.label}</div>
-      {!pendingNpc && !showPaperPrompt && !isHome && !isCasino && !isPlaya && (
+      {!pendingNpc && !showPaperPrompt && !isHome && !isCasino && !isPlaya && !isCoco && (
         <div className="zone-empty-card">
           <div style={{ fontSize: 30, marginBottom: 6 }}>🏚️</div>
           Parece que no hay nadie por aquí ahora mismo.</div>)}
@@ -4999,6 +5259,124 @@ function ZoneScreen({ zone, pendingNpc, onBack, onOpenPaper, game, onSpin, onFis
             )}
           </div>
         </div>)}
+      {isCoco && (
+        <div className="house-room">
+          <div className="house-card">
+            <div className="house-title">🛍️ Coco está aquí</div>
+            <div style={{ fontSize: 12.5, color: "#9a9e8e", marginBottom: 10 }}>
+              Tendera errante — vuelve a aparecer cada 5 días en un sitio distinto.</div>
+            <button className="btn-gold sm" style={{ width: "100%" }} onClick={() => setShowCocoShop(true)}>
+              🛒 Ver tienda</button>
+          </div>
+        </div>)}
+      {showCocoShop && (
+        <CocoShop game={game} onClose={() => setShowCocoShop(false)} onBuy={onBuyCoco} onSell={onSellCoco} />)}
+    </div>);
+}
+
+/* Tienda de Coco: 3 slots de compra fijos durante toda la visita (ver game.cocoVisit,
+   generado por refreshCocoVisit — abrir/cerrar este panel nunca cambia productos ni
+   precios) + un botón VENDER aparte con los objetos vendibles del inventario (por ahora
+   solo peces, ver ITEMS[id].sellMin/sellMax). Cada compra/venta pide confirmación con
+   objeto, efecto/cantidad y precio antes de ejecutar la transacción, tal como pide el
+   documento — nunca se descuenta/entrega nada con un solo click. */
+function CocoShop({ game, onClose, onBuy, onSell }) {
+  const [confirmBuy, setConfirmBuy] = useState(null); // índice de slot
+  const [sellMode, setSellMode] = useState(false);
+  const [sellPrices, setSellPrices] = useState(null); // { [itemId]: precio }, rolado una vez al abrir VENDER
+  const [confirmSell, setConfirmSell] = useState(null); // { id, price, qty }
+  const visit = game.cocoVisit;
+  if (!visit) return null;
+  const openSell = () => {
+    const prices = {};
+    Object.entries(game.inventory || {}).forEach(([id, qty]) => {
+      if (qty > 0 && ITEMS[id] && ITEMS[id].sellMin != null) prices[id] = rollSellPrice(id);
+    });
+    setSellPrices(prices);
+    setSellMode(true);
+  };
+  return (
+    <div className="overlay" style={{ background: "rgba(5,7,13,.75)", zIndex: 65, alignItems: "flex-end", padding: "0 0 16px" }} onClick={onClose}>
+      <div className="sheet" style={{ maxHeight: "78vh", overflowY: "auto", borderRadius: 22 }} onClick={(e) => e.stopPropagation()}>
+        <div className="ptitle" style={{ fontSize: 16, marginBottom: 14 }}>🛍️ TIENDA DE COCO · 🪙 {game.fichas || 0}</div>
+        {!sellMode ? (
+          <>
+            {visit.products.map((p, i) => {
+              const it = ITEMS[p.id];
+              return (
+                <div key={i} className="panel" style={{ display: "flex", alignItems: "center", gap: 10, opacity: p.sold ? .5 : 1 }}>
+                  {it.img ? <img src={it.img} alt={it.name} className="item-ico-img" /> : <span style={{ fontSize: 22 }}>{it.icon}</span>}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, color: "#26291D" }}>{it.name}</div>
+                    <div style={{ fontSize: 10.5, color: "#6F7563" }}>+{it.xp} XP {it.stat}</div>
+                  </div>
+                  {p.sold ? (
+                    <span style={{ fontSize: 11, color: "#9a9e8e", fontFamily: "'Oswald',sans-serif" }}>AGOTADO</span>
+                  ) : (
+                    <button className="btn-gold sm" onClick={() => setConfirmBuy(i)}>🪙 {p.price}</button>
+                  )}
+                </div>);
+            })}
+            <button className="btn-ghost sm" style={{ width: "100%", marginTop: 4 }} onClick={openSell}>💰 Vender objetos</button>
+          </>
+        ) : (
+          <>
+            <button className="btn-ghost sm" style={{ marginBottom: 10 }} onClick={() => setSellMode(false)}>← Volver a comprar</button>
+            {Object.keys(sellPrices || {}).length === 0 && (
+              <div className="empty"><span className="em-ico">🎒</span>
+                No tienes nada que Coco quiera comprar ahora mismo.</div>)}
+            {Object.entries(sellPrices || {}).map(([id, price]) => {
+              const it = ITEMS[id];
+              const qty = (game.inventory || {})[id] || 0;
+              return (
+                <div key={id} className="panel" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  {it.img ? <img src={it.img} alt={it.name} className="item-ico-img" /> : <span style={{ fontSize: 22 }}>{it.icon}</span>}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, color: "#26291D" }}>{it.name}</div>
+                    <div style={{ fontSize: 10.5, color: "#6F7563" }}>Tienes ×{qty}</div>
+                  </div>
+                  <button className="btn-gold sm" onClick={() => setConfirmSell({ id, price, qty })}>🪙 {price}</button>
+                </div>);
+            })}
+          </>
+        )}
+      </div>
+      {confirmBuy != null && (() => {
+        const slot = visit.products[confirmBuy];
+        const it = ITEMS[slot.id];
+        return (
+          <div className="overlay" style={{ background: "rgba(5,7,13,.88)", zIndex: 90 }}
+            onClick={(e) => { e.stopPropagation(); setConfirmBuy(null); }}>
+            <div className="item-lightbox" onClick={(e) => e.stopPropagation()}>
+              {it.img ? <img src={it.img} alt={it.name} className="item-lightbox-img" /> : <span style={{ fontSize: 90 }}>{it.icon}</span>}
+              <div className="item-lightbox-name">{it.name}</div>
+              <div className="item-lightbox-desc">{it.desc}</div>
+              <div className="item-lightbox-desc" style={{ fontWeight: 700 }}>+{it.xp} XP {it.stat} · 🪙 {slot.price}</div>
+              <div style={{ display: "flex", gap: 8, width: "100%" }}>
+                <button className="btn-gold sm" style={{ flex: 1 }} disabled={(game.fichas || 0) < slot.price}
+                  onClick={() => { onBuy(confirmBuy); setConfirmBuy(null); }}>Comprar</button>
+                <button className="btn-ghost sm" style={{ flex: 1 }} onClick={() => setConfirmBuy(null)}>Cancelar</button>
+              </div>
+            </div>
+          </div>);
+      })()}
+      {confirmSell && (() => {
+        const it = ITEMS[confirmSell.id];
+        return (
+          <div className="overlay" style={{ background: "rgba(5,7,13,.88)", zIndex: 90 }}
+            onClick={(e) => { e.stopPropagation(); setConfirmSell(null); }}>
+            <div className="item-lightbox" onClick={(e) => e.stopPropagation()}>
+              {it.img ? <img src={it.img} alt={it.name} className="item-lightbox-img" /> : <span style={{ fontSize: 90 }}>{it.icon}</span>}
+              <div className="item-lightbox-name">{it.name} · tienes ×{confirmSell.qty}</div>
+              <div className="item-lightbox-desc" style={{ fontWeight: 700 }}>🪙 {confirmSell.price}</div>
+              <div style={{ display: "flex", gap: 8, width: "100%" }}>
+                <button className="btn-gold sm" style={{ flex: 1 }}
+                  onClick={() => { onSell(confirmSell.id, 1, confirmSell.price); setConfirmSell(null); }}>Vender 1</button>
+                <button className="btn-ghost sm" style={{ flex: 1 }} onClick={() => setConfirmSell(null)}>Cancelar</button>
+              </div>
+            </div>
+          </div>);
+      })()}
     </div>);
 }
 
@@ -5298,7 +5676,7 @@ function CityMap({ game, onVisit, zones, vb, svgSrc, mapLabel }) {
         }
         /* la cara del personaje solo se ve si tiene algo pendiente que contar.
            en zonas con varios personajes, se enseña el primero que tenga algo pendiente. */
-        const activeKey = zoneActiveNpc(z, npcQueue);
+        const activeKey = zoneActiveNpc(z, npcQueue, game);
         const npc = activeKey ? NPCS[activeKey] : null;
         return (
           <div key={z.id} className="city-zone" style={style}>
@@ -6538,7 +6916,7 @@ export default function App() {
      bloqueada nunca debe poder "visitarse" aunque algo dejara visitedZone con su id. */
   const visitedZoneObj = visitedZone && game && isZoneUnlocked(game, visitedZone)
     ? ZONES.find((z) => z.id === visitedZone) : null;
-  const visitedActiveNpc = visitedZoneObj ? zoneActiveNpc(visitedZoneObj, game ? (game.npcQueue || []) : []) : null;
+  const visitedActiveNpc = visitedZoneObj ? zoneActiveNpc(visitedZoneObj, game ? (game.npcQueue || []) : [], game) : null;
   /* registro mínimo de "última vez que se visitó esta zona" (g.zoneVisits), para objetivos
      de historia tipo "visita X" (ver zoneVisitedSince/BEKA_STORY) — no existía ninguna
      necesidad de esto antes de Beka, así que no se guardaba en ningún sitio. */
@@ -6630,7 +7008,7 @@ export default function App() {
      y, si es la primera vez, encola su escena de presentación. Se llama tras cualquier
      acción que pueda mover el requisito: media, goles de carrera o ascenso de categoría. */
   const checkZoneUnlocks = (g) => {
-    let out = g;
+    let out = refreshCocoVisit(g);
     [...ZONES, ...EXTRA_NPCS].forEach((z) => {
       if (!z.metFlag || out[z.metFlag] || (out.introQueued && out.introQueued[z.metFlag]) || !z.unlocked(out)) return;
       /* el flag "ya lo conoces" no se marca aquí: se marca cuando el jugador lee la escena
@@ -6670,16 +7048,19 @@ export default function App() {
      reacción completa, exactamente igual que cualquier otra escena. */
   const queueStageScene = (out, def, key, stageObj, state, beatsOverride) => {
     const npcName = NPCS[def.npc].name;
+    /* Coco no tiene zona fija por etapa (ver COCO_STORY): fuera de su prólogo, sus
+       capítulos ocurren allá donde esté de visita ahora mismo (game.cocoVisit.zone). */
+    const zone = stageObj.zone || (def.npc === "coco" && out.cocoVisit ? out.cocoVisit.zone : undefined);
     if (stageObj.fish) {
       const before = (stageObj.introBefore || []).map((b) => ({ m: b.m, t: fillTpl(b.t, flavorCtx(out)) }));
-      out = addScene(out, npcName, before, { zone: stageObj.zone });
+      out = addScene(out, npcName, before, { zone });
       const after = (stageObj.introAfter || []).map((b) => ({ m: b.m, t: fillTpl(b.t, flavorCtx(out)) }));
-      out = addMsg(out, npcName, "", { mood: "lanzandocaña", kind: "fishing", zone: stageObj.zone,
+      out = addMsg(out, npcName, "", { mood: "lanzandocaña", kind: "fishing", zone,
         fish: stageObj.fish, afterBeats: after, applyOnRead: { story: { key, state }, flags: stageObj.setFlags } });
       return out;
     }
     const beats = (beatsOverride || stageObj.intro).map((b) => ({ m: b.m, t: fillTpl(b.t, flavorCtx(out)) }));
-    return addScene(out, npcName, beats, { zone: stageObj.zone, replies: stageObj.replies,
+    return addScene(out, npcName, beats, { zone, replies: stageObj.replies,
       applyOnRead: { story: { key, state }, flags: stageObj.setFlags } });
   };
   const checkStories = (g) => {
@@ -6810,6 +7191,57 @@ export default function App() {
     const fishId = pickWeightedFish();
     setGame((g) => addMsg(g, "Nina", "", { mood: "lanzandocaña", kind: "fishing", zone: "playa",
       fish: { id: fishId, rarity: ITEMS[fishId].rarity }, afterBeats: [], freeFish: true }));
+  };
+  /* compra a Coco (ver CocoShop): revalida sold/fichas contra el estado MÁS RECIENTE
+     dentro del propio setGame (no el "game" ya renderizado), para que un doble click no
+     pueda cobrar/entregar el mismo slot dos veces — ver sección 13 del documento. */
+  const buyFromCoco = (slotIdx) => {
+    const visit = game.cocoVisit;
+    if (!visit) return;
+    const slot = visit.products[slotIdx];
+    if (!slot || slot.sold) return;
+    if ((game.fichas || 0) < slot.price) { pushToast("No tienes fichas suficientes."); return; }
+    const it = ITEMS[slot.id];
+    setGame((g) => {
+      const v = g.cocoVisit;
+      const s = v && v.products[slotIdx];
+      if (!v || !s || s.sold || (g.fichas || 0) < s.price) return g;
+      const products = v.products.map((p, i) => (i === slotIdx ? { ...p, sold: true } : p));
+      const inv = { ...(g.inventory || {}) };
+      inv[s.id] = (inv[s.id] || 0) + 1;
+      const log = [{ type: "buy", itemId: s.id, price: s.price, day: todayStr(), zone: v.zone, visitDay: v.day },
+        ...(g.cocoLog || [])].slice(0, 30);
+      return checkStories(checkZoneUnlocks({ ...g, fichas: g.fichas - s.price, inventory: inv,
+        cocoVisit: { ...v, products }, cocoLog: log }));
+    });
+    pushToast(`✅ Comprado: ${it.name} · 🪙 -${slot.price}`);
+    const reaction = slot.price <= 35 ? "Hoy te lo estoy dejando casi regalado."
+      : slot.price <= 50 ? "Un precio bastante razonable." : "Es difícil de conseguir. No pongas esa cara.";
+    setTimeout(() => pushToast(`💬 Coco: «${reaction}»`), 900);
+    buzz(15);
+  };
+  /* vende a Coco: price ya viene rolado y confirmado desde CocoShop (ver rollSellPrice),
+     así el número mostrado en la confirmación y el que se cobra son siempre el mismo. */
+  const sellToCoco = (itemId, qty, price) => {
+    if (!game.cocoVisit) return;
+    if (((game.inventory || {})[itemId] || 0) < qty) return;
+    const it = ITEMS[itemId];
+    const rareSold = it.kind === "fish" && ["raro", "epico", "legendario"].includes(it.rarity);
+    setGame((g) => {
+      const cur = (g.inventory || {})[itemId] || 0;
+      if (cur < qty) return g;
+      const inv = { ...g.inventory, [itemId]: cur - qty };
+      if (inv[itemId] <= 0) delete inv[itemId];
+      const total = price * qty;
+      const v = g.cocoVisit;
+      const log = [{ type: "sell", itemId, price: total, day: todayStr(), zone: v ? v.zone : null, visitDay: v ? v.day : null },
+        ...(g.cocoLog || [])].slice(0, 30);
+      let out = checkStories(checkZoneUnlocks({ ...g, inventory: inv, fichas: (g.fichas || 0) + total, cocoLog: log }));
+      if (rareSold) out = addMsg(out, "Coco", "¡Vaya! No esperaba que trajeras algo así.", { mood: "sorprendida" });
+      return out;
+    });
+    pushToast(`✅ Vendido: ${it.name} ×${qty} · 🪙 +${price * qty}`);
+    buzz(15);
   };
 
   /* carga inicial */
@@ -7194,7 +7626,9 @@ export default function App() {
     if (inv[itemId] <= 0) delete inv[itemId];
     if (upped) setTimeout(() => pushToast(`📈 ¡${stat} sube a ${stats[stat]}!`), 700);
     pushToast(`✅ ${def.name} usado · +${def.xp} XP ${stat}`);
-    return { ...g, inventory: inv, player: { ...p, stats, xp } };
+    /* cuenta simple de consumos, solo para el objetivo "compra un consumible y
+       consúmelo" de COCO_STORY (ver stage.check del capítulo 6) */
+    return { ...g, inventory: inv, player: { ...p, stats, xp }, itemsUsedCount: (g.itemsUsedCount || 0) + 1 };
   });
   /* regalar un objeto: reacción del destinatario en su cola de diálogos + se gasta */
   const giveItemTo = (itemId) => setGame((g) => {
@@ -7454,7 +7888,8 @@ export default function App() {
       {/* visitar una zona: fondo a toda pantalla + flecha para volver */}
       {tab === "chat" && visitedZoneObj && (
         <ZoneScreen zone={visitedZoneObj} pendingNpc={visitedActiveNpc} game={game}
-          onBack={() => setVisitedZone(null)} onOpenPaper={() => setShowPaper(true)} onSpin={spinCasino} onFish={freeFish} />)}
+          onBack={() => setVisitedZone(null)} onOpenPaper={() => setShowPaper(true)} onSpin={spinCasino} onFish={freeFish}
+          onBuyCoco={buyFromCoco} onSellCoco={sellToCoco} />)}
       {/* diálogo de personaje: overlay a nivel de App (fuera de .tab-in), aparece encima
           del fondo de la zona en cuanto hay alguien esperando ahí (visitedActiveNpc) */}
       {tab === "chat" && visitedActiveNpc && (() => {

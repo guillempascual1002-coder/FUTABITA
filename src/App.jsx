@@ -4342,9 +4342,10 @@ function QuestPanel({ game, onClose, storiesRegistry }) {
 }
 
 /* vista ampliada de un objeto: se abre al tocar su icono (en la mochila o en la tienda
-   del Casino), por encima de cualquiera de los dos paneles. Solo enseña la imagen grande,
-   el nombre y la descripción — usar/regalar sigue haciéndose desde el panel de origen. */
-function ItemLightbox({ item, onClose }) {
+   del Casino), por encima de cualquiera de los dos paneles. La tienda solo la usa para
+   ver la imagen grande (sin "actions"); la mochila le pasa además cantidad y el botón de
+   usar/regalar que le corresponda, así el detalle completo vive en un único sitio. */
+function ItemLightbox({ item, qty, actions, onClose }) {
   if (!item) return null;
   return (
     <div className="overlay" style={{ background: "rgba(5,7,13,.88)", zIndex: 90 }}
@@ -4352,19 +4353,25 @@ function ItemLightbox({ item, onClose }) {
       <div className="item-lightbox" onClick={(e) => e.stopPropagation()}>
         {item.img ? <img src={item.img} alt={item.name} className="item-lightbox-img" />
           : <span style={{ fontSize: 90 }}>{item.icon}</span>}
-        <div className="item-lightbox-name">{item.name}</div>
+        <div className="item-lightbox-name">{item.name}{qty > 1 ? ` ×${qty}` : ""}</div>
         <div className="item-lightbox-desc">{item.desc}</div>
+        {actions}
         <button className="btn-ghost sm" onClick={onClose}>Cerrar</button>
       </div>
     </div>);
 }
 
-/* Inventario: burbuja propia junto a Misiones y Viajar. Objetos consumibles (Usar → XP
-   a una stat) y de regalo (Regalar a su personaje → reacción propia + se gasta). */
+/* Inventario: burbuja propia junto a Misiones y Viajar. Rejilla de slots (solo icono +
+   cantidad, como un inventario de videojuego); nombre/descripción/acción (Usar → XP a una
+   stat, o Regalar a su personaje) se ven al tocar un slot, en el mismo ItemLightbox que ya
+   usaba la tienda del Casino para el zoom. */
 function InventoryPanel({ game, onClose, onUseItem, onGiveItem }) {
-  const [openItem, setOpenItem] = useState(null);
   const [zoomId, setZoomId] = useState(null);
   const inv = Object.entries(game.inventory || {}).filter(([, qty]) => qty > 0);
+  const zoomItem = zoomId ? ITEMS[zoomId] : null;
+  const zoomQty = zoomId ? (game.inventory || {})[zoomId] || 0 : 0;
+  const recipient = zoomItem && zoomItem.kind === "gift" ? CARDS.find((c) => c.npc === zoomItem.giveTo) : null;
+  const canGive = recipient && recipient.unlocked(game);
   return (
     <div className="overlay" style={{ background: "rgba(5,7,13,.75)", zIndex: 65, alignItems: "flex-end", padding: 0 }} onClick={onClose}>
       <div className="sheet" style={{ maxHeight: "78vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
@@ -4372,44 +4379,34 @@ function InventoryPanel({ game, onClose, onUseItem, onGiveItem }) {
         {inv.length === 0 && (
           <div className="empty"><span className="em-ico">🎒</span>
             Todavía no tienes ningún objeto.<br />Los consigues completando misiones, en regalos sueltos de la ciudad o en la tienda del Casino.</div>)}
-        {inv.map(([id, qty]) => {
-          const it = ITEMS[id];
-          if (!it) return null;
-          const isOpen = openItem === id;
-          const recipient = it.kind === "gift" ? CARDS.find((c) => c.npc === it.giveTo) : null;
-          const canGive = recipient && recipient.unlocked(game);
-          return (
-            <div key={id} className="panel" style={{ padding: 0, overflow: "hidden" }}>
-              <button style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "12px 14px",
-                background: "none", border: "none", cursor: "pointer", textAlign: "left" }}
-                onClick={() => setOpenItem(isOpen ? null : id)}>
-                {it.img ? (
-                  <img src={it.img} alt={it.name} className="item-ico-img"
-                    onClick={(e) => { e.stopPropagation(); setZoomId(id); }} />
-                ) : (
-                  <span style={{ fontSize: 22 }}>{it.icon}</span>
-                )}
-                <span style={{ flex: 1, fontSize: 13, color: "#26291D" }}>{it.name}</span>
-                <span style={{ fontSize: 12, color: "#6F7563", fontFamily: "'Oswald',sans-serif" }}>×{qty}</span>
-              </button>
-              {isOpen && (
-                <div style={{ padding: "0 14px 14px" }}>
-                  <div style={{ fontSize: 12, color: "#4A4E3F", lineHeight: 1.5, marginBottom: 10 }}>{it.desc}</div>
-                  {it.kind === "consumable" && (
-                    <button className="btn-gold sm" style={{ width: "100%" }} onClick={() => { onUseItem(id); setOpenItem(null); }}>
-                      Usar · +{it.xp} XP {it.stat === "random" ? "(stat al azar)" : it.stat}</button>)}
-                  {it.kind === "gift" && (
-                    canGive ? (
-                      <button className="btn-gold sm" style={{ width: "100%" }} onClick={() => { onGiveItem(id); setOpenItem(null); }}>
-                        Regalar a {NPCS[it.giveTo].name}</button>
-                    ) : (
-                      <div style={{ fontSize: 11.5, color: "#9a9e8e" }}>Todavía no conoces a {NPCS[it.giveTo].name} para dárselo.</div>
-                    ))}
-                </div>)}
-            </div>);
-        })}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
+          {inv.map(([id, qty]) => {
+            const it = ITEMS[id];
+            if (!it) return null;
+            return (
+              <button key={id} className="inv-slot" onClick={() => setZoomId(id)}>
+                {it.img ? <img src={it.img} alt={it.name} className="inv-slot-img" />
+                  : <span style={{ fontSize: 26 }}>{it.icon}</span>}
+                {qty > 1 && <span className="inv-slot-qty">×{qty}</span>}
+              </button>);
+          })}
+        </div>
       </div>
-      <ItemLightbox item={zoomId ? ITEMS[zoomId] : null} onClose={() => setZoomId(null)} />
+      <ItemLightbox item={zoomItem} qty={zoomQty} onClose={() => setZoomId(null)}
+        actions={zoomItem && (
+          <>
+            {zoomItem.kind === "consumable" && (
+              <button className="btn-gold sm" style={{ width: "100%" }} onClick={() => { onUseItem(zoomId); setZoomId(null); }}>
+                Usar · +{zoomItem.xp} XP {zoomItem.stat === "random" ? "(stat al azar)" : zoomItem.stat}</button>)}
+            {zoomItem.kind === "gift" && (
+              canGive ? (
+                <button className="btn-gold sm" style={{ width: "100%" }} onClick={() => { onGiveItem(zoomId); setZoomId(null); }}>
+                  Regalar a {NPCS[zoomItem.giveTo].name}</button>
+              ) : (
+                <div style={{ fontSize: 11.5, color: "#9a9e8e" }}>Todavía no conoces a {NPCS[zoomItem.giveTo].name} para dárselo.</div>
+              ))}
+          </>
+        )} />
     </div>);
 }
 
@@ -6940,6 +6937,11 @@ function StyleTag() {
       .empty { text-align:center; color:#8A8E7C; font-size:13px; padding:26px 12px; line-height:1.6; }
       .empty .em-ico { font-size:30px; display:block; margin-bottom:6px; }
       .item-ico-img { width:32px; height:32px; object-fit:cover; border-radius:10px; flex-shrink:0; cursor:zoom-in; }
+      .inv-slot { position:relative; aspect-ratio:1; background:#F0EFE5; border:1.5px solid rgba(20,23,14,.08);
+        border-radius:14px; display:flex; align-items:center; justify-content:center; padding:10px; cursor:pointer; }
+      .inv-slot-img { width:100%; height:100%; object-fit:cover; border-radius:9px; }
+      .inv-slot-qty { position:absolute; bottom:4px; right:4px; font-family:'Oswald',sans-serif; font-size:10px;
+        color:#26291D; background:rgba(239,238,227,.92); border-radius:6px; padding:1px 5px; line-height:1.3; }
       .item-lightbox { display:flex; flex-direction:column; align-items:center; gap:12px; background:#EFEEE3;
         border-radius:22px; padding:26px 22px; max-width:320px; width:88%; }
       .item-lightbox-img { width:100%; max-width:220px; aspect-ratio:1; object-fit:contain; border-radius:18px;

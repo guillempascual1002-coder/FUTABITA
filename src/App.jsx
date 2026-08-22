@@ -5776,7 +5776,11 @@ export default function App() {
     due.forEach((p) => {
       const pool = AMBIENT_BY_CHAR[p.npc];
       const def = NPCS[p.npc];
-      if (!pool || !def) return;
+      /* si la zona donde "vive" este personaje todavía no está desbloqueada, esta
+         aparición se descarta en vez de encolar un mensaje sin ningún sitio donde
+         leerlo (ver isZoneUnlocked/HOME_ZONE) — no es progreso real que se pierda,
+         es solo relleno ambiental provisional (ver AMBIENT_BY_CHAR) */
+      if (!pool || !def || !isZoneUnlocked(out, HOME_ZONE[p.npc])) return;
       const filtered = pool.filter((y) => !y.w || (COND[y.w] && COND[y.w](ctx)));
       if (filtered.length) out = playPoolEntry(out, def.name, filtered[Math.floor(Math.random() * filtered.length)], ctx);
     });
@@ -6042,8 +6046,17 @@ export default function App() {
          para no duplicar su turno. Contenido PROVISIONAL, ver comentario sobre AMBIENT_*. */
       {
         const storyPending = out.storyPending || {};
+        /* "conocido" ya no basta por sí solo: hace falta además que su zona esté
+           desbloqueada (ver releaseDuePending) — Elisa y López antes entraban aquí
+           sin comprobar nada porque su historia se dispara el día 1 y normalmente
+           desbloquea su zona en la misma pasada, pero eso era una coincidencia de
+           orden de ejecución, no una garantía */
         const known = {
-          yuna: !!out.yunaMet, elisa: true, lopez: true, lisa: !!out.metLisa, igor: !!out.metIgor,
+          yuna: !!out.yunaMet && isZoneUnlocked(out, HOME_ZONE.yuna),
+          elisa: isZoneUnlocked(out, HOME_ZONE.elisa),
+          lopez: isZoneUnlocked(out, HOME_ZONE.lopez),
+          lisa: !!out.metLisa && isZoneUnlocked(out, HOME_ZONE.lisa),
+          igor: !!out.metIgor && isZoneUnlocked(out, HOME_ZONE.igor),
         };
         const names = Object.keys(AMBIENT_BY_CHAR).filter((k) => known[k] && !storyPending[k]);
         const shuffled = [...names].sort(() => Math.random() - 0.5);
@@ -6522,8 +6535,14 @@ export default function App() {
       <div style={{ color: "#16190F", fontFamily: "'Oswald',sans-serif", letterSpacing: 4, fontSize: 15 }}>FUTABITA 3.1</div>
     </div>);
 
-  /* aviso en la pestaña Ciudad: diálogos en cola + la edición de hoy sin leer */
-  const unreadTotal = (game.npcQueue || []).length +
+  /* aviso en la pestaña Ciudad: diálogos en cola + la edición de hoy sin leer.
+     Red de seguridad: un mensaje cuya zona (explícita o la "home" del personaje)
+     no esté desbloqueada nunca debería llegar a encolarse (ver enterStage/
+     releaseDuePending), pero si alguno se colara igualmente — partida antigua,
+     estado manipulado a mano, etc. — no debe sumar al número: si no hay ninguna
+     burbuja donde leerlo, tampoco debe existir el aviso de que hay algo pendiente. */
+  const unreadTotal = (game.npcQueue || [])
+    .filter((e) => isZoneUnlocked(game, e.zone || HOME_ZONE[e.npc])).length +
     (game.phase === "main" && game.paper && game.paperRead !== todayStr() ? 1 : 0);
 
   return (

@@ -1020,6 +1020,14 @@ const NPCS = {
       celebracion: "/images/beka/beka_celebracion.webp", agotada: "/images/beka/beka_agotada.webp",
       disco_happy: "/images/beka/beka_disco_happy.webp", disco_seria: "/images/beka/beka_disco_seria.webp",
       playa: "/images/beka/beka_playa.webp" }, def: "idle" },
+  /* Nina: la pescadora de la Playa. Sin outfits nuevos (el documento pide reutilizar solo
+     estos 5 moods + "lanzandocaña", la pose exclusiva que usa la secuencia de pesca —
+     ver FishingSequence — mientras lanza/espera/nota el picotazo, antes de revelar la
+     captura). Sin "idle": def cae en "seria", su registro más neutro. */
+  nina: { name: "Nina", color: "#2E9EC9", voice: "/audio/vozchica02.mp3", icon: "/images/nina/nina_icon.webp",
+    arts: { happy: "/images/nina/nina_happy.webp", orgullosa: "/images/nina/nina_orgullosa.webp",
+      seria: "/images/nina/nina_seria.webp", sorprendida: "/images/nina/nina_sorprendida.webp",
+      "lanzandocaña": "/images/nina/nina_lanzandocaña.webp" }, def: "seria" },
 };
 /* el sender siempre es el nombre real del personaje ahora (la zona ya no crea una
    identidad de sender distinta: es contexto de la escena, ver campo "zone" en addMsg/addScene) */
@@ -1031,6 +1039,7 @@ const senderToNpc = (from) => {
   if (from === "Igor") return "igor";
   if (from === "López" || from.includes("Capitán") || from.includes("· Vestuario")) return "lopez";
   if (from === "Beka") return "beka";
+  if (from === "Nina") return "nina";
   return null; /* prensa/afición/redes/club -> periódico */
 };
 const paperSec = (from) =>
@@ -1341,7 +1350,7 @@ const ZONES = [
   { id: "enfermeria", kind: "npc", npc: ["elisa", "milly", "beka"], label: "Enfermería", icon: "🏥", x: 70.56, y: 8.09,
     pts: "269.53 96.59 375.7 85.45 379.45 140.6 271.57 150.46 269.53 96.59",
     unlocked: (g) => isZoneUnlocked(g, "enfermeria") },
-  { id: "playa", kind: "npc", npc: ["elisa", "milly", "lopez", "lisa", "yuna", "igor"], label: "Playa", icon: "🏖️", x: 18.88, y: 62.76,
+  { id: "playa", kind: "npc", npc: ["elisa", "milly", "lopez", "lisa", "yuna", "igor", "nina"], label: "Playa", icon: "🏖️", x: 18.88, y: 62.76,
     pts: "76.85 417.61 148.34 442.12 135.57 514.12 96.25 602.97 31.4 583.57 76.85 417.61",
     unlocked: (g) => isZoneUnlocked(g, "playa") },
   { id: "atico", kind: "npc", npc: ["elisa", "lisa"], label: "Ático de Lujo", icon: "🌇", x: 34.48, y: 19.29,
@@ -1364,7 +1373,7 @@ const ZONES = [
 /* home zone de cada personaje: dónde "vive" por defecto si una escena no especifica zona
    explícita (varios personajes están asignados a más de una zona ahora que la zona es
    contexto de escena y no una identidad de npc distinta, ver NPCS más arriba) */
-const HOME_ZONE = { elisa: "oficina", lopez: "ciudad-dep", milly: "kiosco", yuna: "barrio", lisa: "patro", igor: "restaurante", beka: "barrio" };
+const HOME_ZONE = { elisa: "oficina", lopez: "ciudad-dep", milly: "kiosco", yuna: "barrio", lisa: "patro", igor: "restaurante", beka: "barrio", nina: "playa" };
 /* una zona puede tener uno o varios personajes asignados (p.ej. El Barrio) */
 const zoneNpcList = (z) => (Array.isArray(z.npc) ? z.npc : z.npc ? [z.npc] : []);
 /* una entrada de npcQueue cuenta para una zona si su "zone" explícito coincide, o si no
@@ -3594,9 +3603,284 @@ const BEKA_STORY = {
   }],
 };
 
+/* ============================================================
+   NINA · octava campaña, la pescadora de la Playa. Prólogo + 15
+   capítulos + final + epílogo, misma arquitectura que el resto —
+   con una pieza nueva: varias etapas llevan una captura de pesca en
+   medio de la escena (ver stage.fish/introBefore/introAfter y
+   queueStageScene/FishingSequence). Sin outfits nuevos: solo los 5
+   moods del documento + "lanzandocaña" para la propia secuencia.
+
+   Las capturas de la campaña son deterministas (el fishId de cada
+   etapa siempre es el mismo, nunca al azar) — la aleatoriedad solo
+   existe en la pesca libre posterior (ver freeFish/pickWeightedFish),
+   tal como pide el documento. */
+const NINA_STORY = {
+  npc: "nina",
+  chapters: [{
+    id: "cap1",
+    title: "La historia de Nina",
+    trigger: () => true,
+    stages: [
+      /* PRÓLOGO — La chica que nunca tiene prisa */
+      { title: "La chica que nunca tiene prisa", zone: "playa",
+        objective: "Completa un día de alimentación y sueño, y vuelve a hablar con Nina.",
+        intro: [
+          { m: "seria", t: "¿Tú eres el que viene a entrenar a esta hora?" },
+          { m: "happy", t: "Ya decía yo que esa cara de cansancio no podía ser de alguien que hubiera venido a tomar el sol." },
+          { m: "seria", t: "Tranquilo. No te estoy juzgando." },
+          { m: "happy", t: "Yo llevo aquí desde hace bastante más tiempo y, técnicamente, todavía no he hecho absolutamente nada." },
+          { m: "happy", t: "Es una habilidad." },
+          { m: "seria", t: "Soy Nina. Pesco aquí casi todos los días." },
+          { m: "orgullosa", t: "Y sí, antes de que preguntes, se me da bastante bien." },
+          { m: "happy", t: "Aunque los peces tienen la mala costumbre de no reconocer mis méritos." },
+          { m: "seria", t: "Supongo que por eso me gusta." },
+          { m: "seria", t: "En el fútbol todo tiene que pasar rápido. Un entrenamiento. Un partido. Un gol. Una estadística que sube." },
+          { m: "happy", t: "Aquí puedes lanzar la caña y pasar cinco minutos mirando el agua." },
+          { m: "seria", t: "Y nadie te dice que estás perdiendo el tiempo." },
+          { m: "happy", t: "De hecho, a veces esperar es exactamente lo que tienes que hacer." },
+          { m: "happy", t: "¿Has vuelto?" },
+          { m: "orgullosa", t: "Bien. Entonces quizá sí tengas la paciencia necesaria." },
+        ],
+        setFlags: ["ninaMet"],
+        snap: () => ({ since: todayStr() }),
+        check: (g, snap) => Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.closed &&
+          (l.prot || 0) >= g.player.goals.protein && l.sleep != null && l.sleep >= g.player.goals.sleepGoal) },
+      /* CAPÍTULO 1 — Primera caña (desbloqueo del sistema de pesca) */
+      { title: "Primera caña", zone: "playa",
+        objective: "Captura una sardina.",
+        introBefore: [
+          { m: "happy", t: "Vale. Vamos a empezar fácil." },
+          { m: "seria", t: "No quiero que pienses demasiado. Solo observa." },
+          { m: "happy", t: "Y, por favor, no tires de la caña como si estuvieras intentando ganar un partido." },
+          { m: "seria", t: "Cuando pique, no te pongas nervioso." },
+          { m: "happy", t: "Bueno... si te pones nervioso tampoco pasa nada. Yo también me pongo nerviosa." },
+        ],
+        fish: { id: "pez_sardina", rarity: "comun" },
+        introAfter: [
+          { m: "happy", t: "¡Ahí está!" },
+          { m: "orgullosa", t: "Tu primera captura." },
+          { m: "happy", t: "No parece gran cosa, ¿verdad?" },
+          { m: "seria", t: "Pero acuérdate de ella. Todo el mundo empieza por algo pequeño." },
+        ],
+        setFlags: ["ninaFishingUnlocked", "ninaFishingIntroDone"],
+        snap: () => ({}), check: () => true },
+      /* CAPÍTULO 2 — Una captura también se come */
+      { title: "Una captura también se come", zone: "playa",
+        objective: "Cumple el objetivo de proteína durante 2 días y captura una caballa.",
+        introBefore: [
+          { m: "seria", t: "¿Qué has hecho con la sardina?" },
+          { m: "happy", t: "No me digas que la has guardado como si fuera un trofeo." },
+          { m: "seria", t: "Bueno... en realidad me parece bastante tierno." },
+          { m: "happy", t: "Pero también se puede comer." },
+          { m: "seria", t: "Hay algo que me gusta de la pesca. Al final del día tienes algo real delante de ti." },
+          { m: "seria", t: "No es una cifra. No es una barra que sube. Es comida." },
+          { m: "happy", t: "Y si estás intentando ponerte fuerte, comer bien importa tanto como entrenar." },
+        ],
+        fish: { id: "pez_caballa", rarity: "comun" },
+        introAfter: [
+          { m: "orgullosa", t: "Muy bien." },
+          { m: "happy", t: "Ya no eres completamente nuevo." },
+        ],
+        snap: (g) => ({ since: todayStr() }),
+        check: (g, snap) => Object.entries(g.logs || {}).filter(([d, l]) => d >= snap.since && l.closed &&
+          (l.prot || 0) >= g.player.goals.protein).length >= 2 },
+      /* CAPÍTULO 3 — Ya empiezas a entenderlo */
+      { title: "Ya empiezas a entenderlo", zone: "playa",
+        objective: "Captura una lubina y completa 2 días de alimentación.",
+        introBefore: [
+          { m: "happy", t: "Mira quién ha vuelto." },
+          { m: "seria", t: "¿Sabes qué diferencia hay entre alguien que pesca una vez y alguien que empieza a aprender?" },
+          { m: "happy", t: "Que el segundo vuelve aunque el día anterior no haya pescado nada." },
+          { m: "seria", t: "La mayoría de la gente quiere resultados inmediatamente." },
+          { m: "seria", t: "En el fútbol pasa muchísimo." },
+          { m: "happy", t: "Pero tú ya estás aprendiendo a esperar." },
+        ],
+        fish: { id: "pez_lubina", rarity: "poco_comun" },
+        introAfter: [
+          { m: "orgullosa", t: "Esa ya tiene otra pinta." },
+          { m: "happy", t: "Empiezas a tener mano." },
+        ],
+        snap: (g) => ({ since: todayStr() }),
+        check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 2 },
+      /* CAPÍTULO 4 — Lo que llevas a casa */
+      { title: "Lo que llevas a casa", zone: "playa",
+        objective: "Captura una dorada y completa 3 días de alimentación.",
+        introBefore: [
+          { m: "seria", t: "¿Nunca te ha pasado que entrenas muchísimo y luego llegas a casa sin ganas de preparar nada?" },
+          { m: "happy", t: "A mí sí." },
+          { m: "seria", t: "Por eso aprendí a pescar de verdad. No solo por el deporte." },
+          { m: "seria", t: "Cuando sabes que tienes algo que cocinar, cambia un poco la forma en la que ves la comida." },
+          { m: "happy", t: "Además, si sale mal, siempre puedes culpar al pez." },
+          { m: "happy", t: "Es una técnica culinaria muy avanzada." },
+        ],
+        fish: { id: "pez_dorada", rarity: "poco_comun" },
+        introAfter: [
+          { m: "orgullosa", t: "Esta sí que merece una buena comida." },
+          { m: "seria", t: "Y recuerda algo: no necesitas comer perfecto. Solo necesitas empezar a cuidar un poco más lo que haces cada día." },
+        ],
+        snap: (g) => ({ since: todayStr() }),
+        check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3 },
+      /* CAPÍTULO 5 — El silencio */
+      { title: "El silencio", zone: "playa",
+        objective: "Captura una trucha y mantén una racha de 3 días.",
+        introBefore: [
+          { m: "seria", t: "Hoy no quiero hablar demasiado." },
+          { m: "happy", t: "No pongas esa cara. No estoy enfadada." },
+          { m: "seria", t: "Solo quiero que escuches." },
+          { m: "seria", t: "El agua. El viento. La caña." },
+          { m: "seria", t: "Después de pasar tanto tiempo viendo gente correr detrás de algo, a veces viene bien quedarse quieto." },
+          { m: "happy", t: "Aunque sea cinco minutos." },
+        ],
+        fish: { id: "pez_trucha", rarity: "raro" },
+        introAfter: [
+          { m: "orgullosa", t: "Bien." },
+          { m: "happy", t: "No has intentado forzarla." },
+          { m: "seria", t: "Eso es más importante de lo que parece." },
+        ],
+        snap: () => ({}),
+        check: (g) => (g.player.streak || 0) >= 3 },
+      /* CAPÍTULO 6 — Algo grande */
+      { title: "Algo grande", zone: "playa",
+        objective: "Captura un atún y consigue el objetivo de proteína durante 3 días.",
+        introBefore: [
+          { m: "happy", t: "Hoy te he traído hasta aquí porque quiero probar algo." },
+          { m: "seria", t: "Hay días en los que la playa está tranquila y otros en los que parece que todo lo que hay debajo del agua se ha puesto de acuerdo para fastidiarte." },
+          { m: "happy", t: "Hoy vamos a comprobar de qué tipo es." },
+          { m: "seria", t: "Vamos a por un atún." },
+        ],
+        fish: { id: "pez_atun", rarity: "raro" },
+        introAfter: [
+          { m: "sorprendida", t: "¡¿Eso estaba ahí abajo?!" },
+          { m: "happy", t: "Vale. Vale. No voy a decir nada." },
+          { m: "orgullosa", t: "Bueno... sí. Estoy impresionada." },
+        ],
+        snap: (g) => ({ since: todayStr() }),
+        check: (g, snap) => Object.entries(g.logs || {}).filter(([d, l]) => d >= snap.since && l.closed &&
+          (l.prot || 0) >= g.player.goals.protein).length >= 3 },
+      /* CAPÍTULO 7 — El pez espada */
+      { title: "El pez espada", zone: "playa",
+        objective: "Captura un pez espada y completa 3 días de objetivos de alimentación.",
+        introBefore: [
+          { m: "seria", t: "Hay una diferencia entre pescar algo grande y pescar algo que parece diseñado para hacerte quedar mal." },
+          { m: "happy", t: "El pez espada entra en la segunda categoría." },
+          { m: "seria", t: "No quiero que te confíes." },
+          { m: "seria", t: "Si notas que la caña tiembla demasiado, respira y espera." },
+          { m: "happy", t: "Y si sale algo enorme, intenta no gritar." },
+          { m: "happy", t: "Yo grité la primera vez." },
+        ],
+        fish: { id: "pez_espada", rarity: "epico" },
+        introAfter: [
+          { m: "sorprendida", t: "..." },
+          { m: "happy", t: "Retiro oficialmente lo de que eres principiante." },
+          { m: "orgullosa", t: "Eso ha sido muy bueno." },
+        ],
+        snap: (g) => ({ since: todayStr() }),
+        check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3 },
+      /* CAPÍTULO 8 — Una idea terrible */
+      { title: "Una idea terrible", zone: "playa",
+        objective: "Captura un tiburón y cumple 4 días de alimentación.",
+        introBefore: [
+          { m: "happy", t: "Tengo una idea." },
+          { m: "seria", t: "Antes de que preguntes, sí, probablemente sea mala." },
+          { m: "happy", t: "Pero ya que hemos llegado hasta aquí..." },
+          { m: "seria", t: "Vamos a intentar pescar algo que normalmente no querrías ver acercándose a ti." },
+          { m: "happy", t: "Un tiburón." },
+          { m: "seria", t: "No te preocupes. Si todo sale mal, yo correré primero." },
+        ],
+        fish: { id: "pez_tiburon", rarity: "legendario" },
+        introAfter: [
+          { m: "sorprendida", t: "..." },
+          { m: "happy", t: "Creo que acabo de perder cinco años de vida." },
+          { m: "orgullosa", t: "Pero ha valido la pena." },
+        ],
+        snap: (g) => ({ since: todayStr() }),
+        check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 4 },
+      /* CAPÍTULO 9 — El pez que nunca olvidó (sin captura: prepara la del capítulo 10) */
+      { title: "El pez que nunca olvidó", zone: "playa",
+        objective: "Completa 4 días de alimentación y sueño.",
+        intro: [
+          { m: "seria", t: "Hay algo que nunca te he contado." },
+          { m: "seria", t: "Cuando empecé a pescar, venía con mi padre." },
+          { m: "seria", t: "No sabía absolutamente nada. Yo solo quería lanzar la caña y sacar algo enorme." },
+          { m: "happy", t: "Él se reía porque me pasaba el día preguntando cuándo iba a picar." },
+          { m: "seria", t: "Un día vimos un pez luna." },
+          { m: "seria", t: "No conseguimos sacarlo." },
+          { m: "happy", t: "Desde entonces me quedó esa pequeña obsesión." },
+          { m: "seria", t: "No por demostrar que podía hacerlo." },
+          { m: "seria", t: "Supongo que porque quería volver a sentir aquel momento." },
+          { m: "orgullosa", t: "Y ahora quiero intentarlo contigo." },
+        ],
+        setFlags: ["ninaTrustUp"],
+        snap: (g) => ({ since: todayStr() }),
+        check: (g, snap) => Object.entries(g.logs || {}).filter(([d, l]) => d >= snap.since && l.closed &&
+          (l.prot || 0) >= g.player.goals.protein && l.sleep != null && l.sleep >= g.player.goals.sleepGoal).length >= 4 },
+      /* CAPÍTULO 10 — El pez luna (captura emocional de la campaña) */
+      { title: "El pez luna", zone: "playa",
+        objective: "Captura un pez luna.",
+        introBefore: [
+          { m: "seria", t: "Hoy no quiero que pienses en ganar." },
+          { m: "seria", t: "Ni en mejorar." },
+          { m: "seria", t: "Ni siquiera en la captura." },
+          { m: "happy", t: "Solo quiero que estés aquí." },
+          { m: "seria", t: "Cuando pique, no tengas prisa." },
+          { m: "seria", t: "Déjalo tirar." },
+          { m: "seria", t: "Espera." },
+          { m: "happy", t: "Confía en lo que has aprendido." },
+        ],
+        fish: { id: "pez_luna", rarity: "legendario" },
+        introAfter: [
+          { m: "sorprendida", t: "..." },
+          { m: "sorprendida", t: "Lo has conseguido." },
+          { m: "seria", t: "Después de tantos años..." },
+          { m: "orgullosa", t: "Pensaba que cuando llegara este momento iba a gritar." },
+          { m: "happy", t: "Y resulta que solo quiero quedarme aquí un rato." },
+          { m: "orgullosa", t: "Gracias por hacerlo conmigo." },
+        ],
+        snap: () => ({}), check: () => true },
+      /* FINAL — Ya sabes pescar (sin captura propia) */
+      { title: "Ya sabes pescar", zone: "playa",
+        objective: "Sin objetivo adicional.",
+        intro: [
+          { m: "happy", t: "Bueno." },
+          { m: "orgullosa", t: "Oficialmente ya no puedo llamarte principiante." },
+          { m: "seria", t: "Pero creo que el pez luna no era realmente el objetivo." },
+          { m: "happy", t: "Sí, ya sé que suena a frase de película." },
+          { m: "seria", t: "Lo que quería decir es que empezaste queriendo sacar algo de aquí." },
+          { m: "seria", t: "Y terminaste aprendiendo a quedarte." },
+          { m: "happy", t: "Eso no está nada mal." },
+          { m: "orgullosa", t: "Además, ahora tienes un montón de pescado que vender cuando abramos la tienda." },
+          { m: "happy", t: "Así que tampoco hemos perdido el tiempo." },
+        ],
+        snap: () => ({}), check: () => true },
+      /* EPÍLOGO — ¿Eso es un pez? (última etapa: final:true, captura de cangrejo +
+         marca ninaStoryComplete y desbloquea la pesca libre al entrar aquí) */
+      { title: "¿Eso es un pez?", zone: "playa", final: true,
+        introBefore: [
+          { m: "happy", t: "Hoy no hay objetivos." },
+          { m: "happy", t: "Ni peces legendarios. Ni retos." },
+          { m: "seria", t: "Solo vamos a pescar." },
+        ],
+        fish: { id: "cangrejo", rarity: "especial" },
+        introAfter: [
+          { m: "sorprendida", t: "..." },
+          { m: "happy", t: "Eso no es un pez." },
+          { m: "happy", t: "Pero técnicamente ha mordido el anzuelo." },
+          { m: "orgullosa", t: "Lo voy a contar como una captura." },
+        ],
+        setFlags: ["ninaStoryComplete"],
+        reward: (g) => {
+          const stats = { ...g.player.stats };
+          stats.NUT = Math.min(99, stats.NUT + 1);
+          return { ...g, player: { ...g.player, stats } };
+        } },
+    ],
+  }],
+};
+
 /* registro único: desde la fusión de La Metrópolis dentro de La Ciudad ya no hace
    falta separar por mapa (todas las zonas conviven en el mismo SVG). */
-const STORIES = { ...toStories(QUESTS), elisa: ELISA_STORY, milly: MILLY_STORY, yuna: YUNA_STORY, lopez: LOPEZ_STORY, igor: IGOR_STORY, lisa: KARLA_STORY, beka: BEKA_STORY };
+const STORIES = { ...toStories(QUESTS), elisa: ELISA_STORY, milly: MILLY_STORY, yuna: YUNA_STORY, lopez: LOPEZ_STORY, igor: IGOR_STORY, lisa: KARLA_STORY, beka: BEKA_STORY, nina: NINA_STORY };
 
 /* ============================================================
    OBJETOS COLECCIONABLES · dos tipos: "consumable" (los usas, dan
@@ -3631,6 +3915,50 @@ const ITEMS = {
     desc: "El pin que te dio Karla cuando dejó de tratarte como un proyecto comercial. No se usa ni se regala: es un recuerdo de todo el camino." },
   beka_pin: { name: "Pin de Beka", icon: "📌", img: "/images/objects/beka_pin.webp", kind: "keepsake",
     desc: "El pin que te dio Beka el día que dejasteis de fingir que solo erais rivales. No se usa ni se regala: es un recuerdo de todo el camino." },
+  /* capturas de Nina: objetos normales del inventario (kind:"fish"), sin sistema aparte —
+     ver FishingSequence y FISH_RARITY para cómo se muestran en la pantalla de captura. */
+  pez_sardina: { name: "Sardina", icon: "🐟", img: "/images/peces/sardina.webp", kind: "fish", rarity: "comun",
+    desc: "Tu primera captura. No parece gran cosa, pero todo el mundo empieza por algo pequeño." },
+  pez_caballa: { name: "Caballa", icon: "🐟", img: "/images/peces/caballa.webp", kind: "fish", rarity: "comun",
+    desc: "El primer paso para dejar de ser completamente nuevo en esto." },
+  pez_lubina: { name: "Lubina", icon: "🐟", img: "/images/peces/lubina.webp", kind: "fish", rarity: "poco_comun",
+    desc: "Ya tiene otra pinta. Empiezas a tener mano." },
+  pez_dorada: { name: "Dorada", icon: "🐟", img: "/images/peces/dorada.webp", kind: "fish", rarity: "poco_comun",
+    desc: "Esta sí que merece una buena comida." },
+  pez_trucha: { name: "Trucha", icon: "🐟", img: "/images/peces/trucha.webp", kind: "fish", rarity: "raro",
+    desc: "No la forzaste. Eso es más importante de lo que parece." },
+  pez_atun: { name: "Atún", icon: "🐟", img: "/images/peces/atun.webp", kind: "fish", rarity: "raro",
+    desc: "¿Eso estaba ahí abajo? El primer gran salto de tamaño." },
+  pez_espada: { name: "Pez espada", icon: "🐟", img: "/images/peces/pezespada.webp", kind: "fish", rarity: "epico",
+    desc: "Ya nadie puede llamarte principiante después de esto." },
+  pez_tiburon: { name: "Tiburón", icon: "🦈", img: "/images/peces/tiburon.webp", kind: "fish", rarity: "legendario",
+    desc: "Cinco años de vida perdidos. Ha valido la pena." },
+  pez_luna: { name: "Pez luna", icon: "🐡", img: "/images/peces/pezluna.webp", kind: "fish", rarity: "legendario",
+    desc: "El pez que Nina nunca olvidó. Lo habéis conseguido juntos." },
+  cangrejo: { name: "Cangrejo", icon: "🦀", img: "/images/peces/cangrejo.webp", kind: "fish", rarity: "especial",
+    desc: "Técnicamente no es un pez. Pero ha mordido el anzuelo, así que cuenta como captura." },
+};
+/* metadatos de rareza para la pantalla de captura de Nina (ver FishingSequence): etiqueta
+   visible y color del brillo/borde, de menos a más espectacular. */
+const FISH_RARITY = {
+  comun: { label: "Común", color: "#B9BCA8" },
+  poco_comun: { label: "Poco común", color: "#3F8F2B" },
+  raro: { label: "Raro", color: "#2E6ED6" },
+  epico: { label: "Épico", color: "#9C6BD6" },
+  legendario: { label: "Legendario", color: "#E0A526" },
+  especial: { label: "Especial", color: "#D65A2E" },
+};
+/* pesca libre (sección 8 del documento de Nina, disponible tras completar su campaña):
+   frecuencias relativas, no probabilidades exactas — solo determinan qué tan a menudo
+   sale cada pez en la tirada diaria. Las capturas de la campaña narrativa NUNCA usan
+   esto: son siempre deterministas (ver stage.fish en NINA_STORY). */
+const FREE_FISH_WEIGHTS = { pez_sardina: 30, pez_caballa: 22, pez_lubina: 15, pez_dorada: 12,
+  pez_trucha: 10, pez_atun: 6, pez_espada: 3, pez_tiburon: 1, pez_luna: 1, cangrejo: 2 };
+const pickWeightedFish = () => {
+  const total = Object.values(FREE_FISH_WEIGHTS).reduce((a, w) => a + w, 0);
+  let roll = Math.random() * total;
+  for (const [id, w] of Object.entries(FREE_FISH_WEIGHTS)) { if (roll < w) return id; roll -= w; }
+  return "pez_sardina";
 };
 /* dar un objeto a su destinatario: reacción propia del personaje + el objeto se gasta */
 const ITEM_GIVE_REACTIONS = {
@@ -3656,6 +3984,8 @@ const CARDS = [
   { npc: "igor", unlocked: (g) => !!g.metIgor, bio: "Chef estrella del Restaurante. Trata la nutrición como táctica de fútbol, con datos curiosos siempre a mano." },
   { npc: "beka", unlocked: (g) => !!g.bekaMet,
     bio: "Futbolista de otro club. Rival directa, competitiva y algo macarra — aunque de noche, en la Discoteca, deja de competir durante unas horas." },
+  { npc: "nina", unlocked: (g) => !!g.ninaMet,
+    bio: "La pescadora de la Playa. Nunca tiene prisa — y poco a poco te enseña que tampoco hace falta tenerla siempre." },
 ];
 
 /* --- EL PERIÓDICO · plantillas con titular y cuerpo, por secciones.
@@ -4452,6 +4782,58 @@ function NpcDialogue({ entry, queueLeft, onAdvance, onChoice, onOffer }) {
     </div>);
 }
 
+/* duración de cada fase según la rareza de la captura: cuanto más rara, más se alarga
+   la espera/sacudida antes de la revelación (ver documento de Nina, sección 3: "para
+   peces raros/épicos/legendarios, aumentar duración, intensidad de brillo..."). */
+const FISH_DURATION_MULT = { comun: 1, poco_comun: 1.1, raro: 1.3, epico: 1.6, legendario: 2, especial: 1.15 };
+/* secuencia de pesca de Nina: sustituye a NpcDialogue mientras el kind de la entrada al
+   frente de la cola es "fishing" (ver queueStageScene/resolveFishing). No es un minijuego
+   de habilidad: es una escena con fases fijas (lanzar → esperar → picada → suspense →
+   revelación) que termina en una pantalla de captura de solo lectura, a la espera de un
+   click del jugador — nunca avanza sola, igual que pide el documento ("no hacer que la
+   captura desaparezca automáticamente"). */
+function FishingSequence({ entry, onConfirm }) {
+  const npc = NPCS[entry.npc] || NPCS.nina;
+  const item = ITEMS[entry.fish.id];
+  const rarity = FISH_RARITY[entry.fish.rarity] || FISH_RARITY.comun;
+  const mult = FISH_DURATION_MULT[entry.fish.rarity] || 1;
+  const [phase, setPhase] = useState("cast"); // cast -> wait -> shake -> suspense -> reveal
+  useEffect(() => { setPhase("cast"); }, [entry.id]);
+  useEffect(() => {
+    const delays = { cast: 900, wait: 1100, shake: 850, suspense: 550 };
+    const next = { cast: "wait", wait: "shake", shake: "suspense", suspense: "reveal" };
+    if (phase === "reveal") return;
+    if (phase === "shake") buzz(20);
+    const t = setTimeout(() => setPhase(next[phase]), delays[phase] * mult);
+    return () => clearTimeout(t);
+  }, [phase, mult]);
+  useEffect(() => { if (phase === "reveal") buzz([20, 30, 60]); }, [phase]);
+
+  const art = npc.arts["lanzandocaña"];
+  const phaseText = { cast: "Lanza la caña...", wait: "Esperando...", shake: "¡Está picando!", suspense: "..." }[phase];
+
+  if (phase !== "reveal") {
+    return (
+      <div className="fishing-ov">
+        <div className={"fishing-pose" + (phase === "shake" ? " fishing-shake" : "")}>
+          {art ? <img src={art} alt={npc.name} className="fishing-pose-img" />
+            : <div className="fishing-pose-img fishing-pose-fallback">{npc.name[0]}</div>}
+        </div>
+        <div className="fishing-hint">{phaseText}</div>
+      </div>);
+  }
+  return (
+    <div className="fishing-ov fishing-reveal" onClick={() => onConfirm(entry.id)}>
+      <div className="fishing-catch-card" style={{ "--fish-glow": rarity.color }}>
+        <div className="fishing-glow" />
+        {item.img && <img src={item.img} alt={item.name} className="fishing-fish-img" />}
+        <div className="fishing-fish-name">{item.name}</div>
+        <div className="fishing-fish-rarity" style={{ color: rarity.color, borderColor: rarity.color }}>{rarity.label}</div>
+      </div>
+      <div className="fishing-hint">toca para continuar</div>
+    </div>);
+}
+
 /* ---------- EL PERIÓDICO ---------- */
 function Newspaper({ game, onRead }) {
   const today = todayStr();
@@ -4545,13 +4927,16 @@ function Newspaper({ game, onRead }) {
    siempre hay periódico, así que en vez de cartel ofrece abrirlo.
    Fondo real: si existe /images/zones/{id}.webp se usa; si no (todavía no se ha
    subido), cae a un degradado de marcador de posición sin romper nada. */
-function ZoneScreen({ zone, pendingNpc, onBack, onOpenPaper, game, onSpin, onBuy }) {
+function ZoneScreen({ zone, pendingNpc, onBack, onOpenPaper, game, onSpin, onBuy, onFish }) {
   const [imgOk, setImgOk] = useState(true);
   const [zoomId, setZoomId] = useState(null);
   const npc = pendingNpc ? NPCS[pendingNpc] : null;
   const showPaperPrompt = zone.kind === "paper" && !pendingNpc;
   const isHome = zone.kind === "home";
   const isCasino = zone.id === "casino";
+  /* pesca libre: solo tras completar la campaña de Nina (ver NINA_STORY, FINAL/EPÍLOGO) */
+  const isPlaya = zone.id === "playa" && !!game.ninaStoryComplete;
+  const fishedToday = isPlaya && game.ninaFishDay === todayStr();
   const spunToday = isCasino && game && game.casinoSpinDay === todayStr();
   const lastSpin = isCasino ? game && game.casinoLastSpin : null;
   /* partidas antiguas pueden tener un casinoLastSpin de una forma previa a "kind"
@@ -4574,7 +4959,7 @@ function ZoneScreen({ zone, pendingNpc, onBack, onOpenPaper, game, onSpin, onBuy
       <div className="zone-shade" />
       <button className="zone-back" onClick={onBack}>← Volver</button>
       <div className="zone-label">{zone.label}</div>
-      {!pendingNpc && !showPaperPrompt && !isHome && !isCasino && (
+      {!pendingNpc && !showPaperPrompt && !isHome && !isCasino && !isPlaya && (
         <div className="zone-empty-card">
           <div style={{ fontSize: 30, marginBottom: 6 }}>🏚️</div>
           Parece que no hay nadie por aquí ahora mismo.</div>)}
@@ -4614,6 +4999,19 @@ function ZoneScreen({ zone, pendingNpc, onBack, onOpenPaper, game, onSpin, onBuy
                     onClick={() => onBuy(id, cost)}>Comprar</button>
                 </div>);
             })}
+          </div>
+        </div>)}
+      {isPlaya && !pendingNpc && (
+        <div className="house-room">
+          <div className="house-card">
+            <div className="house-title">🎣 Pesca libre</div>
+            {fishedToday ? (
+              <div style={{ fontSize: 13, color: "#EFEEE3", lineHeight: 1.5 }}>
+                Ya has pescado hoy.<br />Vuelve mañana para otra tirada.</div>
+            ) : (
+              <button className="btn-gold sm" style={{ width: "100%" }} onClick={onFish}>
+                🎣 Lanzar la caña (tirada gratis de hoy)</button>
+            )}
           </div>
         </div>)}
       <ItemLightbox item={zoomId ? ITEMS[zoomId] : null} onClose={() => setZoomId(null)} />
@@ -6188,7 +6586,8 @@ export default function App() {
          leído la escena. */
       if (q.length >= 12) { const i = q.findIndex((e) => e.kind !== "offer" && !e.applyOnRead); if (i >= 0) q.splice(i, 1); }
       q.push({ id: Date.now() + Math.random(), npc, mood: extra.mood || moodOf(npc, text), text,
-        kind: extra.kind, offer: extra.offer, replies: extra.replies, applyOnRead: extra.applyOnRead, zone: extra.zone });
+        kind: extra.kind, offer: extra.offer, replies: extra.replies, applyOnRead: extra.applyOnRead, zone: extra.zone,
+        fish: extra.fish, afterBeats: extra.afterBeats, freeFish: extra.freeFish });
       return { ...g, npcQueue: q };
     }
     const today = todayStr();
@@ -6278,6 +6677,27 @@ export default function App() {
     (stage.alsoUnlock || []).forEach((zoneId) => { out = unlockZone(out, zoneId); });
     return out;
   };
+  /* encola la escena de una etapa. Si la etapa declara "fish" (ver stage.introBefore/
+     introAfter/fish en NINA_STORY), la escena se corta en dos con la secuencia de pesca
+     en medio: introBefore se encola como una escena normal y luego una entrada especial
+     kind:"fishing" (que la app renderiza como <FishingSequence> en vez de <NpcDialogue>)
+     lleva consigo introAfter y el applyOnRead que cerraría la etapa — así el avance de
+     la historia no se confirma hasta que el jugador confirma la captura Y lee la
+     reacción completa, exactamente igual que cualquier otra escena. */
+  const queueStageScene = (out, def, key, stageObj, state, beatsOverride) => {
+    const npcName = NPCS[def.npc].name;
+    if (stageObj.fish) {
+      const before = (stageObj.introBefore || []).map((b) => ({ m: b.m, t: fillTpl(b.t, flavorCtx(out)) }));
+      out = addScene(out, npcName, before, { zone: stageObj.zone });
+      const after = (stageObj.introAfter || []).map((b) => ({ m: b.m, t: fillTpl(b.t, flavorCtx(out)) }));
+      out = addMsg(out, npcName, "", { mood: "lanzandocaña", kind: "fishing", zone: stageObj.zone,
+        fish: stageObj.fish, afterBeats: after, applyOnRead: { story: { key, state }, flags: stageObj.setFlags } });
+      return out;
+    }
+    const beats = (beatsOverride || stageObj.intro).map((b) => ({ m: b.m, t: fillTpl(b.t, flavorCtx(out)) }));
+    return addScene(out, npcName, beats, { zone: stageObj.zone, replies: stageObj.replies,
+      applyOnRead: { story: { key, state }, flags: stageObj.setFlags } });
+  };
   const checkStories = (g) => {
     let out = g;
     const stories = { ...(out.stories || {}) };
@@ -6295,8 +6715,7 @@ export default function App() {
         const s0 = chapter.stages[0];
         const state = { chapter: chapterIdx, stage: 0, snap: s0.snap ? s0.snap(out) : {}, startDay: todayStr() };
         out = enterStage(out, s0);
-        out = addScene(out, NPCS[def.npc].name, s0.intro.map((b) => ({ m: b.m, t: fillTpl(b.t, flavorCtx(out)) })),
-          { zone: s0.zone, replies: s0.replies, applyOnRead: { story: { key, state }, flags: s0.setFlags } });
+        out = queueStageScene(out, def, key, s0, state);
         pending[key] = true;
         return;
       }
@@ -6317,8 +6736,7 @@ export default function App() {
         : { chapter: chapterIdx, stage: nextIdx, snap: next.snap ? next.snap(out) : {}, startDay: todayStr(), done: chapterDone, failed };
       const beats = failed && next.introFail ? next.introFail : next.intro;
       out = enterStage(out, next);
-      out = addScene(out, NPCS[def.npc].name, beats.map((b) => ({ m: b.m, t: fillTpl(b.t, flavorCtx(out)) })),
-        { zone: next.zone, replies: next.replies, applyOnRead: { story: { key, state }, flags: next.setFlags } });
+      out = queueStageScene(out, def, key, next, state, beats);
       pending[key] = true;
       if (chapterDone && next.reward && !failed) out = next.reward(out);
     });
@@ -6382,6 +6800,33 @@ export default function App() {
       `Me han contado que rechazaste al ${e.offer.club.name}. Esa lealtad no se olvida. La afición te va a hacer un cántico. ❤️`, { mood: "happy" })), 400);
   };
   const markPaperRead = () => setGame((g) => ({ ...g, paperRead: todayStr() }));
+  /* confirma una captura de pesca (ver FishingSequence): añade el pez al inventario como
+     un objeto normal y, si la captura venía con una reacción de Nina pendiente
+     (afterBeats — historia narrativa) o marca de pesca libre (freeFish), la resuelve aquí
+     mismo. Solo se llama al click del jugador en la pantalla de captura: nunca al
+     encolar la escena, para que reproducir/perder una escena no pueda duplicar el pez. */
+  const resolveFishing = (id) => setGame((g) => {
+    const q = g.npcQueue || [];
+    const e = q.find((x) => x.id === id);
+    if (!e || e.kind !== "fishing") return g;
+    const inv = { ...(g.inventory || {}) };
+    inv[e.fish.id] = (inv[e.fish.id] || 0) + 1;
+    let out = { ...g, inventory: inv, npcQueue: q.filter((x) => x.id !== id) };
+    if (e.freeFish) out.ninaFishDay = todayStr();
+    if (e.afterBeats && e.afterBeats.length) out = addScene(out, "Nina", e.afterBeats, { zone: e.zone, applyOnRead: e.applyOnRead });
+    else if (e.applyOnRead) out = applyOnRead(out, e.applyOnRead);
+    return out;
+  });
+  /* pesca libre diaria (ver ZonaScreen "🎣 Pescar", desbloqueada tras BEKA... NINA_STORY):
+     mismo mecanismo que la escena narrativa (una entrada kind:"fishing" en la cola), pero
+     con el pez elegido al azar por rareza en vez de determinista, y sin reacción de Nina
+     detrás (afterBeats vacío: la captura se cierra sola al confirmarla). */
+  const freeFish = () => {
+    if (game.ninaFishDay === todayStr()) return;
+    const fishId = pickWeightedFish();
+    setGame((g) => addMsg(g, "Nina", "", { mood: "lanzandocaña", kind: "fishing", zone: "playa",
+      fish: { id: fishId, rarity: ITEMS[fishId].rarity }, afterBeats: [], freeFish: true }));
+  };
 
   /* carga inicial */
   useEffect(() => {
@@ -7032,12 +7477,18 @@ export default function App() {
       {/* visitar una zona: fondo a toda pantalla + flecha para volver */}
       {tab === "chat" && visitedZoneObj && (
         <ZoneScreen zone={visitedZoneObj} pendingNpc={visitedActiveNpc} game={game}
-          onBack={() => setVisitedZone(null)} onOpenPaper={() => setShowPaper(true)} onSpin={spinCasino} onBuy={buyShopItem} />)}
+          onBack={() => setVisitedZone(null)} onOpenPaper={() => setShowPaper(true)} onSpin={spinCasino} onBuy={buyShopItem} onFish={freeFish} />)}
       {/* diálogo de personaje: overlay a nivel de App (fuera de .tab-in), aparece encima
           del fondo de la zona en cuanto hay alguien esperando ahí (visitedActiveNpc) */}
       {tab === "chat" && visitedActiveNpc && (() => {
         const q = (game.npcQueue || []).filter((e) => e.npc === visitedActiveNpc);
-        return q.length > 0 && (
+        if (!q.length) return null;
+        /* secuencia de pesca de Nina: mismo hueco en la cola que un mensaje normal (kind
+           "fishing", ver queueStageScene/addMsg), pero se renderiza con su propio
+           componente en vez de NpcDialogue — solo-lectura hasta que el jugador confirma
+           la captura con un click (ver resolveFishing). */
+        if (q[0].kind === "fishing") return <FishingSequence entry={q[0]} onConfirm={resolveFishing} />;
+        return (
           <NpcDialogue entry={q[0]} queueLeft={q.length}
             onAdvance={advanceNpc} onChoice={answerChoice} onOffer={answerOffer} />);
       })()}
@@ -7285,6 +7736,35 @@ function StyleTag() {
       @keyframes npccaret { 0%,100% { transform:translateY(0); } 50% { transform:translateY(4px); } }
       .npc-hint { font-size:10px; color:#8A8E7C; text-align:right; margin-top:5px; letter-spacing:.5px; }
       .npc-ghost { background:rgba(255,255,255,.07); color:#EFEEE3; border-color:rgba(239,238,227,.35); }
+      /* --- secuencia de pesca de Nina (ver FishingSequence) --- */
+      .fishing-ov { position:fixed; inset:0; z-index:30; display:flex; flex-direction:column;
+        align-items:center; justify-content:center; gap:22px;
+        background:radial-gradient(ellipse at 50% 20%, #0E3A4A, #05070d 78%); cursor:pointer; }
+      .fishing-pose { display:flex; align-items:center; justify-content:center; }
+      .fishing-pose-img { max-height:52vh; max-width:80vw; object-fit:contain;
+        filter:drop-shadow(0 14px 30px rgba(0,0,0,.6)); animation:npcin .3s cubic-bezier(.2,1.2,.4,1) both; }
+      .fishing-pose-fallback { width:150px; height:150px; border-radius:50%; background:#2E9EC9;
+        display:flex; align-items:center; justify-content:center; font-family:'Oswald',sans-serif; font-size:64px; color:#fff; }
+      .fishing-shake .fishing-pose-img { animation:fishingshake .35s ease-in-out infinite; }
+      @keyframes fishingshake { 0%,100% { transform:rotate(0deg) translateX(0); }
+        25% { transform:rotate(-3deg) translateX(-4px); } 75% { transform:rotate(3deg) translateX(4px); } }
+      .fishing-hint { font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:2px; color:#EFEEE3;
+        text-transform:uppercase; opacity:.85; }
+      .fishing-reveal .fishing-hint { animation:npccaret 1s ease-in-out infinite; }
+      .fishing-catch-card { position:relative; display:flex; flex-direction:column; align-items:center;
+        gap:6px; animation:fishpop .5s cubic-bezier(.2,1.4,.4,1) both; }
+      @keyframes fishpop { from { opacity:0; transform:scale(.6); } to { opacity:1; transform:scale(1); } }
+      .fishing-glow { position:absolute; top:50%; left:50%; width:280px; height:280px;
+        transform:translate(-50%,-50%); border-radius:50%; background:radial-gradient(circle, var(--fish-glow) 0%, transparent 70%);
+        opacity:.5; filter:blur(6px); animation:fishglow 1.8s ease-in-out infinite; pointer-events:none; }
+      @keyframes fishglow { 0%,100% { opacity:.35; transform:translate(-50%,-50%) scale(1); }
+        50% { opacity:.6; transform:translate(-50%,-50%) scale(1.08); } }
+      .fishing-fish-img { position:relative; z-index:1; max-height:34vh; max-width:78vw; object-fit:contain;
+        filter:drop-shadow(0 10px 26px rgba(0,0,0,.55)); }
+      .fishing-fish-name { position:relative; z-index:1; font-family:'Oswald',sans-serif; font-size:20px;
+        letter-spacing:1px; color:#EFEEE3; margin-top:4px; }
+      .fishing-fish-rarity { position:relative; z-index:1; font-family:'Oswald',sans-serif; font-size:11.5px;
+        letter-spacing:2px; text-transform:uppercase; border:1.5px solid; border-radius:20px; padding:3px 14px; }
       /* --- motor 2D del partido --- */
       .match-ov { background:radial-gradient(ellipse at 50% -10%, #14300F, #05070d 72%);
         justify-content:flex-start; padding:26px 14px 16px; overflow-y:auto; }

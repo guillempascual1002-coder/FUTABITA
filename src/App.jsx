@@ -4887,6 +4887,7 @@ function CityMap({ game, onVisit, zones, vb, svgSrc, mapLabel }) {
   return (
     <div className="city-wrap">
       <img src={svgSrc} alt={`Mapa de ${mapLabel}`} className="city-bg-img" />
+      <div className="city-coins">🪙 {game.fichas || 0}</div>
       {/* la zona en sí (su silueta real del mapa) es lo clicable, no un círculo suelto encima.
           bloqueadas: gris + candado. desbloqueadas sin nada pendiente: invisible, pero clicable
           en toda su forma. Con algo pendiente, esa silueta queda tapada por la burbuja de personaje. */}
@@ -7395,6 +7396,9 @@ function StyleTag() {
       .city-empty-card { line-height:1.5; text-align:center; color:#6F7563; font-size:13.5px;
         background:#F0EFE5; border-radius:16px; padding:26px 22px; max-width:260px; }
       .city-bg-img { display:block; width:100%; height:auto; }
+      .city-coins { position:absolute; top:10px; right:10px; z-index:3; line-height:1.4;
+        background:rgba(22,25,15,.78); color:#EFEEE3; font-family:'Oswald',sans-serif; font-size:13px;
+        font-weight:600; padding:5px 11px; border-radius:20px; border:1.5px solid rgba(205,245,70,.5); }
       .city-overlay { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
       .city-lockshape { pointer-events:auto; cursor:pointer; }
       /* pointer-events:auto no basta con fill transparent (el SVG solo cuenta el área

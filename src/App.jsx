@@ -6740,38 +6740,15 @@ export default function App() {
     return { ...g, savedMeals: [...sm, m].slice(-8) };
   }); pushToast("💾 Guardada en comidas frecuentes"); };
   const deleteSavedMeal = (name) => setGame((g) => ({ ...g, savedMeals: (g.savedMeals || []).filter((m) => m.name !== name) }));
-  /* ruleta del Casino: una tirada gratis al día, +5..20 XP a una stat al azar */
-  /* la ruleta tiene 3 premios posibles: XP de una stat (lo normal), fichas del casino
-     (para gastar en la tiendecita del Casino) o, muy de vez en cuando, un objeto especial */
+  /* ruleta del Casino: una tirada gratis al día, +5..20 fichas. Antes también podía dar
+     XP directa o un objeto especial; se simplificó a solo fichas (la tienda del Casino,
+     a construir más adelante, es el único sitio donde esas fichas se convierten en algo). */
   const spinCasino = () => {
     if (game.casinoSpinDay === todayStr()) return; /* ya se ha usado hoy, botón no debería ni estar visible */
-    const roll = Math.random();
-    const result = roll < 0.65 ? { kind: "xp", stat: pick(["FIS", "FUE", "RES", "NUT", "REC", "MEN"]), amount: Math.floor(rnd(5, 21)) }
-      : roll < 0.9 ? { kind: "fichas", amount: Math.floor(rnd(5, 16)) }
-      : { kind: "item", itemId: "amuleto_suerte" };
-    setGame((g) => {
-      const p = g.player;
-      let out = { ...g, casinoSpinDay: todayStr(), casinoLastSpin: result };
-      if (result.kind === "xp") {
-        const stats = { ...p.stats }, xp = { ...p.xp };
-        xp[result.stat] = (xp[result.stat] || 0) + result.amount;
-        let upped = false;
-        while (stats[result.stat] < 99 && xp[result.stat] >= xpToNext(stats[result.stat])) { xp[result.stat] -= xpToNext(stats[result.stat]); stats[result.stat] += 1; upped = true; }
-        if (upped) setTimeout(() => pushToast(`📈 ¡${result.stat} sube a ${stats[result.stat]}!`), 700);
-        out.player = { ...p, stats, xp };
-      } else if (result.kind === "fichas") {
-        out.fichas = (g.fichas || 0) + result.amount;
-      } else {
-        const inv = { ...(g.inventory || {}) };
-        inv[result.itemId] = (inv[result.itemId] || 0) + 1;
-        out.inventory = inv;
-      }
-      return out;
-    });
+    const result = { kind: "fichas", amount: Math.floor(rnd(5, 21)) };
+    setGame((g) => ({ ...g, casinoSpinDay: todayStr(), casinoLastSpin: result, fichas: (g.fichas || 0) + result.amount }));
     buzz(15);
-    if (result.kind === "xp") pushToast(`🎰 ¡+${result.amount} XP en ${result.stat}!`);
-    else if (result.kind === "fichas") pushToast(`🎰 ¡+${result.amount} 🪙 fichas!`);
-    else pushToast(`🎰 ¡Premio especial: ${ITEMS[result.itemId].name}!`);
+    pushToast(`🎰 ¡+${result.amount} 🪙 fichas!`);
   };
   /* tiendecita del Casino: gasta fichas ganadas en la ruleta en un par de objetos fijos */
   const buyShopItem = (itemId, cost) => setGame((g) => {

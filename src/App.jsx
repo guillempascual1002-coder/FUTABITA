@@ -4299,6 +4299,24 @@ function QuestPanel({ game, onClose, storiesRegistry }) {
   const active = Object.entries(storiesRegistry)
     .map(([key, def]) => ({ key, def, st: (game.stories || {})[key] }))
     .filter((x) => x.st && x.st.stage !== -1);
+  /* replay de la cinemática de la etapa activa: SOLO lectura, ver comentario junto a
+     startReplay/advanceReplay más abajo — no toca game ni llama a setGame en ningún punto. */
+  const [replay, setReplay] = useState(null); // { npc, name, beats, idx } | null
+  const startReplay = (npcKey, name, stageDef) => {
+    const ctx = flavorCtx(game);
+    const beats = (stageDef.intro || []).map((b) => ({ m: b.m, t: fillTpl(b.t, ctx) }));
+    if (!beats.length) return;
+    setReplay({ npc: npcKey, name, beats, idx: 0 });
+  };
+  /* avanza el índice local nada más: no hay applyOnRead, ni npcQueue, ni setGame.
+     Al tocar el último beat, idx supera el total y el replay se cierra solo — eso YA
+     es "volver automáticamente a Misiones", porque el panel nunca se desmontó debajo. */
+  const advanceReplay = () => setReplay((r) => {
+    if (!r) return null;
+    const nextIdx = r.idx + 1;
+    return nextIdx >= r.beats.length ? null : { ...r, idx: nextIdx };
+  });
+  const replayEntry = replay && { id: `replay-${replay.idx}`, npc: replay.npc, mood: replay.beats[replay.idx].m, text: replay.beats[replay.idx].t };
   return (
     <div className="overlay" style={{ background: "rgba(5,7,13,.75)", zIndex: 65, alignItems: "flex-end", padding: 0 }} onClick={onClose}>
       <div className="sheet" style={{ maxHeight: "78vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
@@ -4314,8 +4332,19 @@ function QuestPanel({ game, onClose, storiesRegistry }) {
           const pct = st.done || waitingToTalk ? 1 : stageProgress(game, stageDef, st.snap);
           return (
             <div key={key} className="panel" style={{ display: "flex", gap: 12, alignItems: "center" }}>
-              <img src={npc.icon} alt={npc.name} style={{ width: 44, height: 44, borderRadius: "50%",
-                objectFit: "cover", flexShrink: 0, border: "1.5px solid #16190F" }} />
+              {/* recordatorio de la cinemática de la etapa activa: solo si hay una etapa en
+                  marcha (no en historias ya completadas/cerradas) — replay de solo lectura,
+                  no reinicia la misión ni repite ningún efecto de esa escena */}
+              {st.done ? (
+                <img src={npc.icon} alt={npc.name} style={{ width: 44, height: 44, borderRadius: "50%",
+                  objectFit: "cover", flexShrink: 0, border: "1.5px solid #16190F" }} />
+              ) : (
+                <button onClick={() => startReplay(def.npc, npc.name, stageDef)}
+                  aria-label={`Volver a ver la escena de ${npc.name}`}
+                  style={{ padding: 0, border: "none", background: "none", cursor: "pointer", flexShrink: 0 }}>
+                  <img src={npc.icon} alt={npc.name} style={{ width: 44, height: 44, borderRadius: "50%",
+                    objectFit: "cover", border: "1.5px solid #16190F" }} />
+                </button>)}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 13, marginBottom: 2 }}>{chapter.title}</div>
                 {st.done ? (
@@ -4338,6 +4367,11 @@ function QuestPanel({ game, onClose, storiesRegistry }) {
             </div>);
         })}
       </div>
+      {replayEntry && (
+        <div onClick={(e) => e.stopPropagation()}>
+          <NpcDialogue entry={replayEntry} queueLeft={replay.beats.length - replay.idx}
+            onAdvance={advanceReplay} onChoice={() => {}} onOffer={() => {}} />
+        </div>)}
     </div>);
 }
 

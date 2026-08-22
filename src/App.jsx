@@ -1011,6 +1011,15 @@ const NPCS = {
       orgulloso: "/images/igor/igor_orgulloso.webp", chef: "/images/igor/igor_chef.webp",
       cansado: "/images/igor/igor_cansado.webp", celebracion: "/images/igor/igor_celebracion.webp",
       playa: "/images/igor/igor_playa.webp" }, def: "idle" },
+  /* Beka: futbolista rival de otro club, competitiva y macarra. "angry" es pique
+     competitivo/chulería, nunca enfado real (igual que en Karla/Yuna). disco_happy/
+     disco_seria son su faceta nocturna en la Discoteca (donde trabaja); playa es su
+     outfit fuera de servicio. Sin "happy" suelto: def cae en "idle". */
+  beka: { name: "Beka", color: "#C81E3A", voice: "/audio/vozchica01.mp3", icon: "/images/beka/beka_icon.webp",
+    arts: { idle: "/images/beka/beka_idle.webp", angry: "/images/beka/beka_angry.webp",
+      celebracion: "/images/beka/beka_celebracion.webp", agotada: "/images/beka/beka_agotada.webp",
+      disco_happy: "/images/beka/beka_disco_happy.webp", disco_seria: "/images/beka/beka_disco_seria.webp",
+      playa: "/images/beka/beka_playa.webp" }, def: "idle" },
 };
 /* el sender siempre es el nombre real del personaje ahora (la zona ya no crea una
    identidad de sender distinta: es contexto de la escena, ver campo "zone" en addMsg/addScene) */
@@ -1021,6 +1030,7 @@ const senderToNpc = (from) => {
   if (from === "Milly") return "milly";
   if (from === "Igor") return "igor";
   if (from === "López" || from.includes("Capitán") || from.includes("· Vestuario")) return "lopez";
+  if (from === "Beka") return "beka";
   return null; /* prensa/afición/redes/club -> periódico */
 };
 const paperSec = (from) =>
@@ -1227,6 +1237,10 @@ const careerAssists = (g) => (g.matchHistory || []).reduce((a, m) => a + (m.myAs
    que repetir en cada misión los mismos tres campos (gym/comida/sueño) a mano. */
 const daysGoalsCompletedSince = (g, sinceDay) =>
   Object.entries(g.logs || {}).filter(([d, l]) => d >= sinceDay && l.closed && (l.pct || 0) >= 70).length;
+/* ¿ha visitado esta zona desde una fecha? (ver g.zoneVisits, que registra la última vez que
+   se abrió cada zona — infraestructura mínima añadida para objetivos tipo "visita X",
+   que hasta ahora ningún capítulo necesitaba: ver BEKA_STORY) */
+const zoneVisitedSince = (g, zoneId, sinceDay) => !!(g.zoneVisits && g.zoneVisits[zoneId] >= sinceDay);
 /* hitos de constancia para desbloquear las zonas de La Metrópolis, contados sobre TODO el historial de logs */
 const gymDaysCount = (g) => Object.values(g.logs || {}).filter((l) => l.gym).length;
 const habitDaysCount = (g) => Object.values(g.logs || {}).filter((l) => (l.habitsDone || []).length > 0).length;
@@ -1260,10 +1274,7 @@ const CITY_MAP_VB = { x: 15, y: 60, w: 438, h: 720.3 };
    todavía (no se ha diseñado qué historia abre qué zona), así que solo
    Casa y Barrio están disponibles desde el principio y el resto se queda
    bloqueado hasta que el sistema de historias las abra más adelante. */
-/* discoteca: zona nueva en el SVG fusionado, todavía sin personaje ni historia asignada
-   (pendiente de contenido) — se deja siempre visible pero vacía, en vez de bloqueada sin
-   ningún evento narrativo que pueda desbloquearla nunca */
-const DEFAULT_UNLOCKED_ZONES = ["casa", "barrio", "discoteca"];
+const DEFAULT_UNLOCKED_ZONES = ["casa", "barrio"];
 const isZoneUnlocked = (g, zoneId) => (g.unlockedZones || DEFAULT_UNLOCKED_ZONES).includes(zoneId);
 const unlockZone = (g, zoneId) => {
   const cur = g.unlockedZones || DEFAULT_UNLOCKED_ZONES;
@@ -1282,7 +1293,7 @@ const ZONES = [
   { id: "oficina", kind: "npc", npc: "elisa", label: "Oficina", icon: "🏢", x: 26.11, y: 6.63,
     pts: "52.25 87.74 55.66 137.44 204.76 129.61 204.76 76.16 52.25 87.74",
     unlocked: (g) => isZoneUnlocked(g, "oficina") },
-  { id: "ciudad-dep", kind: "npc", npc: ["lopez", "elisa", "milly"], label: "Ciudad Deportiva", icon: "🏟️", x: 68.40, y: 31.75,
+  { id: "ciudad-dep", kind: "npc", npc: ["lopez", "elisa", "milly", "beka"], label: "Ciudad Deportiva", icon: "🏟️", x: 68.40, y: 31.75,
     pts: "226.89 245.01 214.21 284.33 257.1 333.35 437.36 333.35 437.36 247.57 226.89 245.01",
     unlocked: (g) => isZoneUnlocked(g, "ciudad-dep") },
   { id: "kiosco", kind: "paper", npc: "milly", label: "Kiosco", icon: "📰", x: 71.79, y: 44.20,
@@ -1292,18 +1303,18 @@ const ZONES = [
   /* npc: "yuna" — casa sigue siendo la pantalla de trofeos (HouseRoom) por defecto, pero
      ahora también admite una escena de personaje encima (ver ZoneScreen: isHome no excluye
      ya pendingNpc), para las escenas de intimidad emocional de su campaña en Casa del jugador */
-  { id: "casa", kind: "home", npc: ["yuna", "lopez", "igor", "lisa"], label: "Tu Casa", icon: "🏠", x: 24.20, y: 45.68,
+  { id: "casa", kind: "home", npc: ["yuna", "lopez", "igor", "lisa", "beka"], label: "Tu Casa", icon: "🏠", x: 24.20, y: 45.68,
     pts: "91.14 348.16 163.66 373.18 152.42 429.35 76.85 405.35 91.14 348.16",
     unlocked: (g) => isZoneUnlocked(g, "casa") },
   /* varios personajes comparten esta zona de calle: la burbuja muestra a quien tenga
      algo pendiente ahora mismo (ver EXTRA_NPCS y CityMap); en reposo, el puntito de siempre */
-  { id: "barrio", kind: "npc", npc: ["yuna", "elisa", "milly", "lopez", "igor"], label: "El Barrio", icon: "🌆", x: 57.78, y: 58.78,
+  { id: "barrio", kind: "npc", npc: ["yuna", "elisa", "milly", "lopez", "igor", "beka"], label: "El Barrio", icon: "🌆", x: 57.78, y: 58.78,
     pts: "217.78 461.01 217.78 507.48 318.38 500 318.38 465.1 217.78 461.01",
     unlocked: (g) => isZoneUnlocked(g, "barrio") },
-  { id: "car", kind: "npc", npc: ["lopez", "lisa", "elisa", "igor"], label: "Centro de Alto Rendimiento", icon: "🏋️", x: 66.84, y: 18.18,
+  { id: "car", kind: "npc", npc: ["lopez", "lisa", "elisa", "igor", "beka"], label: "Centro de Alto Rendimiento", icon: "🏋️", x: 66.84, y: 18.18,
     pts: "229.95 164.5 229.95 222.03 387.91 223.74 383.14 153.52 229.95 164.5",
     unlocked: (g) => isZoneUnlocked(g, "car") },
-  { id: "prensa", kind: "npc", npc: ["milly", "lisa"], label: "Sala de Prensa", icon: "🎙️", x: 27.50, y: 33.16,
+  { id: "prensa", kind: "npc", npc: ["milly", "lisa", "beka"], label: "Sala de Prensa", icon: "🎙️", x: 27.50, y: 33.16,
     pts: "131.91 245.01 187.66 293.52 168.25 358.89 91.14 337.44 98.29 259.31 131.91 245.01",
     unlocked: (g) => isZoneUnlocked(g, "prensa") },
   /* la presentación de Karla ya no depende de metFlag/intro (eso duplicaba el prólogo real
@@ -1318,16 +1329,16 @@ const ZONES = [
   { id: "tienda", kind: "npc", npc: ["yuna", "lopez"], label: "Tienda Oficial", icon: "🛍️", x: 84.10, y: 65.63,
     pts: "342.38 511.57 346.97 559.57 424.08 552.42 420 507.48 342.38 511.57",
     unlocked: (g) => isZoneUnlocked(g, "tienda") },
-  { id: "estadio", kind: "npc", npc: ["lopez", "yuna", "elisa", "milly", "igor"], label: "Gran Estadio", icon: "🏆", x: 74.47, y: 89.16,
+  { id: "estadio", kind: "npc", npc: ["lopez", "yuna", "elisa", "milly", "igor", "beka"], label: "Gran Estadio", icon: "🏆", x: 74.47, y: 89.16,
     pts: "384.07 634.12 295.02 657.52 262.89 677.69 290.06 764.25 384.07 764.25 431.07 715.53 384.07 634.12",
     unlocked: (g) => isZoneUnlocked(g, "estadio"), big: true },
-  { id: "parque", kind: "npc", npc: ["elisa", "lisa", "milly", "yuna", "lopez"], label: "Parque", icon: "🌳", x: 47.99, y: 42.84,
+  { id: "parque", kind: "npc", npc: ["elisa", "lisa", "milly", "yuna", "lopez", "beka"], label: "Parque", icon: "🌳", x: 47.99, y: 42.84,
     pts: "204.76 310.38 181.53 393.1 289.27 402.29 204.76 310.38",
     unlocked: (g) => isZoneUnlocked(g, "parque") },
   { id: "casino", kind: "npc", npc: ["elisa", "lisa"], label: "Casino", icon: "🎰", x: 63.79, y: 72.25,
     pts: "262.21 525.86 321.95 522.8 333.44 636.16 297.83 644.33 256.59 572.84 262.21 525.86",
     unlocked: (g) => isZoneUnlocked(g, "casino") },
-  { id: "enfermeria", kind: "npc", npc: ["elisa", "milly"], label: "Enfermería", icon: "🏥", x: 70.56, y: 8.09,
+  { id: "enfermeria", kind: "npc", npc: ["elisa", "milly", "beka"], label: "Enfermería", icon: "🏥", x: 70.56, y: 8.09,
     pts: "269.53 96.59 375.7 85.45 379.45 140.6 271.57 150.46 269.53 96.59",
     unlocked: (g) => isZoneUnlocked(g, "enfermeria") },
   { id: "playa", kind: "npc", npc: ["elisa", "milly", "lopez", "lisa", "yuna", "igor"], label: "Playa", icon: "🏖️", x: 18.88, y: 62.76,
@@ -1341,14 +1352,19 @@ const ZONES = [
   { id: "restaurante", kind: "npc", npc: ["igor", "elisa"], label: "Restaurante", icon: "🍽️", x: 51.41, y: 50.53,
     pts: "295.06 414.55 314.29 442.12 171.83 437.01 179.49 402.29 295.06 414.55",
     unlocked: (g) => isZoneUnlocked(g, "restaurante") },
-  { id: "discoteca", kind: "npc", npc: [], label: "Discoteca", icon: "🪩", x: 83.21, y: 57.68,
+  /* ya no está en DEFAULT_UNLOCKED_ZONES: cuando se añadió no tenía ningún personaje ni
+     historia asignada, así que se dejaba siempre visible a propósito. Ahora la desbloquea
+     BEKA_STORY (capítulo 3, "La otra vida") como cualquier otra zona narrativa — partidas
+     ya guardadas que la tuvieran desbloqueada de antes no se ven afectadas (sanitizeGame
+     solo aplica el default cuando no existe unlockedZones en absoluto). */
+  { id: "discoteca", kind: "npc", npc: ["beka"], label: "Discoteca", icon: "🪩", x: 83.21, y: 57.68,
     pts: "335.1 454.89 340.21 497.27 418.46 497.27 424.08 452.33 335.1 454.89",
     unlocked: (g) => isZoneUnlocked(g, "discoteca") },
 ];
 /* home zone de cada personaje: dónde "vive" por defecto si una escena no especifica zona
    explícita (varios personajes están asignados a más de una zona ahora que la zona es
    contexto de escena y no una identidad de npc distinta, ver NPCS más arriba) */
-const HOME_ZONE = { elisa: "oficina", lopez: "ciudad-dep", milly: "kiosco", yuna: "barrio", lisa: "patro", igor: "restaurante" };
+const HOME_ZONE = { elisa: "oficina", lopez: "ciudad-dep", milly: "kiosco", yuna: "barrio", lisa: "patro", igor: "restaurante", beka: "barrio" };
 /* una zona puede tener uno o varios personajes asignados (p.ej. El Barrio) */
 const zoneNpcList = (z) => (Array.isArray(z.npc) ? z.npc : z.npc ? [z.npc] : []);
 /* una entrada de npcQueue cuenta para una zona si su "zone" explícito coincide, o si no
@@ -3188,9 +3204,399 @@ const KARLA_STORY = {
   }],
 };
 
+/* ============================================================
+   BEKA · séptima campaña, DLC independiente ("Choque de clases").
+   Prólogo + 15 capítulos + final + epílogo, misma arquitectura que el
+   resto. Rival directa de otro club: en el campo compite, en la
+   Discoteca (donde trabaja algunas noches) deja de competir. Su
+   "angry" es pique competitivo/chulería, nunca enfado real — igual
+   que Karla/Yuna.
+
+   Zona nueva para objetivos: "Visita la Discoteca" (capítulos 3/4/8/11/14)
+   no tenía forma de comprobarse en el motor (nada registraba qué zonas
+   había visitado el jugador) — se añadió la infraestructura mínima
+   (game.zoneVisits, ver useEffect junto a visitedZoneObj, y el helper
+   zoneVisitedSince) sin tocar ningún otro sistema.
+
+   Estructura FINAL/EPÍLOGO distinta a las demás campañas: el documento
+   coloca la entrega del pin dentro de la escena "FINAL — Desde abajo"
+   y deja el EPÍLOGO como una coda corta sin recompensa. El motor solo
+   dispara reward() en la ÚLTIMA etapa (la marcada final:true), así que
+   aquí el diálogo de la entrega del pin se movió a la etapa EPÍLOGO
+   (ver más abajo) para que dispare correctamente — ni una línea de
+   diálogo del documento se ha tocado ni recortado, solo se reordenó
+   en qué etapa del motor cae cada bloque para que el pin se entregue
+   en el momento narrativo correcto. */
+const BEKA_STORY = {
+  npc: "beka",
+  chapters: [{
+    id: "cap1",
+    title: "La historia de Beka",
+    trigger: () => true,
+    stages: [
+      /* PRÓLOGO — La chica del balón */
+      { title: "La chica del balón", zone: "barrio",
+        objective: "Completa un partido.",
+        intro: [
+          { m: "idle", t: "Tú eres {player}, ¿no?" },
+          { m: "idle", t: "El del {club}." },
+          { m: "angry", t: "Te he visto jugar." },
+          { m: "idle", t: "No está mal." },
+          { m: "angry", t: "No pongas esa cara. «No está mal» es bastante para ser el primer día." },
+          { m: "idle", t: "Yo soy Beka. Juego en otro club." },
+          { m: "angry", t: "Y antes de que preguntes: sí. Soy bastante mejor de lo que parezco." },
+          { m: "idle", t: "Aunque supongo que eso tendremos que comprobarlo." },
+          { m: "angry", t: "Bien. Ahora ya tengo algo con lo que compararte." },
+          { m: "idle", t: "Nos veremos otra vez." },
+        ],
+        setFlags: ["bekaMet"],
+        snap: (g) => ({ matchCount: (g.matchHistory || []).length }),
+        check: (g, snap) => (g.matchHistory || []).length > snap.matchCount },
+      /* CAPÍTULO 1 — No te emociones */
+      { title: "No te emociones", zone: "ciudad-dep",
+        objective: "Consigue una victoria y marca al menos 1 gol o asistencia desde el inicio del capítulo.",
+        intro: [
+          { m: "angry", t: "He visto tu último partido." },
+          { m: "idle", t: "Has mejorado." },
+          { m: "angry", t: "No demasiado. No te vengas arriba." },
+          { m: "idle", t: "Pero si quieres que te tome en serio, hay una cosa que puedes hacer." },
+          { m: "angry", t: "Ganar." },
+          { m: "celebracion", t: "Vale. Eso sí ha estado bien." },
+          { m: "angry", t: "Pero una vez no cambia nada." },
+          { m: "idle", t: "Ahora quiero ver si puedes hacerlo otra vez." },
+        ],
+        snap: (g) => ({ matchCount: (g.matchHistory || []).length, goals: careerGoals(g), assists: careerAssists(g) }),
+        subs: [
+          (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
+          (g, snap) => careerGoals(g) > snap.goals || careerAssists(g) > snap.assists,
+        ],
+        check: (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") &&
+          (careerGoals(g) > snap.goals || careerAssists(g) > snap.assists) },
+      /* CAPÍTULO 2 — Te estoy empezando a conocer */
+      { title: "Te estoy empezando a conocer", zone: "barrio",
+        objective: "Completa 3 días de objetivos y consigue una nota de partido igual o superior a tu mejor nota del capítulo anterior.",
+        intro: [
+          { m: "idle", t: "Empiezo a saber cómo juegas." },
+          { m: "angry", t: "Y eso es malo para ti." },
+          { m: "idle", t: "Ya sé cuándo aceleras. Cuándo te escondes. Cuándo intentas hacer demasiado." },
+          { m: "angry", t: "Así que la próxima vez no te va a salir tan fácil." },
+          { m: "idle", t: "Eso quería." },
+          { m: "angry", t: "Que me obligaras a mejorar." },
+        ],
+        snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length, bestRating: g.bestRating || 0 }),
+        subs: [
+          (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3,
+          (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => (m.rating || 0) >= snap.bestRating),
+        ],
+        check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3 &&
+          (g.matchHistory || []).slice(snap.matchCount).some((m) => (m.rating || 0) >= snap.bestRating) },
+      /* CAPÍTULO 3 — La otra vida */
+      { title: "La otra vida", zone: "discoteca",
+        objective: "Visita la Discoteca.",
+        intro: [
+          { m: "disco_happy", t: "¿Qué haces tú aquí?" },
+          { m: "disco_happy", t: "Espera. No me digas que has venido a buscarme." },
+          { m: "disco_seria", t: "Trabajo aquí algunas noches." },
+          { m: "disco_happy", t: "Sí. Ya sé que no pega mucho con la imagen que te habías hecho de mí." },
+          { m: "disco_seria", t: "Pero aquí puedo estar tranquila." },
+          { m: "disco_happy", t: "Bueno. Todo lo tranquila que puede estar una persona trabajando con música a todo volumen." },
+          { m: "disco_happy", t: "Una cosa." },
+          { m: "disco_happy", t: "Aquí no somos rivales." },
+          { m: "disco_seria", t: "Al menos hasta que salgamos por esa puerta." },
+        ],
+        setFlags: ["bekaDisco"],
+        snap: () => ({ since: todayStr() }),
+        check: (g, snap) => zoneVisitedSince(g, "discoteca", snap.since) },
+      /* CAPÍTULO 4 — Después del partido */
+      { title: "Después del partido", zone: "discoteca",
+        objective: "Gana un partido y visita la Discoteca después.",
+        intro: [
+          { m: "disco_happy", t: "¿Has ganado?" },
+          { m: "disco_happy", t: "Entonces hoy puedes quedarte." },
+          { m: "disco_seria", t: "Me gusta venir aquí después de jugar." },
+          { m: "disco_happy", t: "Durante un rato nadie me pregunta por la clasificación." },
+          { m: "disco_seria", t: "Ni por el próximo partido." },
+          { m: "disco_happy", t: "Solo por si quiero otra canción." },
+          { m: "disco_seria", t: "Ha estado bien." },
+          { m: "disco_happy", t: "No la noche. La conversación." },
+          { m: "disco_happy", t: "No pongas esa cara. No me arrepiento de haberlo dicho." },
+        ],
+        snap: (g) => ({ matchCount: (g.matchHistory || []).length, since: todayStr() }),
+        subs: [
+          (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
+          (g, snap) => zoneVisitedSince(g, "discoteca", snap.since),
+        ],
+        check: (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") &&
+          zoneVisitedSince(g, "discoteca", snap.since) },
+      /* CAPÍTULO 5 — No todo es ganar */
+      { title: "No todo es ganar", zone: "parque",
+        objective: "Mantén una racha de 3 días y completa al menos 3 días de objetivos diarios.",
+        intro: [
+          { m: "idle", t: "Hoy no te voy a retar." },
+          { m: "idle", t: "Relájate." },
+          { m: "idle", t: "Bueno... intenta." },
+          { m: "agotada", t: "¿Sabes qué pasa cuando llevas demasiado tiempo intentando demostrar algo?" },
+          { m: "idle", t: "Que un día ya no sabes si estás jugando porque te gusta o porque tienes miedo de quedarte atrás." },
+          { m: "angry", t: "A mí me pasa bastante." },
+          { m: "idle", t: "No te estoy pidiendo que me entiendas." },
+          { m: "idle", t: "Solo... que no te olvides de disfrutarlo." },
+        ],
+        snap: () => ({ since: todayStr() }),
+        subs: [
+          (g) => (g.player.streak || 0) >= 3,
+          (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3,
+        ],
+        check: (g, snap) => (g.player.streak || 0) >= 3 && daysGoalsCompletedSince(g, snap.since) >= 3 },
+      /* CAPÍTULO 6 — Que suba el nivel */
+      { title: "Que suba el nivel", zone: "car",
+        objective: "Mejora tu OVR respecto al snapshot de inicio y completa 4 días de objetivos.",
+        intro: [
+          { m: "angry", t: "He oído que estás mejorando." },
+          { m: "angry", t: "Qué rabia." },
+          { m: "idle", t: "Pero también me gusta." },
+          { m: "angry", t: "Si tú subes, yo tengo que subir." },
+          { m: "celebracion", t: "Así funciona esto." },
+          { m: "celebracion", t: "Ahora sí." },
+          { m: "angry", t: "Vuelve a hacerlo." },
+        ],
+        snap: (g) => ({ ovr: calcOVR(g.player.stats), since: todayStr() }),
+        subs: [
+          (g, snap) => calcOVR(g.player.stats) > snap.ovr,
+          (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 4,
+        ],
+        check: (g, snap) => calcOVR(g.player.stats) > snap.ovr && daysGoalsCompletedSince(g, snap.since) >= 4 },
+      /* CAPÍTULO 7 — La gente empieza a mirar */
+      { title: "La gente empieza a mirar", zone: "prensa",
+        objective: "Alcanza el siguiente umbral de OVR/tier disponible y juega un partido con ese nuevo estado.",
+        intro: [
+          { m: "idle", t: "Te están empezando a reconocer." },
+          { m: "angry", t: "No te emociones." },
+          { m: "idle", t: "La gente te mira cuando ganas y opina cuando pierdes." },
+          { m: "disco_seria", t: "Y cuando eso empieza, es difícil volver atrás." },
+          { m: "disco_seria", t: "Si algún día te pesa, ven aquí." },
+          { m: "disco_happy", t: "Pero no esperes que te deje ganar." },
+        ],
+        snap: (g) => ({ tierId: g.tier.id, ovr: calcOVR(g.player.stats), matchCount: (g.matchHistory || []).length }),
+        subs: [
+          (g, snap) => { const next = TIERS.find((t) => t.id === snap.tierId + 1); return (next && calcOVR(g.player.stats) >= next.minOvr) || g.tier.id !== snap.tierId; },
+          (g, snap) => (g.matchHistory || []).length > snap.matchCount,
+        ],
+        check: (g, snap) => {
+          const next = TIERS.find((t) => t.id === snap.tierId + 1);
+          const reached = (next && calcOVR(g.player.stats) >= next.minOvr) || g.tier.id !== snap.tierId;
+          return reached && (g.matchHistory || []).length > snap.matchCount;
+        } },
+      /* CAPÍTULO 8 — Ya no es solo una rivalidad */
+      { title: "Ya no es solo una rivalidad", zone: "discoteca",
+        objective: "Visita la Discoteca y completa 2 días de objetivos diarios desde el inicio del capítulo.",
+        intro: [
+          { m: "disco_happy", t: "Hoy tenemos una regla." },
+          { m: "disco_happy", t: "No hablamos de fútbol." },
+          { m: "disco_seria", t: "Una noche." },
+          { m: "disco_happy", t: "Puedes sobrevivir." },
+          { m: "disco_seria", t: "Es raro." },
+          { m: "disco_seria", t: "Contigo puedo estar aquí y no pensar en quién es mejor." },
+          { m: "disco_happy", t: "Eso no significa que vaya a dejar de intentar ganarte." },
+          { m: "disco_seria", t: "Supongo que ya no eres solo el tío al que quiero ganar." },
+          { m: "disco_happy", t: "No preguntes qué significa eso." },
+        ],
+        setFlags: ["bekaClose"],
+        snap: () => ({ since: todayStr() }),
+        subs: [
+          (g, snap) => zoneVisitedSince(g, "discoteca", snap.since),
+          (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 2,
+        ],
+        check: (g, snap) => zoneVisitedSince(g, "discoteca", snap.since) && daysGoalsCompletedSince(g, snap.since) >= 2 },
+      /* CAPÍTULO 9 — Te estás alejando */
+      { title: "Te estás alejando", zone: "barrio",
+        objective: "Alcanza el siguiente incremento de OVR o mejora de tier desde el snapshot.",
+        intro: [
+          { m: "idle", t: "Así que has subido." },
+          { m: "idle", t: "Enhorabuena." },
+          { m: "angry", t: "Ya está. Se acabó la ceremonia." },
+          { m: "idle", t: "Me alegro por ti." },
+          { m: "agotada", t: "Solo que ahora parece que corres más rápido que yo." },
+          { m: "angry", t: "Y no me gusta quedarme atrás." },
+          { m: "angry", t: "No me esperes." },
+          { m: "idle", t: "Si te alcanzo, será porque yo también he llegado." },
+        ],
+        snap: (g) => ({ tierId: g.tier.id, ovr: calcOVR(g.player.stats) }),
+        check: (g, snap) => g.tier.id !== snap.tierId || calcOVR(g.player.stats) > snap.ovr },
+      /* CAPÍTULO 10 — No necesito que me salves */
+      { title: "No necesito que me salves", zone: "enfermeria",
+        objective: "Recupera una forma de «buen» o «alza», completa 3 días de objetivos y consigue una victoria.",
+        intro: [
+          { m: "agotada", t: "Estoy bien." },
+          { m: "agotada", t: "Deja de mirarme así." },
+          { m: "angry", t: "No necesito que me salves." },
+          { m: "idle", t: "Necesito seguir." },
+          { m: "agotada", t: "Porque si paro, siento que todo el mundo me adelanta." },
+          { m: "idle", t: "Y no pienso volver a empezar desde abajo." },
+          { m: "idle", t: "Vale." },
+          { m: "idle", t: "Quizá no todo sea apretar hasta romper." },
+          { m: "angry", t: "Pero no se lo digas a nadie." },
+        ],
+        setFlags: ["bekaCrisis", "bekaCrisisResolved"],
+        snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
+        subs: [
+          (g) => g.player.form === "buen" || g.player.form === "alza",
+          (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3,
+          (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
+        ],
+        check: (g, snap) => (g.player.form === "buen" || g.player.form === "alza") &&
+          daysGoalsCompletedSince(g, snap.since) >= 3 &&
+          (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") },
+      /* CAPÍTULO 11 — La noche que no hablamos de fútbol */
+      { title: "La noche que no hablamos de fútbol", zone: "discoteca",
+        objective: "Visita la Discoteca y completa un día de objetivos desde el inicio del capítulo.",
+        intro: [
+          { m: "disco_happy", t: "Hoy sí." },
+          { m: "disco_happy", t: "Cero fútbol." },
+          { m: "disco_seria", t: "Ni tu club. Ni el mío. Ni la clasificación." },
+          { m: "disco_seria", t: "¿Sabes qué es lo raro?" },
+          { m: "disco_seria", t: "Que cuando estoy aquí contigo no siento que tenga que demostrar nada." },
+          { m: "disco_happy", t: "Y eso me gusta." },
+          { m: "disco_seria", t: "Mucho." },
+          { m: "disco_seria", t: "No voy a repetirlo." },
+          { m: "disco_happy", t: "Así que aprovecha." },
+        ],
+        setFlags: ["bekaTrust"],
+        snap: () => ({ since: todayStr() }),
+        subs: [
+          (g, snap) => zoneVisitedSince(g, "discoteca", snap.since),
+          (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 1,
+        ],
+        check: (g, snap) => zoneVisitedSince(g, "discoteca", snap.since) && daysGoalsCompletedSince(g, snap.since) >= 1 },
+      /* CAPÍTULO 12 — Lo que cuesta seguir */
+      { title: "Lo que cuesta seguir", zone: "casa",
+        objective: "Completa una secuencia de entrenamiento + alimentación + sueño durante 3 días y gana el siguiente partido.",
+        intro: [
+          { m: "idle", t: "Hoy quería preguntarte algo." },
+          { m: "idle", t: "¿Tú también tienes miedo?" },
+          { m: "idle", t: "A quedarte atrás. A que todo esto termine siendo demasiado." },
+          { m: "agotada", t: "Yo sí." },
+          { m: "idle", t: "Pero supongo que por eso seguimos." },
+          { m: "idle", t: "Vale." },
+          { m: "idle", t: "Entonces no soy la única." },
+          { m: "angry", t: "Eso no significa que vaya a aflojar." },
+        ],
+        snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
+        subs: [
+          (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3,
+          (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
+        ],
+        check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3 &&
+          (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") },
+      /* CAPÍTULO 13 — Caminos distintos */
+      { title: "Caminos distintos", zone: "estadio",
+        objective: "Alcanza un nuevo tier narrativo y consigue una victoria importante.",
+        intro: [
+          { m: "idle", t: "Mírate." },
+          { m: "idle", t: "Cuando te conocí estabas en Tercera." },
+          { m: "celebracion", t: "Ahora estás aquí." },
+          { m: "idle", t: "Y yo también he llegado más lejos de lo que pensaba." },
+          { m: "disco_seria", t: "Supongo que eso es lo que me gusta de nuestra historia." },
+          { m: "disco_seria", t: "Ninguno de los dos se quedó esperando al otro." },
+          { m: "celebracion", t: "Sigue." },
+          { m: "angry", t: "Todavía quiero ver hasta dónde llegas." },
+        ],
+        snap: (g) => ({ tierId: g.tier.id, matchCount: (g.matchHistory || []).length }),
+        subs: [
+          (g, snap) => g.tier.id !== snap.tierId,
+          (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
+        ],
+        check: (g, snap) => g.tier.id !== snap.tierId &&
+          (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") },
+      /* CAPÍTULO 14 — Todavía no he terminado */
+      { title: "Todavía no he terminado", zone: "discoteca",
+        objective: "Completa un partido y visita la Discoteca.",
+        intro: [
+          { m: "disco_happy", t: "Hola." },
+          { m: "disco_happy", t: "Cuánto tiempo." },
+          { m: "disco_seria", t: "He estado ocupada." },
+          { m: "disco_seria", t: "Entrenando. Jugando. Intentando construir lo mío." },
+          { m: "disco_happy", t: "Y no, no te voy a contar todo." },
+          { m: "disco_seria", t: "Algunas cosas quiero conseguirlas por mí misma." },
+          { m: "disco_seria", t: "Pero me alegra que sigas aquí." },
+          { m: "disco_happy", t: "Aunque sigas siendo un pesado." },
+        ],
+        snap: (g) => ({ matchCount: (g.matchHistory || []).length, since: todayStr() }),
+        subs: [
+          (g, snap) => (g.matchHistory || []).length > snap.matchCount,
+          (g, snap) => zoneVisitedSince(g, "discoteca", snap.since),
+        ],
+        check: (g, snap) => (g.matchHistory || []).length > snap.matchCount && zoneVisitedSince(g, "discoteca", snap.since) },
+      /* CAPÍTULO 15 — Una última vez (el documento da tres cierres distintos según el
+         resultado del partido, pero el propio objetivo exige ganar — así que el cierre de
+         empate/derrota nunca llega a ser alcanzable bajo ese objetivo: se usa el cierre de
+         victoria, el único que el check() puede confirmar) */
+      { title: "Una última vez", zone: "estadio",
+        objective: "Gana un partido importante y supera tu mejor rating de partido anterior o consigue una nota de referencia definida por el snapshot.",
+        intro: [
+          { m: "angry", t: "Hoy no voy a dejarte pasar." },
+          { m: "angry", t: "Ni por amistad. Ni por historia. Ni por nada." },
+          { m: "celebracion", t: "Hoy quiero saber quién ha mejorado más." },
+          { m: "agotada", t: "Vale." },
+          { m: "idle", t: "Has sido mejor." },
+          { m: "idle", t: "Y eso me fastidia." },
+          { m: "celebracion", t: "Pero también me hace ilusión." },
+        ],
+        snap: (g) => ({ matchCount: (g.matchHistory || []).length, bestRating: g.bestRating || 0 }),
+        subs: [
+          (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
+          (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => (m.rating || 0) > snap.bestRating),
+        ],
+        check: (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") &&
+          (g.matchHistory || []).slice(snap.matchCount).some((m) => (m.rating || 0) > snap.bestRating) },
+      /* FINAL — Desde abajo (sin objetivo propio: se resuelve en cuanto se lee, igual que
+         el FINAL de Milly) */
+      { title: "Desde abajo", zone: "discoteca",
+        objective: "Sin objetivo adicional.",
+        intro: [
+          { m: "disco_seria", t: "¿Te acuerdas del primer día?" },
+          { m: "disco_seria", t: "Te vi y pensé: «otro que se cree bueno»." },
+          { m: "disco_happy", t: "Luego quise ganarte." },
+          { m: "disco_seria", t: "Después quise alcanzarte." },
+          { m: "disco_seria", t: "Y en algún momento dejé de saber cuál de las dos cosas me importaba más." },
+          { m: "disco_happy", t: "Supongo que hemos pasado demasiado tiempo juntos para seguir fingiendo que solo somos rivales." },
+          { m: "disco_seria", t: "No voy a dejar de competir contigo." },
+          { m: "disco_happy", t: "Pero ya no necesito ganarte para que me importe lo que te pase." },
+          { m: "disco_seria", t: "Hemos empezado desde abajo." },
+          { m: "disco_seria", t: "Hemos tenido que currárnoslo." },
+          { m: "disco_happy", t: "Y mira dónde estamos." },
+        ],
+        snap: () => ({}), check: () => true },
+      /* EPÍLOGO — Nos vemos en el campo (última etapa: final:true, entrega el pin y +1 FUE
+         al entrar aquí, ver reward — la escena de la entrega, "RECOMPENSA: entregar
+         beka_pin" en el documento, se movió aquí desde FINAL: ver nota al inicio del bloque) */
+      { title: "Nos vemos en el campo", zone: "discoteca", final: true,
+        intro: [
+          { m: "idle", t: "Toma." },
+          { m: "idle", t: "Este sí es un regalo." },
+          { m: "angry", t: "Y no lo pierdas." },
+          { m: "disco_happy", t: "Si lo pierdes tendrás que volver a verme." },
+          { m: "disco_happy", t: "Así que tampoco sería tan malo." },
+          { m: "disco_happy", t: "¿Sabes qué es lo mejor?" },
+          { m: "disco_happy", t: "Que ahora ya no necesito una excusa para hablar contigo." },
+          { m: "disco_seria", t: "Aunque tampoco te emociones." },
+          { m: "angry", t: "Sigo queriendo ganarte." },
+          { m: "disco_happy", t: "Nos vemos." },
+        ],
+        setFlags: ["bekaStoryComplete", "bekaPinEarned"],
+        reward: (g) => {
+          const stats = { ...g.player.stats };
+          stats.FUE = Math.min(99, stats.FUE + 1);
+          const inv = { ...(g.inventory || {}) };
+          inv.beka_pin = (inv.beka_pin || 0) + 1;
+          return { ...g, player: { ...g.player, stats }, inventory: inv };
+        } },
+    ],
+  }],
+};
+
 /* registro único: desde la fusión de La Metrópolis dentro de La Ciudad ya no hace
    falta separar por mapa (todas las zonas conviven en el mismo SVG). */
-const STORIES = { ...toStories(QUESTS), elisa: ELISA_STORY, milly: MILLY_STORY, yuna: YUNA_STORY, lopez: LOPEZ_STORY, igor: IGOR_STORY, lisa: KARLA_STORY };
+const STORIES = { ...toStories(QUESTS), elisa: ELISA_STORY, milly: MILLY_STORY, yuna: YUNA_STORY, lopez: LOPEZ_STORY, igor: IGOR_STORY, lisa: KARLA_STORY, beka: BEKA_STORY };
 
 /* ============================================================
    OBJETOS COLECCIONABLES · dos tipos: "consumable" (los usas, dan
@@ -3223,6 +3629,8 @@ const ITEMS = {
     desc: "El pin que te dio Igor el día que dejó de tratarte como cliente. No se usa ni se regala: es un recuerdo de todo el camino." },
   karla_pin: { name: "Pin de Karla", icon: "📌", img: "/images/objects/karla_pin.webp", kind: "keepsake",
     desc: "El pin que te dio Karla cuando dejó de tratarte como un proyecto comercial. No se usa ni se regala: es un recuerdo de todo el camino." },
+  beka_pin: { name: "Pin de Beka", icon: "📌", img: "/images/objects/beka_pin.webp", kind: "keepsake",
+    desc: "El pin que te dio Beka el día que dejasteis de fingir que solo erais rivales. No se usa ni se regala: es un recuerdo de todo el camino." },
 };
 /* dar un objeto a su destinatario: reacción propia del personaje + el objeto se gasta */
 const ITEM_GIVE_REACTIONS = {
@@ -3246,6 +3654,8 @@ const CARDS = [
   { npc: "lisa", unlocked: (g) => !!g.metLisa,
     bio: "Futbolista profesional, gestiona patrocinios. Engreída de cara al público, exigente de puertas para adentro." },
   { npc: "igor", unlocked: (g) => !!g.metIgor, bio: "Chef estrella del Restaurante. Trata la nutrición como táctica de fútbol, con datos curiosos siempre a mano." },
+  { npc: "beka", unlocked: (g) => !!g.bekaMet,
+    bio: "Futbolista de otro club. Rival directa, competitiva y algo macarra — aunque de noche, en la Discoteca, deja de competir durante unas horas." },
 ];
 
 /* --- EL PERIÓDICO · plantillas con titular y cuerpo, por secciones.
@@ -5746,6 +6156,21 @@ export default function App() {
   const visitedZoneObj = visitedZone && game && isZoneUnlocked(game, visitedZone)
     ? ZONES.find((z) => z.id === visitedZone) : null;
   const visitedActiveNpc = visitedZoneObj ? zoneActiveNpc(visitedZoneObj, game ? (game.npcQueue || []) : []) : null;
+  /* registro mínimo de "última vez que se visitó esta zona" (g.zoneVisits), para objetivos
+     de historia tipo "visita X" (ver zoneVisitedSince/BEKA_STORY) — no existía ninguna
+     necesidad de esto antes de Beka, así que no se guardaba en ningún sitio. */
+  useEffect(() => {
+    if (!visitedZoneObj) return;
+    const id = visitedZoneObj.id, today = todayStr();
+    setGame((g) => {
+      if (!g) return g;
+      if (g.zoneVisits && g.zoneVisits[id] === today) return g; /* ya registrada hoy: nada que reevaluar */
+      /* checkStories también aquí (no solo tras partidos/cierre de día/pesaje): así un
+         objetivo de tipo "visita X" se completa en el momento de entrar, no en la
+         siguiente acción de juego que por casualidad vuelva a llamar al motor */
+      return checkStories(checkZoneUnlocks({ ...g, zoneVisits: { ...(g.zoneVisits || {}), [id]: today } }));
+    });
+  }, [visitedZoneObj && visitedZoneObj.id]);
 
   /* mensajes en 2ª persona -> cola de diálogos NPC; 3ª persona -> artículo del periódico.
      Mantiene la firma histórica: los ~20 puntos que llaman addMsg no cambian. */

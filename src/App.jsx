@@ -3895,8 +3895,16 @@ const ITEMS = {
     desc: "Llena de anotaciones de Elisa sobre cómo aguantar los noventa minutos sin bajar el ritmo." },
   especias_raras: { name: "Especias Raras", icon: "🌶️", img: "/images/objects/guindilla.webp", kind: "consumable", stat: "NUT", xp: 10,
     desc: "Una mezcla que Igor trae de sus viajes de cocina. Nadie sabe bien qué lleva, pero funciona." },
-  amuleto_suerte: { name: "Amuleto de la Suerte", icon: "🍀", img: "/images/objects/amuleto_suerte.webp", kind: "consumable", stat: "random", xp: 15,
-    desc: "Un premio raro de la ruleta del Casino. Nadie sabe si de verdad trae suerte, pero por probar..." },
+  /* seis consumibles, uno por stat (ver STAT_KEYS) — el antiguo amuleto_suerte (stat
+     "random", premio de la ruleta) se retiró junto con la tienda del Casino y no tenía
+     ninguna otra fuente, así que se reconvirtió en el objeto fijo de FUE. zapatillas es
+     el único de los seis sin asset propio todavía (icono de emoji hasta que exista uno). */
+  mancuerna: { name: "Mancuerna", icon: "🏋️", img: "/images/objects/mancuerna.webp", kind: "consumable", stat: "FUE", xp: 12,
+    desc: "Una sesión extra de fuerza, condensada. Se nota en el próximo entrenamiento." },
+  taza_cafe: { name: "Taza de Café", icon: "☕", img: "/images/objects/tazadecafe.webp", kind: "consumable", stat: "MEN", xp: 10,
+    desc: "Justo lo que hace falta para afinar la cabeza antes de un día exigente." },
+  zapatillas: { name: "Zapatillas de Entrenamiento", icon: "👟", kind: "consumable", stat: "FIS", xp: 12,
+    desc: "Un par nuevo, todavía sin estrenar del todo. Dan ganas de salir a correr." },
   perfume_lujo: { name: "Perfume de Lujo", icon: "🧴", img: "/images/objects/perfume_lujo.webp", kind: "gift", giveTo: "lisa",
     desc: "Un frasco carísimo que Milly guardaba 'para una ocasión especial'. Le pega mucho a Karla." },
   /* recuerdo, no consumible ni regalable: solo se enseña (ver InventoryPanel, no

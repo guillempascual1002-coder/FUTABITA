@@ -4728,8 +4728,8 @@ function QuestPanel({ game, onClose, storiesRegistry }) {
   });
   const replayEntry = replay && { id: `replay-${replay.idx}`, npc: replay.npc, mood: replay.beats[replay.idx].m, text: replay.beats[replay.idx].t };
   return (
-    <div className="overlay" style={{ background: "rgba(5,7,13,.75)", zIndex: 65, alignItems: "flex-end", padding: 0 }} onClick={onClose}>
-      <div className="sheet" style={{ maxHeight: "78vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+    <div className="overlay" style={{ background: "rgba(5,7,13,.75)", zIndex: 65, alignItems: "flex-end", padding: "0 0 16px" }} onClick={onClose}>
+      <div className="sheet" style={{ maxHeight: "78vh", overflowY: "auto", borderRadius: 22 }} onClick={(e) => e.stopPropagation()}>
         <div className="ptitle" style={{ fontSize: 16, marginBottom: 14 }}>📜 MISIONES</div>
         {active.length === 0 && (
           <div className="empty"><span className="em-ico">🎯</span>

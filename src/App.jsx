@@ -4927,9 +4927,8 @@ function Newspaper({ game, onRead }) {
    siempre hay periódico, así que en vez de cartel ofrece abrirlo.
    Fondo real: si existe /images/zones/{id}.webp se usa; si no (todavía no se ha
    subido), cae a un degradado de marcador de posición sin romper nada. */
-function ZoneScreen({ zone, pendingNpc, onBack, onOpenPaper, game, onSpin, onBuy, onFish }) {
+function ZoneScreen({ zone, pendingNpc, onBack, onOpenPaper, game, onSpin, onFish }) {
   const [imgOk, setImgOk] = useState(true);
-  const [zoomId, setZoomId] = useState(null);
   const npc = pendingNpc ? NPCS[pendingNpc] : null;
   const showPaperPrompt = zone.kind === "paper" && !pendingNpc;
   const isHome = zone.kind === "home";
@@ -4947,7 +4946,6 @@ function ZoneScreen({ zone, pendingNpc, onBack, onOpenPaper, game, onSpin, onBuy
     lastSpin.kind === "fichas" ? `Te tocaron +${lastSpin.amount} 🪙 fichas.` :
     lastSpin.kind === "item" && ITEMS[lastSpin.itemId] ? `¡Premio especial: ${ITEMS[lastSpin.itemId].name}!` :
     "Ya has girado hoy.";
-  const SHOP = [["especias_raras", 8], ["botiquin", 6]];
   return (
     <div className="zone-screen">
       {imgOk ? (
@@ -4979,27 +4977,6 @@ function ZoneScreen({ zone, pendingNpc, onBack, onOpenPaper, game, onSpin, onBuy
                 🎰 Girar la ruleta (tirada gratis de hoy)</button>
             )}
           </div>
-          <div className="house-card">
-            <div className="house-title">🛒 Tienda de fichas</div>
-            {SHOP.map(([id, cost]) => {
-              const it = ITEMS[id];
-              const can = (game.fichas || 0) >= cost;
-              return (
-                <div key={id} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                  {it.img ? (
-                    <img src={it.img} alt={it.name} className="item-ico-img" onClick={() => setZoomId(id)} />
-                  ) : (
-                    <span style={{ fontSize: 22 }}>{it.icon}</span>
-                  )}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 12.5, color: "#EFEEE3" }}>{it.name}</div>
-                    <div style={{ fontSize: 10.5, color: "#9a9e8e" }}>🪙 {cost}</div>
-                  </div>
-                  <button className="btn-ghost sm" disabled={!can} style={!can ? { opacity: 0.4 } : {}}
-                    onClick={() => onBuy(id, cost)}>Comprar</button>
-                </div>);
-            })}
-          </div>
         </div>)}
       {isPlaya && !pendingNpc && (
         <div className="house-room">
@@ -5014,7 +4991,6 @@ function ZoneScreen({ zone, pendingNpc, onBack, onOpenPaper, game, onSpin, onBuy
             )}
           </div>
         </div>)}
-      <ItemLightbox item={zoomId ? ITEMS[zoomId] : null} onClose={() => setZoomId(null)} />
     </div>);
 }
 
@@ -7196,13 +7172,6 @@ export default function App() {
     buzz(15);
     pushToast(`🎰 ¡+${result.amount} 🪙 fichas!`);
   };
-  /* tiendecita del Casino: gasta fichas ganadas en la ruleta en un par de objetos fijos */
-  const buyShopItem = (itemId, cost) => setGame((g) => {
-    if ((g.fichas || 0) < cost) return g;
-    const inv = { ...(g.inventory || {}) };
-    inv[itemId] = (inv[itemId] || 0) + 1;
-    return { ...g, fichas: g.fichas - cost, inventory: inv };
-  });
   /* usar un objeto consumible: XP a la stat indicada (o una al azar si stat:"random") y se gasta */
   const useItem = (itemId) => setGame((g) => {
     const def = ITEMS[itemId];
@@ -7477,7 +7446,7 @@ export default function App() {
       {/* visitar una zona: fondo a toda pantalla + flecha para volver */}
       {tab === "chat" && visitedZoneObj && (
         <ZoneScreen zone={visitedZoneObj} pendingNpc={visitedActiveNpc} game={game}
-          onBack={() => setVisitedZone(null)} onOpenPaper={() => setShowPaper(true)} onSpin={spinCasino} onBuy={buyShopItem} onFish={freeFish} />)}
+          onBack={() => setVisitedZone(null)} onOpenPaper={() => setShowPaper(true)} onSpin={spinCasino} onFish={freeFish} />)}
       {/* diálogo de personaje: overlay a nivel de App (fuera de .tab-in), aparece encima
           del fondo de la zona en cuanto hay alguien esperando ahí (visitedActiveNpc) */}
       {tab === "chat" && visitedActiveNpc && (() => {

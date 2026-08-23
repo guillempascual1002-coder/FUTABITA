@@ -1726,7 +1726,7 @@ const ELISA_STORY = {
         check: (g, snap) => (g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum) && (g.player.streak || 0) >= 5 },
       /* CAPÍTULO 12 — Hasta arriba */
       { title: "Hasta arriba", zone: "atico",
-        objective: "Alcanza el nivel de élite, gana un partido importante, racha de 6 días y supera tu mejor OVR o nota.",
+        objective: "Alcanza el nivel de élite, gana un partido, racha de 6 días y supera tu mejor OVR o nota.",
         intro: [
           { m: "idle", t: "¿Te acuerdas de la primera vez que te vi?" },
           { m: "happy", t: "No tenías nada de esto." },
@@ -2511,7 +2511,7 @@ const LOPEZ_STORY = {
           (g.matchHistory || []).length > snap.matchCount },
       /* CAPÍTULO 6 — El vestuario después de una derrota */
       { title: "El vestuario después de una derrota", zone: "ciudad-dep",
-        objective: "Pierde un partido y completa 2 días de objetivos después.",
+        objective: "Pierde un partido y completa 2 días de objetivos.",
         intro: [
           { m: "preocupado", t: "No me importa que hoy haya salido mal." },
           { m: "serio", t: "Me importa lo que hagamos mañana." },
@@ -2891,7 +2891,7 @@ const IGOR_STORY = {
         check: (g, snap) => proteinDaysSince(g, snap.since) >= 4 },
       /* CAPÍTULO 13 — La gran noche */
       { title: "La gran noche", zone: "estadio",
-        objective: "Gana un partido importante o alcanza un hito de temporada.",
+        objective: "Gana un partido o alcanza un hito de temporada.",
         intro: [
           { m: "celebracion", t: "¡ESTO SE CELEBRA!" },
           { m: "happy", t: "No me importa la dieta esta noche." },
@@ -3049,7 +3049,7 @@ const KARLA_STORY = {
         check: (g, snap) => calcOVR(g.player.stats) > snap.ovr || careerGoals(g) > snap.goals || careerAssists(g) > snap.assists },
       /* CAPÍTULO 4 — La tarjeta VIP */
       { title: "La tarjeta VIP", zone: "casino",
-        objective: "Completa un partido o un hito de carrera.",
+        objective: "Completa un partido.",
         intro: [
           { m: "gala_idle", t: "Bienvenido." },
           { m: "gala_ego", t: "Aquí hay gente que puede hacer que tu carrera cambie en una noche." },
@@ -3157,7 +3157,7 @@ const KARLA_STORY = {
         } },
       /* CAPÍTULO 11 — Lo que no sale en las fotos */
       { title: "Lo que no sale en las fotos", zone: "atico",
-        objective: "Gana un partido importante o supera un máximo de carrera.",
+        objective: "Gana un partido o supera un máximo de carrera.",
         intro: [
           { m: "vulnerable", t: "Cuando empecé, pensaba que si llegaba arriba dejaría de tener miedo." },
           { m: "preocupada", t: "No funciona así." },
@@ -3392,7 +3392,7 @@ const BEKA_STORY = {
         check: (g, snap) => (g.player.streak || 0) >= 3 && daysGoalsCompletedSince(g, snap.since) >= 3 },
       /* CAPÍTULO 6 — Que suba el nivel */
       { title: "Que suba el nivel", zone: "car",
-        objective: "Mejora tu OVR respecto al snapshot de inicio y completa 4 días de objetivos.",
+        objective: "Mejora tu OVR desde que empezó el capítulo y completa 4 días de objetivos.",
         intro: [
           { m: "angry", t: "He oído que estás mejorando." },
           { m: "angry", t: "Qué rabia." },
@@ -3452,7 +3452,7 @@ const BEKA_STORY = {
         check: (g, snap) => zoneVisitedSince(g, "discoteca", snap.since) && daysGoalsCompletedSince(g, snap.since) >= 2 },
       /* CAPÍTULO 9 — Te estás alejando */
       { title: "Te estás alejando", zone: "barrio",
-        objective: "Alcanza el siguiente incremento de OVR o mejora de tier desde el snapshot.",
+        objective: "Mejora tu OVR o sube de categoría desde que empezó el capítulo.",
         intro: [
           { m: "idle", t: "Así que has subido." },
           { m: "idle", t: "Enhorabuena." },
@@ -3512,7 +3512,7 @@ const BEKA_STORY = {
         check: (g, snap) => zoneVisitedSince(g, "discoteca", snap.since) && daysGoalsCompletedSince(g, snap.since) >= 1 },
       /* CAPÍTULO 12 — Lo que cuesta seguir */
       { title: "Lo que cuesta seguir", zone: "casa",
-        objective: "Completa una secuencia de entrenamiento + alimentación + sueño durante 3 días y gana el siguiente partido.",
+        objective: "Completa 3 días de objetivos y gana el siguiente partido.",
         intro: [
           { m: "idle", t: "Hoy quería preguntarte algo." },
           { m: "idle", t: "¿Tú también tienes miedo?" },
@@ -3532,7 +3532,7 @@ const BEKA_STORY = {
           (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") },
       /* CAPÍTULO 13 — Caminos distintos */
       { title: "Caminos distintos", zone: "estadio",
-        objective: "Alcanza un nuevo tier narrativo y consigue una victoria importante.",
+        objective: "Sube de categoría y consigue una victoria.",
         intro: [
           { m: "idle", t: "Mírate." },
           { m: "idle", t: "Cuando te conocí estabas en Tercera." },
@@ -3574,7 +3574,7 @@ const BEKA_STORY = {
          empate/derrota nunca llega a ser alcanzable bajo ese objetivo: se usa el cierre de
          victoria, el único que el check() puede confirmar) */
       { title: "Una última vez", zone: "estadio",
-        objective: "Gana un partido importante y supera tu mejor rating de partido anterior o consigue una nota de referencia definida por el snapshot.",
+        objective: "Gana un partido y supera tu mejor nota del capítulo anterior.",
         intro: [
           { m: "angry", t: "Hoy no voy a dejarte pasar." },
           { m: "angry", t: "Ni por amistad. Ni por historia. Ni por nada." },
@@ -3998,7 +3998,7 @@ const COCO_STORY = {
         check: (g, snap) => (g.cocoLog || []).some((e) => e.type === "buy" && e.day >= snap.since) },
       /* CAPÍTULO 2 — También compro */
       { title: "También compro",
-        objective: "Vende un objeto a Coco.",
+        objective: "Vende un pez a Coco (los peces se consiguen pescando).",
         intro: [
           { m: "idle", t: "¿Sabes cuál es la otra mitad de mi trabajo?" },
           { m: "happy", t: "Comprar cosas." },
@@ -4038,7 +4038,7 @@ const COCO_STORY = {
         check: (g, snap) => cocoDistinctVisits(g, snap.since, ["buy"]) >= 2 },
       /* CAPÍTULO 5 — Lo que llevas encima */
       { title: "Lo que llevas encima",
-        objective: "Vende objetos hasta conseguir 100 monedas acumuladas.",
+        objective: "Vende peces hasta conseguir 100 monedas acumuladas.",
         intro: [
           { m: "idle", t: "Tienes más cosas de las que pensaba." },
           { m: "happy", t: "¿Guardas todo?" },
@@ -4111,7 +4111,7 @@ const COCO_STORY = {
         check: (g, snap) => cocoDistinctVisits(g, snap.since, ["buy", "sell"]) >= 3 },
       /* CAPÍTULO 10 — Lo que realmente busca */
       { title: "Lo que realmente busca",
-        objective: "Compra un objeto y vende otro en la misma visita.",
+        objective: "Compra un objeto y vende un pez en la misma visita.",
         intro: [
           { m: "seria", t: "Te voy a contar un secreto." },
           { m: "blush", t: "Pero si se lo cuentas a todo el mundo, voy a negarlo." },

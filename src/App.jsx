@@ -1138,6 +1138,57 @@ function paperRustle() {
   } catch (e) {}
 }
 
+/* Sonido del sobre al tocarlo para abrirlo (ver SobreReveal): mismo ruido blanco filtrado
+   que paperRustle pero más corto y agudo, imitando el crujido rápido del papel. Sintetizado
+   igual que el resto de sonidos del juego, sin cargar ningún archivo nuevo. */
+function envelopeShake() {
+  if (!VOICES_ON) return;
+  try {
+    if (!AUDIO.ctx) AUDIO.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (AUDIO.ctx.state === "suspended") AUDIO.ctx.resume();
+    const ctx = AUDIO.ctx, t = ctx.currentTime, dur = 0.22;
+    const n = Math.floor(ctx.sampleRate * dur);
+    const buf = ctx.createBuffer(1, n, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 3600; bp.Q.value = 0.8;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.14, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(bp); bp.connect(g); g.connect(ctx.destination);
+    src.start(t); src.stop(t + dur);
+    AUDIO.live.add(src);
+    src.onended = () => AUDIO.live.delete(src);
+  } catch (e) {}
+}
+/* Sonido de revelación del sobre/cuadro: arpegio ascendente de 3 notas (osciladores puros),
+   el mismo "shimmer" de recompensa reutilizado tanto por SobreReveal como por CuadroReveal
+   para que las pantallas de recompensa grande del juego suenen coherentes entre sí. */
+function rewardShimmer() {
+  if (!VOICES_ON) return;
+  try {
+    if (!AUDIO.ctx) AUDIO.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (AUDIO.ctx.state === "suspended") AUDIO.ctx.resume();
+    const ctx = AUDIO.ctx, t = ctx.currentTime;
+    [0, 0.07, 0.14].forEach((delay, i) => {
+      const osc = ctx.createOscillator(); osc.type = "sine";
+      const freq = 520 + i * 220;
+      osc.frequency.setValueAtTime(freq, t + delay);
+      osc.frequency.exponentialRampToValueAtTime(freq * 1.6, t + delay + 0.16);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t + delay);
+      g.gain.exponentialRampToValueAtTime(0.1, t + delay + 0.03);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + delay + 0.28);
+      osc.connect(g); g.connect(ctx.destination);
+      osc.start(t + delay); osc.stop(t + delay + 0.3);
+      AUDIO.live.add(osc);
+      osc.onended = () => AUDIO.live.delete(osc);
+    });
+  } catch (e) {}
+}
+
 /* corta cualquier voz en curso: al cerrar el diálogo no debe seguir sonando nada */
 function hushVoices() {
   AUDIO.live.forEach((s) => { try { s.stop(); } catch (e) {} });
@@ -7089,6 +7140,7 @@ function CuadroReveal({ itemId, onClose }) {
   const img = isCompletion ? NPCS.vera.arts.playa_regalo : item && item.img;
   const title = isCompletion ? "La historia de Vera" : item && item.name;
   const subtitle = isCompletion ? "Campaña completada · Inspiración libre desbloqueada" : "Nuevo cuadro conseguido";
+  useEffect(() => { rewardShimmer(); }, [itemId]);
   return (
     <div className="cuadro-reveal-ov" onClick={onClose}>
       <div className={"cuadro-reveal-card" + (isCompletion ? " cuadro-reveal-big" : "")} style={{ "--cuadro-glow": NPCS.vera.color }}>
@@ -7102,33 +7154,34 @@ function CuadroReveal({ itemId, onClose }) {
 }
 
 /* Apertura del sobre diario del Casino (ver openSobre/game.pendingSobreReveal y
-   FUTABITA_Sistema_Cartas_y_Sobres_Code.docx): mismo patrón de fases con temporizador que
-   FishingSequence (shake -> open -> reveal) para el "shake/suspense" que pide el
-   documento, reutilizando sus clases fishing-* para la fase de espera y las cuadro-reveal-*
-   de <CuadroReveal> para la fase final — así las tres pantallas de recompensa grande del
-   juego (pesca, cuadros, cartas) comparten la misma base visual en vez de tener cada una
-   la suya. La carta ya se decidió y se añadió al inventario en openSobre (game state), en
-   cuanto el jugador tocó "abrir sobre": este componente es solo la puesta en escena. */
+   FUTABITA_Sistema_Cartas_y_Sobres_Code.docx): a diferencia de FishingSequence (que avanza
+   fase a fase por temporizador), aquí el sobre se queda quieto esperando un toque — el
+   jugador decide cuándo abrirlo, no una cuenta atrás. Un click sobre el sobre dispara el
+   crujido (envelopeShake) y una breve animación de apertura (fase "opening", ~450ms) antes
+   de revelar la carta con su propio sonido (rewardShimmer). Reutiliza las clases fishing-*
+   para las fases de espera/apertura y las cuadro-reveal-* de <CuadroReveal> para la
+   revelación final, así las tres pantallas de recompensa grande (pesca, cuadros, cartas)
+   comparten la misma base visual. La carta ya se decidió y se añadió al inventario en
+   openSobre (game state) en cuanto el jugador pulsó "abrir sobre" en el Casino: este
+   componente es solo la puesta en escena de esa entrega. */
 function SobreReveal({ reveal, onClose }) {
-  const [phase, setPhase] = useState("shake"); // shake -> open -> reveal
-  useEffect(() => { setPhase("shake"); }, [reveal.id]);
+  const [phase, setPhase] = useState("closed"); // closed (esperando toque) -> opening -> reveal
+  useEffect(() => { setPhase("closed"); }, [reveal.id]);
   useEffect(() => {
-    if (phase === "reveal") return;
-    if (phase === "shake") buzz(20);
-    const delays = { shake: 900, open: 500 };
-    const next = { shake: "open", open: "reveal" };
-    const t = setTimeout(() => setPhase(next[phase]), delays[phase]);
+    if (phase !== "opening") return;
+    const t = setTimeout(() => setPhase("reveal"), 450);
     return () => clearTimeout(t);
   }, [phase]);
-  useEffect(() => { if (phase === "reveal") buzz([20, 30, 60]); }, [phase]);
+  useEffect(() => { if (phase === "reveal") { buzz([20, 30, 60]); rewardShimmer(); } }, [phase]);
 
   if (phase !== "reveal") {
+    const open = () => { if (phase !== "closed") return; buzz(20); envelopeShake(); setPhase("opening"); };
     return (
-      <div className="fishing-ov">
-        <div className={"fishing-pose" + (phase === "shake" ? " fishing-shake" : "")}>
+      <div className="fishing-ov" onClick={open}>
+        <div className={"fishing-pose" + (phase === "opening" ? " fishing-shake" : "")}>
           <img src="/images/cartas/sobre.webp" alt="Sobre" className="fishing-pose-img" />
         </div>
-        <div className="fishing-hint">{phase === "shake" ? "Algo se mueve ahí dentro..." : "Abriendo el sobre..."}</div>
+        <div className="fishing-hint">{phase === "closed" ? "toca para abrir" : "Abriendo el sobre..."}</div>
       </div>);
   }
   const item = ITEMS[reveal.id];

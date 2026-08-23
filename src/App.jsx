@@ -3701,7 +3701,7 @@ const NINA_STORY = {
         snap: () => ({}), check: () => true },
       /* CAPÍTULO 2 — Una captura también se come */
       { title: "Una captura también se come", zone: "playa",
-        objective: "Cumple el objetivo de proteína durante 2 días y captura una caballa.",
+        objective: "Ya tienes la caballa. Cumple el objetivo de proteína durante 2 días.",
         introBefore: [
           { m: "seria", t: "¿Qué has hecho con la sardina?" },
           { m: "happy", t: "No me digas que la has guardado como si fuera un trofeo." },
@@ -3721,7 +3721,7 @@ const NINA_STORY = {
         check: (g, snap) => proteinDaysSince(g, snap.since) >= 2 },
       /* CAPÍTULO 3 — Ya empiezas a entenderlo */
       { title: "Ya empiezas a entenderlo", zone: "playa",
-        objective: "Captura una lubina y completa 2 días de alimentación.",
+        objective: "Ya tienes la lubina. Completa 2 días de alimentación.",
         introBefore: [
           { m: "happy", t: "Mira quién ha vuelto." },
           { m: "seria", t: "¿Sabes qué diferencia hay entre alguien que pesca una vez y alguien que empieza a aprender?" },
@@ -3740,7 +3740,7 @@ const NINA_STORY = {
         check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 2 },
       /* CAPÍTULO 4 — Lo que llevas a casa */
       { title: "Lo que llevas a casa", zone: "playa",
-        objective: "Captura una dorada y completa 3 días de alimentación.",
+        objective: "Ya tienes la dorada. Completa 3 días de alimentación.",
         introBefore: [
           { m: "seria", t: "¿Nunca te ha pasado que entrenas muchísimo y luego llegas a casa sin ganas de preparar nada?" },
           { m: "happy", t: "A mí sí." },
@@ -3759,7 +3759,7 @@ const NINA_STORY = {
         check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3 },
       /* CAPÍTULO 5 — El silencio */
       { title: "El silencio", zone: "playa",
-        objective: "Captura una trucha y mantén una racha de 3 días.",
+        objective: "Ya tienes la trucha. Mantén una racha de 3 días.",
         introBefore: [
           { m: "seria", t: "Hoy no quiero hablar demasiado." },
           { m: "happy", t: "No pongas esa cara. No estoy enfadada." },
@@ -3779,7 +3779,7 @@ const NINA_STORY = {
         check: (g) => (g.player.streak || 0) >= 3 },
       /* CAPÍTULO 6 — Algo grande */
       { title: "Algo grande", zone: "playa",
-        objective: "Captura un atún y consigue el objetivo de proteína durante 3 días.",
+        objective: "Ya tienes el atún. Consigue el objetivo de proteína durante 3 días.",
         introBefore: [
           { m: "happy", t: "Hoy te he traído hasta aquí porque quiero probar algo." },
           { m: "seria", t: "Hay días en los que la playa está tranquila y otros en los que parece que todo lo que hay debajo del agua se ha puesto de acuerdo para fastidiarte." },
@@ -3797,7 +3797,7 @@ const NINA_STORY = {
         check: (g, snap) => proteinDaysSince(g, snap.since) >= 3 },
       /* CAPÍTULO 7 — El pez espada */
       { title: "El pez espada", zone: "playa",
-        objective: "Captura un pez espada y completa 3 días de objetivos de alimentación.",
+        objective: "Ya tienes el pez espada. Completa 3 días de objetivos de alimentación.",
         introBefore: [
           { m: "seria", t: "Hay una diferencia entre pescar algo grande y pescar algo que parece diseñado para hacerte quedar mal." },
           { m: "happy", t: "El pez espada entra en la segunda categoría." },
@@ -3817,7 +3817,7 @@ const NINA_STORY = {
         check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3 },
       /* CAPÍTULO 8 — Una idea terrible */
       { title: "Una idea terrible", zone: "playa",
-        objective: "Captura un tiburón y cumple 4 días de alimentación.",
+        objective: "Ya tienes el tiburón. Cumple 4 días de alimentación.",
         introBefore: [
           { m: "happy", t: "Tengo una idea." },
           { m: "seria", t: "Antes de que preguntes, sí, probablemente sea mala." },
@@ -4159,17 +4159,16 @@ const STORIES = { ...toStories(QUESTS), elisa: ELISA_STORY, milly: MILLY_STORY, 
    concreto: reacciona con un mensaje propio y el objeto desaparece
    del inventario). game.inventory = { itemId: cantidad }.
    ============================================================ */
+/* seis consumibles, uno por stat (ver STAT_KEYS), pensados para ser difíciles de
+   conseguir: +50 XP cada uno. bebida_energetica y zapatillas están sin imagen propia
+   todavía (icono de emoji de reserva) a la espera de que lleguen sus assets. */
 const ITEMS = {
-  botiquin: { name: "Botiquín de Recuperación", icon: "🩹", img: "/images/objects/botiquin.webp", kind: "consumable", stat: "REC", xp: 12,
+  botiquin: { name: "Botiquín de Recuperación", icon: "🩹", img: "/images/objects/botiquin.webp", kind: "consumable", stat: "REC", xp: 50,
     desc: "Un kit de recuperación rápida. Lo usas y notas las piernas más frescas al instante." },
-  libreta_tactica: { name: "Libreta Táctica", icon: "📓", img: "/images/objects/libreta_tactica.webp", kind: "consumable", stat: "RES", xp: 10,
+  libreta_tactica: { name: "Libreta Táctica", icon: "📓", img: "/images/objects/libreta_tactica.webp", kind: "consumable", stat: "RES", xp: 50,
     desc: "Llena de anotaciones de Elisa sobre cómo aguantar los noventa minutos sin bajar el ritmo." },
-  especias_raras: { name: "Especias Raras", icon: "🌶️", img: "/images/objects/guindilla.webp", kind: "consumable", stat: "NUT", xp: 10,
+  especias_raras: { name: "Especias Raras", icon: "🌶️", img: "/images/objects/guindilla.webp", kind: "consumable", stat: "NUT", xp: 50,
     desc: "Una mezcla que Igor trae de sus viajes de cocina. Nadie sabe bien qué lleva, pero funciona." },
-  /* seis consumibles, uno por stat (ver STAT_KEYS), pensados para ser difíciles de
-     conseguir (+50 XP cada uno, frente a los 10-15 de los tres de arriba). bebida_energetica
-     y zapatillas están sin imagen propia todavía (icono de emoji de reserva) a la espera
-     de que lleguen sus assets. */
   amuleto_suerte: { name: "Amuleto de la Suerte", icon: "🍀", img: "/images/objects/amuleto_suerte.webp", kind: "consumable", stat: "FUE", xp: 50,
     desc: "Dicen que trae suerte. Lo que seguro trae es fuerza, si te acuerdas de usarlo." },
   bebida_energetica: { name: "Bebida Energética", icon: "🥤", kind: "consumable", stat: "MEN", xp: 50,
@@ -5496,28 +5495,35 @@ function QuestPanel({ game, onClose, storiesRegistry }) {
     .filter((x) => x.st && x.st.stage !== -1);
   /* replay de la cinemática de la etapa activa: SOLO lectura, ver comentario junto a
      startReplay/advanceReplay más abajo — no toca game ni llama a setGame en ningún punto. */
-  const [replay, setReplay] = useState(null); // { npc, name, beats, idx } | null
+  const [replay, setReplay] = useState(null); // { npc, name, steps, idx } | null
   const startReplay = (npcKey, name, stageDef) => {
     const ctx = flavorCtx(game);
+    const beat = (b) => ({ kind: "beat", m: b.m, t: fillTpl(b.t, ctx) });
     /* las etapas de pesca (ver NINA_STORY) no tienen "intro": su guion se parte en
-       introBefore + la captura + introAfter. Para el replay, que es solo texto, se
-       reconstruye la conversación entera juntando las dos mitades — si no, estas
-       etapas se quedaban sin cinemática que repetir y el botón no hacía nada. */
-    const src = stageDef.intro
-      || [...(stageDef.introBefore || []), ...(stageDef.introAfter || [])];
-    const beats = src.map((b) => ({ m: b.m, t: fillTpl(b.t, ctx) }));
-    if (!beats.length) return;
-    setReplay({ npc: npcKey, name, beats, idx: 0 });
+       introBefore + la captura + introAfter. El replay reconstruye la escena COMPLETA
+       en el mismo orden en que se vivió, secuencia de pesca y pantalla de captura
+       incluidas — pero como un paso más que se pasa con un toque: aquí nada llama a
+       resolveFishing, así que el pez NO vuelve a entrar en el inventario. */
+    const steps = stageDef.intro
+      ? stageDef.intro.map(beat)
+      : [...(stageDef.introBefore || []).map(beat),
+         ...(stageDef.fish ? [{ kind: "fishing", fish: stageDef.fish }] : []),
+         ...(stageDef.introAfter || []).map(beat)];
+    if (!steps.length) return;
+    setReplay({ npc: npcKey, name, steps, idx: 0 });
   };
   /* avanza el índice local nada más: no hay applyOnRead, ni npcQueue, ni setGame.
-     Al tocar el último beat, idx supera el total y el replay se cierra solo — eso YA
+     Al pasar el último paso, idx supera el total y el replay se cierra solo — eso YA
      es "volver automáticamente a Misiones", porque el panel nunca se desmontó debajo. */
   const advanceReplay = () => setReplay((r) => {
     if (!r) return null;
     const nextIdx = r.idx + 1;
-    return nextIdx >= r.beats.length ? null : { ...r, idx: nextIdx };
+    return nextIdx >= r.steps.length ? null : { ...r, idx: nextIdx };
   });
-  const replayEntry = replay && { id: `replay-${replay.idx}`, npc: replay.npc, mood: replay.beats[replay.idx].m, text: replay.beats[replay.idx].t };
+  const replayStep = replay ? replay.steps[replay.idx] : null;
+  const replayEntry = replayStep && (replayStep.kind === "fishing"
+    ? { id: `replay-${replay.idx}`, npc: replay.npc, mood: "lanzandocaña", kind: "fishing", text: "", fish: replayStep.fish }
+    : { id: `replay-${replay.idx}`, npc: replay.npc, mood: replayStep.m, text: replayStep.t });
   return (
     <div className="overlay" style={{ background: "rgba(5,7,13,.75)", zIndex: 65, alignItems: "flex-end", padding: "0 0 16px" }} onClick={onClose}>
       <div className="sheet" style={{ maxHeight: "78vh", overflowY: "auto", borderRadius: 22 }} onClick={(e) => e.stopPropagation()}>
@@ -5570,8 +5576,10 @@ function QuestPanel({ game, onClose, storiesRegistry }) {
       </div>
       {replayEntry && (
         <div onClick={(e) => e.stopPropagation()}>
-          <NpcDialogue entry={replayEntry} queueLeft={replay.beats.length - replay.idx}
-            onAdvance={advanceReplay} onChoice={() => {}} onOffer={() => {}} />
+          {replayEntry.kind === "fishing"
+            ? <FishingSequence entry={replayEntry} onConfirm={advanceReplay} />
+            : <NpcDialogue entry={replayEntry} queueLeft={replay.steps.length - replay.idx}
+                onAdvance={advanceReplay} onChoice={() => {}} onOffer={() => {}} />}
         </div>)}
     </div>);
 }

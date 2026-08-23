@@ -5729,8 +5729,7 @@ const STORIES = { ...toStories(QUESTS), elisa: ELISA_STORY, milly: MILLY_STORY, 
    del inventario). game.inventory = { itemId: cantidad }.
    ============================================================ */
 /* seis consumibles, uno por stat (ver STAT_KEYS), pensados para ser difíciles de
-   conseguir: +50 XP cada uno. bebida_energetica y zapatillas están sin imagen propia
-   todavía (icono de emoji de reserva) a la espera de que lleguen sus assets. */
+   conseguir: +50 XP cada uno. */
 const ITEMS = {
   botiquin: { name: "Botiquín de Recuperación", icon: "🩹", img: "/images/objects/botiquin.webp", kind: "consumable", stat: "REC", xp: 50,
     desc: "Un kit de recuperación rápida. Lo usas y notas las piernas más frescas al instante." },
@@ -5740,9 +5739,9 @@ const ITEMS = {
     desc: "Una mezcla que Igor trae de sus viajes de cocina. Nadie sabe bien qué lleva, pero funciona." },
   amuleto_suerte: { name: "Amuleto de la Suerte", icon: "🍀", img: "/images/objects/amuleto_suerte.webp", kind: "consumable", stat: "FUE", xp: 50,
     desc: "Dicen que trae suerte. Lo que seguro trae es fuerza, si te acuerdas de usarlo." },
-  bebida_energetica: { name: "Bebida Energética", icon: "🥤", kind: "consumable", stat: "MEN", xp: 50,
+  bebida_energetica: { name: "Bebida Energética", icon: "🥤", img: "/images/objects/bebida_energetica.png", kind: "consumable", stat: "MEN", xp: 50,
     desc: "Justo lo que hace falta para afinar la cabeza antes de un día exigente." },
-  zapatillas: { name: "Zapatillas de Entrenamiento", icon: "👟", kind: "consumable", stat: "FIS", xp: 50,
+  zapatillas: { name: "Zapatillas de Entrenamiento", icon: "👟", img: "/images/objects/zapatillas_de_entrenamiento.png", kind: "consumable", stat: "FIS", xp: 50,
     desc: "Un par nuevo, todavía sin estrenar del todo. Dan ganas de salir a correr." },
   perfume_lujo: { name: "Perfume de Lujo", icon: "🧴", img: "/images/objects/perfume_lujo.webp", kind: "gift", giveTo: "lisa",
     desc: "Un frasco carísimo que Milly guardaba 'para una ocasión especial'. Le pega mucho a Karla." },

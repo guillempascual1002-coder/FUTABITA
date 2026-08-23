@@ -6084,22 +6084,36 @@ const ITEMS = {
     desc: "Un par nuevo, todavía sin estrenar del todo. Dan ganas de salir a correr." },
   perfume_lujo: { name: "Perfume de Lujo", icon: "🧴", img: "/images/objects/perfume_lujo.webp", kind: "gift", giveTo: "lisa",
     desc: "Un frasco carísimo que Milly guardaba 'para una ocasión especial'. Le pega mucho a Karla." },
-  /* recuerdo, no consumible ni regalable: solo se enseña (ver InventoryPanel, no
-     renderiza botón de acción para un kind que no sea "consumable"/"gift") */
-  elisa_pin: { name: "Pin de Elisa", icon: "📌", img: "/images/objects/elisa_pin.webp", kind: "keepsake",
-    desc: "El pin que te dio Elisa al cierre de vuestra historia. No se usa ni se regala: es un recuerdo de todo el camino." },
-  milly_pin: { name: "Pin de Milly", icon: "📌", img: "/images/objects/milly_pin.webp", kind: "keepsake",
-    desc: "El pin que te dio Milly al publicar su gran reportaje. No se usa ni se regala: es un recuerdo de todo el camino." },
-  yuna_pin: { name: "Pin de Yuna", icon: "📌", img: "/images/objects/yuna_pin.webp", kind: "keepsake",
-    desc: "El pin que te dio Yuna cuando por fin dejó de esconderse detrás de las excusas. No se usa ni se regala: es un recuerdo de todo el camino." },
-  lopez_pin: { name: "Pin de López", icon: "📌", img: "/images/objects/lopez_pin.webp", kind: "keepsake",
-    desc: "El pin que te dio López cuando dejaste de ser 'el nuevo'. No se usa ni se regala: es un recuerdo de todo el camino." },
-  igor_pin: { name: "Pin de Igor", icon: "📌", img: "/images/objects/igor_pin.webp", kind: "keepsake",
-    desc: "El pin que te dio Igor el día que dejó de tratarte como cliente. No se usa ni se regala: es un recuerdo de todo el camino." },
-  karla_pin: { name: "Pin de Karla", icon: "📌", img: "/images/objects/karla_pin.webp", kind: "keepsake",
-    desc: "El pin que te dio Karla cuando dejó de tratarte como un proyecto comercial. No se usa ni se regala: es un recuerdo de todo el camino." },
-  beka_pin: { name: "Pin de Beka", icon: "📌", img: "/images/objects/beka_pin.webp", kind: "keepsake",
-    desc: "El pin que te dio Beka el día que dejasteis de fingir que solo erais rivales. No se usa ni se regala: es un recuerdo de todo el camino." },
+  /* Cartas coleccionables (ver FUTABITA_Sistema_Cartas_y_Sobres_Code.docx). Los antiguos
+     "pines" de historia pasan a ser el MISMO objeto conceptual actualizado, no un sistema
+     paralelo: mismo id (elisa_pin, etc. — el documento pide explícitamente no renombrar,
+     "aunque el archivo diga _pin, Code debe tratarlo como CARTA"), solo cambia el asset
+     (ahora en /images/cartas, ver CARD_POOL/SobreReveal más abajo) y se vuelven vendibles
+     a precio fijo. kind:"card": sin botón de acción en InventoryPanel (igual que antes con
+     "keepsake"), pero con sellMin/sellMax que ya es lo único que activa el botón VENDER en
+     CocoShop. nina_pin/coco_pin/vera_pin son cartas nuevas: esos tres personajes nunca
+     tuvieron pin de historia, pero si sus reworks lo añaden en el futuro pueden reutilizar
+     este mismo id sin tener que crear nada — por ahora solo existen en el pool del sobre. */
+  elisa_pin: { name: "Carta de Elisa", icon: "🎴", img: "/images/cartas/elisa_pin.webp", kind: "card", sellMin: 15, sellMax: 15,
+    desc: "La carta que te dio Elisa al cierre de vuestra historia. Coleccionable, vendible a Coco por 15 monedas." },
+  milly_pin: { name: "Carta de Milly", icon: "🎴", img: "/images/cartas/milly_pin.webp", kind: "card", sellMin: 15, sellMax: 15,
+    desc: "La carta que te dio Milly al publicar su gran reportaje. Coleccionable, vendible a Coco por 15 monedas." },
+  yuna_pin: { name: "Carta de Yuna", icon: "🎴", img: "/images/cartas/yuna_pin.webp", kind: "card", sellMin: 15, sellMax: 15,
+    desc: "La carta que te dio Yuna cuando por fin dejó de esconderse detrás de las excusas. Coleccionable, vendible a Coco por 15 monedas." },
+  lopez_pin: { name: "Carta de López", icon: "🎴", img: "/images/cartas/lopez_pin.webp", kind: "card", sellMin: 15, sellMax: 15,
+    desc: "La carta que te dio López cuando dejaste de ser 'el nuevo'. Coleccionable, vendible a Coco por 15 monedas." },
+  igor_pin: { name: "Carta de Igor", icon: "🎴", img: "/images/cartas/igor_pin.webp", kind: "card", sellMin: 15, sellMax: 15,
+    desc: "La carta que te dio Igor el día que dejó de tratarte como cliente. Coleccionable, vendible a Coco por 15 monedas." },
+  karla_pin: { name: "Carta de Karla", icon: "🎴", img: "/images/cartas/karla_pin.webp", kind: "card", sellMin: 15, sellMax: 15,
+    desc: "La carta que te dio Karla cuando dejó de tratarte como un proyecto comercial. Coleccionable, vendible a Coco por 15 monedas." },
+  beka_pin: { name: "Carta de Beka", icon: "🎴", img: "/images/cartas/beka_pin.webp", kind: "card", sellMin: 15, sellMax: 15,
+    desc: "La carta que te dio Beka el día que dejasteis de fingir que solo erais rivales. Coleccionable, vendible a Coco por 15 monedas." },
+  nina_pin: { name: "Carta de Nina", icon: "🎴", img: "/images/cartas/nina_pin.webp", kind: "card", sellMin: 15, sellMax: 15,
+    desc: "Carta coleccionable de Nina. Vendible a Coco por 15 monedas." },
+  coco_pin: { name: "Carta de Coco", icon: "🎴", img: "/images/cartas/coco_pin.webp", kind: "card", sellMin: 15, sellMax: 15,
+    desc: "Carta coleccionable de Coco. Vendible a Coco por 15 monedas." },
+  vera_pin: { name: "Carta de Vera", icon: "🎴", img: "/images/cartas/vera_pin.webp", kind: "card", sellMin: 15, sellMax: 15,
+    desc: "Carta coleccionable de Vera. Vendible a Coco por 15 monedas." },
   /* Cuadros de Vera (ver VERA_STORY): kind:"painting", no consumible ni regalable (igual
      que los pines, sin botón de acción en InventoryPanel), pero sí vendibles a Coco —
      ITEMS[id].sellMin/sellMax es lo único que gatilla el botón VENDER en CocoShop (ver
@@ -6148,6 +6162,20 @@ const ITEMS = {
   cangrejo: { name: "Cangrejo", icon: "🦀", img: "/images/peces/cangrejo.webp", kind: "fish", rarity: "especial", sellMin: 15, sellMax: 25,
     desc: "Técnicamente no es un pez. Pero ha mordido el anzuelo, así que cuenta como captura." },
 };
+/* pool del sobre diario del Casino (ver ITEMS kind:"card" y SobreReveal/openSobre más
+   abajo): construido a partir de los ITEMS reales existentes, tal como pide el documento
+   ("no inventar nombres de cartas que no existan") — nunca una lista aparte que pueda
+   desincronizarse de qué cartas existen de verdad. */
+const CARD_POOL = Object.keys(ITEMS).filter((id) => ITEMS[id].kind === "card");
+/* una carta puede haberse "descubierto" por historia (el flag XPinEarned que ya ponen las
+   7 campañas con pin/carta de cierre) o por sobre (game.cardsDiscovered, ver openSobre) —
+   se comprueban ambas fuentes sin tener que tocar ninguna de las 7 historias existentes. */
+const CARD_STORY_FLAG = {
+  elisa_pin: "elisaPinEarned", milly_pin: "millyPinEarned", yuna_pin: "yunaPinEarned",
+  lopez_pin: "lopezPinEarned", igor_pin: "igorPinEarned", karla_pin: "karlaPinEarned", beka_pin: "bekaPinEarned",
+};
+const isCardDiscovered = (g, cardId) =>
+  !!(CARD_STORY_FLAG[cardId] && g[CARD_STORY_FLAG[cardId]]) || !!(g.cardsDiscovered && g.cardsDiscovered[cardId]);
 /* metadatos de rareza para la pantalla de captura de Nina (ver FishingSequence): etiqueta
    visible y color del brillo/borde, de menos a más espectacular. */
 const FISH_RARITY = {
@@ -7073,6 +7101,49 @@ function CuadroReveal({ itemId, onClose }) {
     </div>);
 }
 
+/* Apertura del sobre diario del Casino (ver openSobre/game.pendingSobreReveal y
+   FUTABITA_Sistema_Cartas_y_Sobres_Code.docx): mismo patrón de fases con temporizador que
+   FishingSequence (shake -> open -> reveal) para el "shake/suspense" que pide el
+   documento, reutilizando sus clases fishing-* para la fase de espera y las cuadro-reveal-*
+   de <CuadroReveal> para la fase final — así las tres pantallas de recompensa grande del
+   juego (pesca, cuadros, cartas) comparten la misma base visual en vez de tener cada una
+   la suya. La carta ya se decidió y se añadió al inventario en openSobre (game state), en
+   cuanto el jugador tocó "abrir sobre": este componente es solo la puesta en escena. */
+function SobreReveal({ reveal, onClose }) {
+  const [phase, setPhase] = useState("shake"); // shake -> open -> reveal
+  useEffect(() => { setPhase("shake"); }, [reveal.id]);
+  useEffect(() => {
+    if (phase === "reveal") return;
+    if (phase === "shake") buzz(20);
+    const delays = { shake: 900, open: 500 };
+    const next = { shake: "open", open: "reveal" };
+    const t = setTimeout(() => setPhase(next[phase]), delays[phase]);
+    return () => clearTimeout(t);
+  }, [phase]);
+  useEffect(() => { if (phase === "reveal") buzz([20, 30, 60]); }, [phase]);
+
+  if (phase !== "reveal") {
+    return (
+      <div className="fishing-ov">
+        <div className={"fishing-pose" + (phase === "shake" ? " fishing-shake" : "")}>
+          <img src="/images/cartas/sobre.webp" alt="Sobre" className="fishing-pose-img" />
+        </div>
+        <div className="fishing-hint">{phase === "shake" ? "Algo se mueve ahí dentro..." : "Abriendo el sobre..."}</div>
+      </div>);
+  }
+  const item = ITEMS[reveal.id];
+  return (
+    <div className="cuadro-reveal-ov" onClick={onClose}>
+      <div className="cuadro-reveal-card" style={{ "--cuadro-glow": "#CDF546" }}>
+        <div className="cuadro-reveal-glow" />
+        {item.img && <img src={item.img} alt={item.name} className="cuadro-reveal-img" />}
+        <div className="cuadro-reveal-name">{item.name}</div>
+        <div className="cuadro-reveal-sub">{reveal.isNew ? "NUEVA CARTA" : "CARTA REPETIDA"}</div>
+      </div>
+      <div className="fishing-hint cuadro-reveal-hint">toca para continuar</div>
+    </div>);
+}
+
 /* ---------- EL PERIÓDICO ---------- */
 function Newspaper({ game, onRead }) {
   const today = todayStr();
@@ -7166,7 +7237,7 @@ function Newspaper({ game, onRead }) {
    siempre hay periódico, así que en vez de cartel ofrece abrirlo.
    Fondo real: si existe /images/zones/{id}.webp se usa; si no (todavía no se ha
    subido), cae a un degradado de marcador de posición sin romper nada. */
-function ZoneScreen({ zone, pendingNpc, onBack, onOpenPaper, game, onSpin, onFish, onBuyCoco, onSellCoco }) {
+function ZoneScreen({ zone, pendingNpc, onBack, onOpenPaper, game, onOpenSobre, onFish, onBuyCoco, onSellCoco }) {
   const [imgOk, setImgOk] = useState(true);
   const [showCocoShop, setShowCocoShop] = useState(false);
   const npc = pendingNpc ? NPCS[pendingNpc] : null;
@@ -7181,16 +7252,7 @@ function ZoneScreen({ zone, pendingNpc, onBack, onOpenPaper, game, onSpin, onFis
   /* pesca libre: solo tras completar la campaña de Nina (ver NINA_STORY, FINAL/EPÍLOGO) */
   const isPlaya = zone.id === "playa" && !!game.ninaStoryComplete;
   const fishedToday = isPlaya && game.ninaFishDay === todayStr();
-  const spunToday = isCasino && game && game.casinoSpinDay === todayStr();
-  const lastSpin = isCasino ? game && game.casinoLastSpin : null;
-  /* partidas antiguas pueden tener un casinoLastSpin de una forma previa a "kind"
-     (o un itemId que ya no existe en ITEMS): si no lo reconocemos, mejor texto
-     genérico que romper la pantalla entera */
-  const lastSpinText = !lastSpin ? "" :
-    lastSpin.kind === "xp" ? `Te tocaron +${lastSpin.amount} XP en ${lastSpin.stat}.` :
-    lastSpin.kind === "fichas" ? `Te tocaron +${lastSpin.amount} 🪙 fichas.` :
-    lastSpin.kind === "item" && ITEMS[lastSpin.itemId] ? `¡Premio especial: ${ITEMS[lastSpin.itemId].name}!` :
-    "Ya has girado hoy.";
+  const sobreToday = isCasino && game && game.sobreDay === todayStr();
   return (
     <div className="zone-screen">
       {imgOk ? (
@@ -7213,13 +7275,13 @@ function ZoneScreen({ zone, pendingNpc, onBack, onOpenPaper, game, onSpin, onFis
       {isCasino && !pendingNpc && (
         <div className="house-room">
           <div className="house-card">
-            <div className="house-title">🎰 Ruleta del Casino · 🪙 {game.fichas || 0}</div>
-            {spunToday ? (
+            <div className="house-title">🎴 Sobre del Casino</div>
+            {sobreToday ? (
               <div style={{ fontSize: 13, color: "#EFEEE3", lineHeight: 1.5 }}>
-                Ya has girado la ruleta hoy.<br />{lastSpinText}<br />Vuelve mañana para otra tirada.</div>
+                Ya has abierto tu sobre hoy.<br />Vuelve mañana para otra carta.</div>
             ) : (
-              <button className="btn-gold sm" style={{ width: "100%" }} onClick={onSpin}>
-                🎰 Girar la ruleta (tirada gratis de hoy)</button>
+              <button className="btn-gold sm" style={{ width: "100%" }} onClick={onOpenSobre}>
+                🎴 Abrir sobre (1 disponible hoy)</button>
             )}
           </div>
         </div>)}
@@ -9660,15 +9722,24 @@ export default function App() {
     return { ...g, savedMeals: [...sm, m].slice(-8) };
   }); pushToast("💾 Guardada en comidas frecuentes"); };
   const deleteSavedMeal = (name) => setGame((g) => ({ ...g, savedMeals: (g.savedMeals || []).filter((m) => m.name !== name) }));
-  /* ruleta del Casino: una tirada gratis al día, +5..20 fichas. Antes también podía dar
-     XP directa o un objeto especial; se simplificó a solo fichas (la tienda del Casino,
-     a construir más adelante, es el único sitio donde esas fichas se convierten en algo). */
-  const spinCasino = () => {
-    if (game.casinoSpinDay === todayStr()) return; /* ya se ha usado hoy, botón no debería ni estar visible */
-    const result = { kind: "fichas", amount: Math.floor(rnd(5, 21)) };
-    setGame((g) => ({ ...g, casinoSpinDay: todayStr(), casinoLastSpin: result, fichas: (g.fichas || 0) + result.amount }));
+  /* sobre diario del Casino (ver FUTABITA_Sistema_Cartas_y_Sobres_Code.docx): sustituye a
+     la antigua ruleta de +5..20 fichas — el documento pide eliminar esa recompensa directa
+     y convertir el Casino en la fuente diaria de sobres/cartas. La carta se elige y se
+     entrega aquí mismo (game.pendingSobreReveal guarda qué tocó y si era nueva o repetida);
+     <SobreReveal>, montada a nivel de App, solo se encarga de la animación y de que el
+     jugador tenga que tocar para continuar antes de dar la escena por vista. */
+  const openSobre = () => {
+    if (game.sobreDay === todayStr()) return; /* ya se ha abierto hoy, botón no debería ni estar visible */
+    const cardId = pick(CARD_POOL);
+    const isNew = !isCardDiscovered(game, cardId);
+    setGame((g) => {
+      const inv = { ...(g.inventory || {}) };
+      inv[cardId] = (inv[cardId] || 0) + 1;
+      const discovered = { ...(g.cardsDiscovered || {}), [cardId]: true };
+      return { ...g, sobreDay: todayStr(), inventory: inv, cardsDiscovered: discovered,
+        pendingSobreReveal: { id: cardId, isNew } };
+    });
     buzz(15);
-    pushToast(`🎰 ¡+${result.amount} 🪙 fichas!`);
   };
   /* usar un objeto consumible: XP a la stat indicada (o una al azar si stat:"random") y se gasta */
   const useItem = (itemId) => setGame((g) => {
@@ -9950,10 +10021,16 @@ export default function App() {
       {game.pendingCuadroReveal && (
         <CuadroReveal itemId={game.pendingCuadroReveal}
           onClose={() => setGame((g) => ({ ...g, pendingCuadroReveal: null }))} />)}
+      {/* apertura del sobre diario del Casino (ver openSobre/SobreReveal): mismo criterio
+          de montaje que CuadroReveal, a nivel de App y no dentro de ZoneScreen — así sigue
+          visible aunque el jugador pulse "Volver" mientras dura la animación. */}
+      {game.pendingSobreReveal && (
+        <SobreReveal reveal={game.pendingSobreReveal}
+          onClose={() => setGame((g) => ({ ...g, pendingSobreReveal: null }))} />)}
       {/* visitar una zona: fondo a toda pantalla + flecha para volver */}
       {tab === "chat" && visitedZoneObj && (
         <ZoneScreen zone={visitedZoneObj} pendingNpc={visitedActiveNpc} game={game}
-          onBack={() => setVisitedZone(null)} onOpenPaper={() => setShowPaper(true)} onSpin={spinCasino} onFish={freeFish}
+          onBack={() => setVisitedZone(null)} onOpenPaper={() => setShowPaper(true)} onOpenSobre={openSobre} onFish={freeFish}
           onBuyCoco={buyFromCoco} onSellCoco={sellToCoco} />)}
       {/* diálogo de personaje: overlay a nivel de App (fuera de .tab-in), aparece encima
           del fondo de la zona en cuanto hay alguien esperando ahí (visitedActiveNpc) */}

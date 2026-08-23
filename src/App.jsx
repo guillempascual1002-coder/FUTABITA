@@ -3731,13 +3731,6 @@ const NINA_STORY = {
           { m: "happy", t: "No hace falta que te obsesiones. Solo quiero que veas qué pasa cuando eres constante." },
           { m: "seria", t: "Y cuando vuelvas, volveremos a lanzar la caña." },
           { m: "happy", t: "A ver si tenemos un poco más de suerte que la primera vez." },
-          { m: "happy", t: "¿Lo has conseguido?" },
-          { m: "orgullosa", t: "Dos días. Bien." },
-          { m: "seria", t: "¿Ves? No parecía gran cosa cuando te lo propuse." },
-          { m: "happy", t: "Pero estas cosas empiezan así. Un día, luego otro, y de repente ya forma parte de tu rutina." },
-          { m: "seria", t: "Ahora vamos a ver si hoy tenemos la misma suerte con la caña." },
-          { m: "happy", t: "No sé qué va a picar. Eso es precisamente lo divertido." },
-          { m: "seria", t: "Solo vamos a probar otra vez y ver qué nos espera." },
         ],
         fish: { id: "pez_caballa", rarity: "comun" },
         introAfter: [
@@ -3755,6 +3748,15 @@ const NINA_STORY = {
         objective: "Ya tienes la lubina. Completa 2 días de alimentación.",
         introBefore: [
           { m: "happy", t: "Mira quién ha vuelto." },
+          /* reconocimiento de los 2 días de proteína del capítulo anterior: va AQUÍ, al
+             empezar este capítulo, porque es el momento en que el jugador acaba de
+             cumplirlos. En el documento aparece dentro del capítulo 2, pero allí la
+             captura se entrega al ARRANCAR la etapa (ver queueStageScene), así que Nina
+             celebraba unos días que todavía no habían pasado. */
+          { m: "happy", t: "¿Lo has conseguido?" },
+          { m: "orgullosa", t: "Dos días. Bien." },
+          { m: "seria", t: "¿Ves? No parecía gran cosa cuando te lo propuse." },
+          { m: "happy", t: "Pero estas cosas empiezan así. Un día, luego otro, y de repente ya forma parte de tu rutina." },
           { m: "seria", t: "La otra vez te fuiste con una caballa y un par de días más de proteína cumplidos." },
           { m: "happy", t: "No está mal para alguien que al principio parecía dispuesto a tirar de la caña como si fuera una barra de pesas." },
           { m: "seria", t: "Pero hay una cosa que quiero que entiendas." },
@@ -3767,11 +3769,6 @@ const NINA_STORY = {
           { m: "happy", t: "No porque yo sepa que vamos a sacar algo mejor." },
           { m: "seria", t: "Porque quiero que empieces a acostumbrarte a este ritmo." },
           { m: "happy", t: "Comes, descansas, vuelves, lanzas la caña... y ves qué pasa." },
-          { m: "happy", t: "Has vuelto a cumplirlo." },
-          { m: "orgullosa", t: "Empiezas a tener cierta constancia." },
-          { m: "seria", t: "Vamos a probar suerte otra vez." },
-          { m: "happy", t: "No te prometo nada. Nunca lo hago." },
-          { m: "seria", t: "Solo quiero ver qué nos encontramos hoy." },
         ],
         fish: { id: "pez_lubina", rarity: "poco_comun" },
         introAfter: [
@@ -3787,6 +3784,9 @@ const NINA_STORY = {
       { title: "Lo que llevas a casa", zone: "playa",
         objective: "Ya tienes la dorada. Completa 3 días de alimentación.",
         introBefore: [
+          /* reconocimiento de los días del capítulo anterior (mismo motivo que en el 3) */
+          { m: "happy", t: "Has vuelto a cumplirlo." },
+          { m: "orgullosa", t: "Empiezas a tener cierta constancia." },
           { m: "seria", t: "¿Nunca te ha pasado que entrenas muchísimo y luego llegas a casa sin ganas de preparar nada?" },
           { m: "happy", t: "A mí sí." },
           { m: "seria", t: "Y por eso aprendí a valorar algo muy sencillo: tener algo en casa que te apetezca comer." },
@@ -3799,11 +3799,6 @@ const NINA_STORY = {
           { m: "happy", t: "Es una técnica culinaria muy avanzada." },
           { m: "seria", t: "Durante unos días cuida un poco tu alimentación y vuelve a salir conmigo." },
           { m: "happy", t: "No sé qué encontraremos, pero quizá tengamos una captura que merezca una buena comida." },
-          { m: "happy", t: "Tres días. Bien." },
-          { m: "seria", t: "Ya estás haciendo algo que al principio parecía pesado sin darle tantas vueltas." },
-          { m: "happy", t: "Ahora vamos a ver qué nos regala el agua." },
-          { m: "seria", t: "Puede que no sea nada especial." },
-          { m: "happy", t: "O puede que hoy tengamos suerte." },
         ],
         fish: { id: "pez_dorada", rarity: "poco_comun" },
         introAfter: [
@@ -3819,6 +3814,9 @@ const NINA_STORY = {
       { title: "El silencio", zone: "playa",
         objective: "Ya tienes la trucha. Mantén una racha de 3 días.",
         introBefore: [
+          /* reconocimiento de los 3 días del capítulo anterior (mismo motivo que en el 3) */
+          { m: "happy", t: "Tres días. Bien." },
+          { m: "seria", t: "Ya estás haciendo algo que al principio parecía pesado sin darle tantas vueltas." },
           { m: "seria", t: "Hoy no quiero hablar demasiado." },
           { m: "happy", t: "No pongas esa cara. No estoy enfadada." },
           { m: "seria", t: "Solo quiero que escuches." },

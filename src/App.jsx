@@ -6257,6 +6257,8 @@ const CARDS = [
     bio: "La pescadora de la Playa. Nunca tiene prisa — y poco a poco te enseña que tampoco hace falta tenerla siempre." },
   { npc: "coco", unlocked: (g) => !!g.cocoMet,
     bio: "Tendera errante. Aparece cada cinco días en un sitio distinto con mercancía nueva — y siempre compra lo que ya no quieres." },
+  { npc: "vera", unlocked: (g) => !!g.veraMet,
+    bio: "Artista observadora, algo despistada. Busca inspiración en tu rutina y termina pintando momentos que merece la pena recordar." },
 ];
 
 /* --- EL PERIÓDICO · plantillas con titular y cuerpo, por secciones.

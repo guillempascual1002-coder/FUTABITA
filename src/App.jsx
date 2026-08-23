@@ -1036,6 +1036,15 @@ const NPCS = {
   coco: { name: "Coco", color: "#2EA88A", voice: "/audio/vozchica01.mp3", icon: "/images/coco/coco_icon.webp",
     arts: { idle: "/images/coco/coco_idle.webp", blush: "/images/coco/coco_blush.webp",
       sorprendida: "/images/coco/coco_sorprendida.webp" }, def: "idle" },
+  /* Vera: artista observadora (ver VERA_STORY). El documento no define un asset para el
+     mood [suave] que su guion usa varias veces — igual que con Coco, se deja el mood tal
+     cual y cae automáticamente a "idle" (npc.def) mediante el fallback ya existente
+     (npc.arts[entry.mood] || npc.arts[npc.def]), sin inventar un asset nuevo. */
+  vera: { name: "Vera", color: "#8A6FD6", voice: "/audio/vozchica02.mp3", icon: "/images/vera/vera_icon.png",
+    arts: { idle: "/images/vera/vera_idle.png", happy: "/images/vera/vera_happy.png",
+      seria: "/images/vera/vera_seria.png", preocupada: "/images/vera/vera_preocupada.png",
+      pintora: "/images/vera/vera_pintora.png", pintora_pensando: "/images/vera/vera_pintora_pensando.png",
+      playa: "/images/vera/vera_playa.png", playa_regalo: "/images/vera/vera_playa_regalo.png" }, def: "idle" },
 };
 /* el sender siempre es el nombre real del personaje ahora (la zona ya no crea una
    identidad de sender distinta: es contexto de la escena, ver campo "zone" en addMsg/addScene) */
@@ -1049,6 +1058,7 @@ const senderToNpc = (from) => {
   if (from === "Beka") return "beka";
   if (from === "Nina") return "nina";
   if (from === "Coco") return "coco";
+  if (from === "Vera") return "vera";
   return null; /* prensa/afición/redes/club -> periódico */
 };
 const paperSec = (from) =>
@@ -1360,7 +1370,7 @@ const ZONES = [
   { id: "estadio", kind: "npc", npc: ["lopez", "yuna", "elisa", "milly", "igor", "beka"], label: "Gran Estadio", icon: "🏆", x: 74.47, y: 89.16,
     pts: "384.07 634.12 295.02 657.52 262.89 677.69 290.06 764.25 384.07 764.25 431.07 715.53 384.07 634.12",
     unlocked: (g) => isZoneUnlocked(g, "estadio"), big: true },
-  { id: "parque", kind: "npc", npc: ["elisa", "lisa", "milly", "yuna", "lopez", "beka"], label: "Parque", icon: "🌳", x: 47.99, y: 42.84,
+  { id: "parque", kind: "npc", npc: ["elisa", "lisa", "milly", "yuna", "lopez", "beka", "vera"], label: "Parque", icon: "🌳", x: 47.99, y: 42.84,
     pts: "204.76 310.38 181.53 393.1 289.27 402.29 204.76 310.38",
     unlocked: (g) => isZoneUnlocked(g, "parque") },
   { id: "casino", kind: "npc", npc: ["elisa", "lisa"], label: "Casino", icon: "🎰", x: 63.79, y: 72.25,
@@ -1369,7 +1379,7 @@ const ZONES = [
   { id: "enfermeria", kind: "npc", npc: ["elisa", "milly", "beka"], label: "Enfermería", icon: "🏥", x: 70.56, y: 8.09,
     pts: "269.53 96.59 375.7 85.45 379.45 140.6 271.57 150.46 269.53 96.59",
     unlocked: (g) => isZoneUnlocked(g, "enfermeria") },
-  { id: "playa", kind: "npc", npc: ["elisa", "milly", "lopez", "lisa", "yuna", "igor", "nina"], label: "Playa", icon: "🏖️", x: 18.88, y: 62.76,
+  { id: "playa", kind: "npc", npc: ["elisa", "milly", "lopez", "lisa", "yuna", "igor", "nina", "vera"], label: "Playa", icon: "🏖️", x: 18.88, y: 62.76,
     pts: "76.85 417.61 148.34 442.12 135.57 514.12 96.25 602.97 31.4 583.57 76.85 417.61",
     unlocked: (g) => isZoneUnlocked(g, "playa") },
   { id: "atico", kind: "npc", npc: ["elisa", "lisa"], label: "Ático de Lujo", icon: "🌇", x: 34.48, y: 19.29,
@@ -1392,7 +1402,7 @@ const ZONES = [
 /* home zone de cada personaje: dónde "vive" por defecto si una escena no especifica zona
    explícita (varios personajes están asignados a más de una zona ahora que la zona es
    contexto de escena y no una identidad de npc distinta, ver NPCS más arriba) */
-const HOME_ZONE = { elisa: "oficina", lopez: "ciudad-dep", milly: "kiosco", yuna: "barrio", lisa: "patro", igor: "restaurante", beka: "barrio", nina: "playa" };
+const HOME_ZONE = { elisa: "oficina", lopez: "ciudad-dep", milly: "kiosco", yuna: "barrio", lisa: "patro", igor: "restaurante", beka: "barrio", nina: "playa", vera: "parque" };
 /* una zona puede tener uno o varios personajes asignados (p.ej. El Barrio) */
 const zoneNpcList = (z) => (Array.isArray(z.npc) ? z.npc : z.npc ? [z.npc] : []);
 /* una entrada de npcQueue cuenta para una zona si su "zone" explícito coincide, o si no
@@ -5718,9 +5728,338 @@ const COCO_STORY = {
   }],
 };
 
+/* ============================================================
+   VERA · artista observadora, novena campaña y primera con recompensas
+   de campaña MÚLTIPLES (un cuadro por capítulo, no solo un pin al final).
+
+   Por eso su historia no cabe en un único capítulo largo como las demás:
+   el motor (checkStories) solo dispara stage.reward() al ENTRAR en una
+   etapa final:true, y entrar en una etapa final:true cierra el capítulo
+   entero e inmediatamente pasa al siguiente (su propio check/objective,
+   si los tuviera, nunca se evaluarían). Así que cada "CAPÍTULO N" del
+   documento se parte en dos etapas dentro de su propio capítulo:
+     1) la etapa de SETUP (con el objective/check real del capítulo),
+     2) una etapa de ENTREGA (final:true) que solo lleva la reacción al
+        objetivo que se acaba de cumplir + el reward() de ese cuadro.
+   El capítulo N+1 empieza limpio, sin repetir esa reacción (ya se ha
+   mostrado en la etapa de entrega), tal como pide el documento: "La
+   reacción a este objetivo NO va en esta intro; va al principio de la
+   siguiente etapa" — aquí "la siguiente etapa" es la de entrega.
+
+   Cada reward() añade su cuadro (ver ITEMS) Y marca game.pendingCuadroReveal
+   con el id de ese objeto: eso es lo que dispara <CuadroReveal>, la
+   pantalla grande de "imagen → efectos → click para continuar" que pide
+   el documento (ver App, justo debajo del render de <NpcDialogue>).
+
+   Moods: el documento no define asset para [suave] (solo lista idle,
+   happy, seria, preocupada, pintora, pintora_pensando, playa,
+   playa_regalo, icon) — igual que con Coco, se deja el mood tal cual y
+   cae automáticamente a "idle" (npc.def) mediante el fallback ya
+   existente en el motor, sin inventar un asset nuevo.
+
+   Checks: el documento pide explícitamente mapear cada misión a una
+   condición que YA exista en el juego. CAP5/CAP6 ("hito social",
+   "interactúa con 3 personajes") se resuelven con game.seenMoods (ya
+   usado por el motor para marcar qué mood de cada npc ha leído el
+   jugador — su claves son, por tanto, "personajes con los que ya has
+   interactuado") comparando contra un snapshot tomado al empezar la
+   etapa, igual que el resto de checks "desde que empezó el capítulo". */
+const VERA_STORY = {
+  npc: "vera",
+  chapters: [
+    { id: "cap1", title: "Primer toque", trigger: () => true,
+      stages: [
+        /* PRÓLOGO — Algo que pintar (sin MISIÓN propia en el documento:
+           se resuelve en cuanto se lee, igual que el FINAL de Milly/Beka) */
+        { title: "Algo que pintar", zone: "parque",
+          objective: "Sin objetivo adicional.",
+          intro: [
+            { m: "idle", t: "Perdona. ¿Puedes quedarte quieto un segundo?" },
+            { m: "sorprendida", t: "No, no por nada raro. Estaba intentando dibujar lo que tienes detrás y, de repente, me he quedado mirándote a ti." },
+            { m: "happy", t: "Eso suele ser buena señal." },
+            { m: "idle", t: "Soy Vera. Pinto. Bueno... intento pintar. Últimamente tengo un pequeño problema." },
+            { m: "preocupada", t: "Tengo materiales, tiempo, ideas a medias, tres cuadernos llenos de cosas que no terminé y una cantidad bastante preocupante de dibujos de tazas." },
+            { m: "happy", t: "No sé por qué dibujo tantas tazas." },
+            { m: "idle", t: "Lo que no tengo es una idea que me haga pensar: esto merece convertirse en un cuadro." },
+            { m: "seria", t: "Así que he decidido observar un poco más." },
+            { m: "idle", t: "Y tú pareces estar haciendo muchas cosas. Entrenas, intentas mejorar, comes, descansas... incluso sales por ahí." },
+            { m: "happy", t: "Quizá pueda encontrar algo interesante en todo eso." },
+            { m: "pintora_pensando", t: "No necesito que poses para mí. Solo quiero ver qué ocurre cuando alguien intenta cambiar algo de su vida." },
+            { m: "idle", t: "Si no te importa, voy a acompañarte un poco." },
+            { m: "happy", t: "Prometo no dibujarte mientras duermes." },
+          ],
+          setFlags: ["veraMet"],
+          snap: () => ({}), check: () => true },
+        /* CAPÍTULO 1 — Primer toque */
+        { title: "Primer toque", zone: "parque",
+          objective: "Completa un día de preparación: entrenamiento + alimentación + sueño.",
+          intro: [
+            { m: "idle", t: "He estado observándote un poco. No te preocupes, no tanto como para saber a qué hora desayunas." },
+            { m: "happy", t: "Aunque ahora que lo pienso, eso sería bastante útil para una artista obsesionada con los detalles." },
+            { m: "seria", t: "Hay algo que me interesa de los comienzos. Desde fuera parecen insignificantes." },
+            { m: "idle", t: "Un entrenamiento más. Una comida más. Un día en el que decides hacer algo en lugar de dejarlo para mañana." },
+            { m: "pintora_pensando", t: "Pero cuando juntas muchos de esos momentos, de repente existe una historia." },
+            { m: "happy", t: "Y creo que quiero empezar por ahí." },
+            { m: "seria", t: "No quiero pintar una gran victoria todavía. Quiero pintar el momento en el que alguien decide dar el primer paso." },
+            { m: "idle", t: "Así que voy a observarte mientras empiezas a construir esa rutina." },
+            { m: "happy", t: "No hace falta que sea perfecto. Solo necesito ver que de verdad has empezado." },
+          ],
+          snap: () => ({ since: todayStr() }),
+          check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 1 },
+        /* ENTREGA — Cuadro «Primer toque» (final:true: cierra el capítulo 1 y entrega el
+           cuadro; su reacción es la que el documento escribe al principio de "CAPÍTULO 2") */
+        { title: "Primer toque", final: true,
+          intro: [
+            { m: "happy", t: "Así que lo hiciste." },
+            { m: "idle", t: "Ayer parecía un día cualquiera. Y, sin embargo, ahora puedo mirarlo y decir que fue el principio de algo." },
+            { m: "seria", t: "Eso es lo que quería ver." },
+          ],
+          reward: (g) => {
+            const inv = { ...(g.inventory || {}) };
+            inv.cuadro_primer_toque = (inv.cuadro_primer_toque || 0) + 1;
+            return { ...g, inventory: inv, pendingCuadroReveal: "cuadro_primer_toque" };
+          } },
+      ] },
+    { id: "cap2", title: "No parar", trigger: () => true,
+      stages: [
+        { title: "No parar", zone: "parque",
+          objective: "Mantén una racha de 3 días de objetivos diarios.",
+          intro: [
+            { m: "pintora_pensando", t: "He hecho un dibujo esta mañana. No es exactamente una persona corriendo. Es más bien... una persona que ha decidido volver a correr." },
+            { m: "idle", t: "Hay una diferencia enorme entre las dos cosas." },
+            { m: "seria", t: "El primer día puede ser entusiasmo. El segundo ya es una elección." },
+            { m: "idle", t: "Y después llega esa parte aburrida en la que nadie te aplaude por repetir lo que dijiste que ibas a hacer." },
+            { m: "happy", t: "Creo que ahí está el cuadro." },
+            { m: "seria", t: "Durante unos días, no busques hacer algo espectacular. Solo intenta no romper el hilo que acabas de empezar." },
+          ],
+          progressCount: (g) => g.player.streak || 0, progressGoal: 3,
+          snap: () => ({}),
+          check: (g) => (g.player.streak || 0) >= 3 },
+        { title: "No parar", final: true,
+          intro: [
+            { m: "happy", t: "Tres días." },
+            { m: "seria", t: "No parece una cifra enorme escrita en una pantalla, pero ahora entiendo por qué me interesaba." },
+            { m: "idle", t: "Has vuelto a hacerlo incluso después de que la novedad desapareciera." },
+          ],
+          reward: (g) => {
+            const inv = { ...(g.inventory || {}) };
+            inv.cuadro_no_parar = (inv.cuadro_no_parar || 0) + 1;
+            return { ...g, inventory: inv, pendingCuadroReveal: "cuadro_no_parar" };
+          } },
+      ] },
+    { id: "cap3", title: "Después del esfuerzo", trigger: () => true,
+      stages: [
+        { title: "Después del esfuerzo", zone: "parque",
+          objective: "Cumple el objetivo de proteína durante 3 días.",
+          intro: [
+            { m: "pintora_pensando", t: "Y mientras terminaba el segundo cuadro me di cuenta de que estaba dibujando siempre la misma mitad de la historia." },
+            { m: "sorprendida", t: "El esfuerzo." },
+            { m: "seria", t: "Entrenar. Correr. Intentarlo otra vez. Todo eso queda muy bien en un cuadro." },
+            { m: "idle", t: "Pero nadie pinta lo que pasa cuando termina." },
+            { m: "happy", t: "El cuerpo pide cosas. La cabeza también." },
+            { m: "seria", t: "Y si estás intentando mejorar de verdad, no puedes tratar la alimentación como si fuera una nota al pie." },
+            { m: "idle", t: "Creo que mi siguiente cuadro tiene que hablar de eso." },
+            { m: "happy", t: "No de comer mucho. De entender que lo que haces después también forma parte del esfuerzo." },
+            { m: "seria", t: "Ayúdame a verlo durante unos días." },
+          ],
+          progressCount: (g, snap) => proteinDaysSince(g, snap.since), progressGoal: 3,
+          snap: () => ({ since: todayStr() }),
+          check: (g, snap) => proteinDaysSince(g, snap.since) >= 3 },
+        { title: "Después del esfuerzo", final: true,
+          intro: [
+            { m: "suave", t: "Ahora sí lo entiendo." },
+            { m: "idle", t: "No puedes separar el esfuerzo de lo que haces para recuperarte de él." },
+            { m: "seria", t: "He pasado tanto tiempo buscando movimiento para mis cuadros que me había olvidado de algo muy sencillo." },
+          ],
+          reward: (g) => {
+            const inv = { ...(g.inventory || {}) };
+            inv.cuadro_despues_del_esfuerzo = (inv.cuadro_despues_del_esfuerzo || 0) + 1;
+            return { ...g, inventory: inv, pendingCuadroReveal: "cuadro_despues_del_esfuerzo" };
+          } },
+      ] },
+    { id: "cap4", title: "Donde el ruido termina", trigger: () => true,
+      stages: [
+        /* única excepción de zona de toda la campaña: transcurre en la Playa (ver
+           NOTA DE ZONAS del documento) */
+        { title: "Donde el ruido termina", zone: "playa",
+          objective: "Cumple el objetivo de sueño durante 3 días.",
+          intro: [
+            { m: "happy", t: "A veces la mejor escena es la que no está pasando nada." },
+            { m: "pintora_pensando", t: "Mira el mar." },
+            { m: "idle", t: "No hay una barra que suba. No hay una racha que mantener. No hay nadie diciendo que tienes que ser mejor mañana." },
+            { m: "suave", t: "Solo hay un momento en el que puedes parar." },
+            { m: "seria", t: "Y eso también forma parte de cuidar de ti." },
+            { m: "happy", t: "Quiero pintar esa sensación. El segundo en el que el ruido de todo lo demás desaparece." },
+            { m: "idle", t: "Así que durante unos días quiero que me enseñes algo distinto: que también sabes descansar." },
+          ],
+          progressCount: (g, snap) => Object.entries(g.logs || {}).filter(([d, l]) =>
+            d >= snap.since && l.closed && l.sleep != null && l.sleep >= g.player.goals.sleepGoal).length,
+          progressGoal: 3,
+          snap: () => ({ since: todayStr() }),
+          check: (g, snap) => Object.entries(g.logs || {}).filter(([d, l]) =>
+            d >= snap.since && l.closed && l.sleep != null && l.sleep >= g.player.goals.sleepGoal).length >= 3 },
+        { title: "Donde el ruido termina", final: true,
+          intro: [
+            { m: "happy", t: "Vale. Lo admito." },
+            { m: "happy", t: "Pensaba que iba a ser imposible hacer un cuadro sobre descanso y acabar aquí." },
+            { m: "idle", t: "Pero supongo que descansar no significa quedarse quieto para siempre." },
+          ],
+          reward: (g) => {
+            const inv = { ...(g.inventory || {}) };
+            inv.cuadro_donde_el_ruido_termina = (inv.cuadro_donde_el_ruido_termina || 0) + 1;
+            return { ...g, inventory: inv, pendingCuadroReveal: "cuadro_donde_el_ruido_termina" };
+          } },
+      ] },
+    { id: "cap5", title: "Una noche más", trigger: () => true,
+      stages: [
+        { title: "Una noche más", zone: "parque",
+          objective: "Completa un hito social existente del juego y visita la Discoteca.",
+          intro: [
+            { m: "seria", t: "Hay días para apretar. Hay días para parar. Y también hay días para salir, hablar, reírte y recordar que no eres una máquina de estadísticas." },
+            { m: "happy", t: "Además, este sitio tiene una luz increíble." },
+            { m: "pintora_pensando", t: "Mira todas esas formas. Nadie se queda quieto. Todo cambia de color cada segundo." },
+            { m: "idle", t: "Creo que llevo demasiado tiempo intentando encontrar inspiración en cosas importantes." },
+            { m: "happy", t: "Quizá también esté en una noche que no tiene ninguna consecuencia." },
+            { m: "seria", t: "Quiero capturar esa sensación: una noche que simplemente ocurre y mañana ya será un recuerdo." },
+            { m: "happy", t: "No necesito que ganes nada para este cuadro. Necesito que vuelvas a hacer algo por ti." },
+          ],
+          snap: (g) => ({ since: todayStr(), seenNpcs: Object.keys(g.seenMoods || {}) }),
+          subs: [
+            (g, snap) => Object.keys(g.seenMoods || {}).some((n) => !snap.seenNpcs.includes(n)),
+            (g, snap) => zoneVisitedSince(g, "discoteca", snap.since),
+          ],
+          check: (g, snap) => Object.keys(g.seenMoods || {}).some((n) => !snap.seenNpcs.includes(n)) &&
+            zoneVisitedSince(g, "discoteca", snap.since) },
+        { title: "Una noche más", final: true,
+          intro: [
+            { m: "happy", t: "La noche me ha dejado pensando." },
+            { m: "idle", t: "No por la pintura. Bueno, también por la pintura." },
+            { m: "seria", t: "Me di cuenta de que cuando intentaba recordar lo que había visto, no recordaba las luces." },
+          ],
+          reward: (g) => {
+            const inv = { ...(g.inventory || {}) };
+            inv.cuadro_una_noche_mas = (inv.cuadro_una_noche_mas || 0) + 1;
+            return { ...g, inventory: inv, pendingCuadroReveal: "cuadro_una_noche_mas" };
+          } },
+      ] },
+    { id: "cap6", title: "La gente que pasa", trigger: () => true,
+      stages: [
+        { title: "La gente que pasa", zone: "parque",
+          objective: "Interactúa con 3 personajes y completa 2 acciones de ciudad existentes.",
+          intro: [
+            { m: "pintora_pensando", t: "Recordaba a la gente." },
+            { m: "idle", t: "A alguien riéndose. A alguien que iba con prisa. A alguien que parecía completamente perdido en sus pensamientos." },
+            { m: "seria", t: "Incluso me acordé de algunos de los personajes que he ido viendo por la ciudad." },
+            { m: "happy", t: "Supongo que ese es el problema de pintar FUTABITA." },
+            { m: "idle", t: "Hay demasiadas personas interesantes." },
+            { m: "seria", t: "Hasta ahora estaba intentando pintar lo que haces." },
+            { m: "happy", t: "Ahora quiero pintar a quién eres cuando nadie está pensando en tus estadísticas." },
+            { m: "idle", t: "Quiero llenar el cuadro de pequeños momentos. No hace falta que sean importantes." },
+            { m: "pintora_pensando", t: "Solo tienen que ser reales." },
+            { m: "seria", t: "Ayúdame a observar la ciudad. Habla con gente. Muévete por ella. Quiero ver qué aparece cuando dejamos de mirar solo el campo." },
+          ],
+          snap: (g) => ({ since: todayStr(), seenNpcs: Object.keys(g.seenMoods || {}) }),
+          subs: [
+            (g, snap) => Object.keys(g.seenMoods || {}).filter((n) => !snap.seenNpcs.includes(n)).length >= 3,
+            (g, snap) => Object.entries(g.zoneVisits || {}).filter(([, d]) => d >= snap.since).length >= 2,
+          ],
+          check: (g, snap) => Object.keys(g.seenMoods || {}).filter((n) => !snap.seenNpcs.includes(n)).length >= 3 &&
+            Object.entries(g.zoneVisits || {}).filter(([, d]) => d >= snap.since).length >= 2 },
+        { title: "La gente que pasa", final: true,
+          intro: [
+            { m: "suave", t: "Ya lo entiendo." },
+            { m: "idle", t: "He estado buscando inspiración como si fuera una cosa que pudiera encontrar escondida en algún sitio." },
+            { m: "seria", t: "Pero no estaba escondida." },
+            { m: "happy", t: "Estaba en todo lo que has ido haciendo." },
+          ],
+          reward: (g) => {
+            const inv = { ...(g.inventory || {}) };
+            inv.cuadro_la_gente_que_pasa = (inv.cuadro_la_gente_que_pasa || 0) + 1;
+            return { ...g, inventory: inv, pendingCuadroReveal: "cuadro_la_gente_que_pasa" };
+          } },
+      ] },
+    { id: "cap7", title: "Lo que queda", trigger: () => true,
+      stages: [
+        { title: "Lo que queda", zone: "parque",
+          objective: "Completa un hito global de progreso existente y mantén una racha de 5 días.",
+          intro: [
+            { m: "idle", t: "El primer día en el que decidiste empezar." },
+            { m: "seria", t: "Los días en los que seguiste aunque ya no fuera emocionante." },
+            { m: "idle", t: "La comida después del entrenamiento. El descanso. Una noche cualquiera. La gente que pasa por la ciudad y que normalmente ni miramos." },
+            { m: "pintora_pensando", t: "He intentado pintar cada una de esas cosas por separado." },
+            { m: "suave", t: "Y creo que ahora sé por qué no terminaba de funcionar." },
+            { m: "seria", t: "No son historias separadas." },
+            { m: "happy", t: "Son partes de la misma." },
+            { m: "idle", t: "La tuya." },
+            { m: "preocupada", t: "Me da un poco de miedo este cuadro." },
+            { m: "happy", t: "No porque no sepa qué pintar. Por primera vez sé exactamente qué quiero hacer." },
+            { m: "seria", t: "Me da miedo que, cuando lo termine, ya no tenga ninguna excusa para seguir buscando." },
+            { m: "suave", t: "Pero supongo que eso también forma parte de pintar." },
+            { m: "idle", t: "Así que esta vez no quiero observarte desde lejos." },
+            { m: "seria", t: "Quiero que completes una última etapa de todo lo que hemos estado hablando." },
+            { m: "happy", t: "No tiene que ser perfecto. Solo tiene que demostrar que la historia que empezamos no era solo una idea bonita." },
+          ],
+          progressCount: (g) => g.player.streak || 0, progressGoal: 5,
+          snap: (g) => ({ tierId: g.tier.id, ovr: calcOVR(g.player.stats) }),
+          subs: [
+            (g, snap) => g.tier.id !== snap.tierId || calcOVR(g.player.stats) > snap.ovr,
+            (g) => (g.player.streak || 0) >= 5,
+          ],
+          check: (g, snap) => (g.tier.id !== snap.tierId || calcOVR(g.player.stats) > snap.ovr) && (g.player.streak || 0) >= 5 },
+        { title: "Lo que queda", final: true,
+          intro: [
+            { m: "happy", t: "Lo terminamos." },
+            { m: "suave", t: "Bueno. Lo terminé yo. Pero me entiendes." },
+          ],
+          reward: (g) => {
+            const inv = { ...(g.inventory || {}) };
+            inv.cuadro_lo_que_queda = (inv.cuadro_lo_que_queda || 0) + 1;
+            return { ...g, inventory: inv, pendingCuadroReveal: "cuadro_lo_que_queda" };
+          } },
+      ] },
+    /* FINAL — El cuadro que faltaba (capítulo de cierre: sin MISIÓN propia, narración de
+       cierre + desbloqueo de INSPIRACIÓN LIBRE, ver refreshVeraFreeVisit. Pantalla especial
+       con vera_playa_regalo.webp en vez del cuadro de campaña — "tratamiento ligeramente
+       más especial" que pide el documento, ver CuadroReveal) */
+    { id: "cap8", title: "El cuadro que faltaba", trigger: () => true,
+      stages: [
+        { title: "El cuadro que faltaba", zone: "parque", final: true,
+          intro: [
+            { m: "seria", t: "He estado mirando el cuadro durante un rato intentando decidir si le faltaba algo." },
+            { m: "idle", t: "Y creo que no." },
+            { m: "suave", t: "No porque sea perfecto. Porque ya no necesita serlo." },
+            { m: "happy", t: "Tiene el principio, la constancia, la comida, el descanso, la noche y todas esas personas que pasan por la ciudad." },
+            { m: "seria", t: "Y en algún sitio, casi escondido, estás tú." },
+            { m: "suave", t: "No como un retrato." },
+            { m: "happy", t: "Como la persona que hizo que todo lo demás ocurriera." },
+            { m: "idle", t: "Supongo que eso era lo que estaba buscando desde el principio." },
+            { m: "suave", t: "No quería encontrar algo bonito." },
+            { m: "seria", t: "Quería encontrar algo que mereciera ser recordado." },
+            { m: "happy", t: "Gracias por ayudarme a encontrarlo." },
+          ],
+          setFlags: ["veraStoryComplete"],
+          reward: (g) => ({ ...g, pendingCuadroReveal: "vera_completion" }) },
+      ] },
+  ],
+};
+/* INSPIRACIÓN LIBRE: modo semanal que se desbloquea tras VERA_STORY (flag veraStoryComplete).
+   No es parte de STORIES/checkStories (esa historia ya queda "done" tras el capítulo 8, y
+   checkStories nunca reevalúa un capítulo "done") — es una visita periódica independiente,
+   con la misma arquitectura que game.cocoVisit/refreshCocoVisit pero mucho más simple: no
+   hay tienda, solo una escena corta y un cuadro genérico de precio aleatorio (ver
+   refreshVeraFreeVisit, llamado desde checkZoneUnlocks junto a refreshCocoVisit). */
+const VERA_FREE_BEATS = [
+  { m: "happy", t: "He cometido un error." },
+  { m: "idle", t: "Pensaba que terminar este cuadro iba a dejarme tranquila durante un tiempo." },
+  { m: "happy", t: "Ha ocurrido exactamente lo contrario." },
+  { m: "pintora_pensando", t: "Ahora tengo ideas para veinte cuadros." },
+  { m: "seria", t: "Así que, si no te importa, voy a seguir necesitando inspiración." },
+  { m: "happy", t: "Y quizá pueda darte algo a cambio." },
+];
+
 /* registro único: desde la fusión de La Metrópolis dentro de La Ciudad ya no hace
    falta separar por mapa (todas las zonas conviven en el mismo SVG). */
-const STORIES = { ...toStories(QUESTS), elisa: ELISA_STORY, milly: MILLY_STORY, yuna: YUNA_STORY, lopez: LOPEZ_STORY, igor: IGOR_STORY, lisa: KARLA_STORY, beka: BEKA_STORY, nina: NINA_STORY, coco: COCO_STORY };
+const STORIES = { ...toStories(QUESTS), elisa: ELISA_STORY, milly: MILLY_STORY, yuna: YUNA_STORY, lopez: LOPEZ_STORY, igor: IGOR_STORY, lisa: KARLA_STORY, beka: BEKA_STORY, nina: NINA_STORY, coco: COCO_STORY, vera: VERA_STORY };
 
 /* ============================================================
    OBJETOS COLECCIONABLES · dos tipos: "consumable" (los usas, dan
@@ -5761,6 +6100,29 @@ const ITEMS = {
     desc: "El pin que te dio Karla cuando dejó de tratarte como un proyecto comercial. No se usa ni se regala: es un recuerdo de todo el camino." },
   beka_pin: { name: "Pin de Beka", icon: "📌", img: "/images/objects/beka_pin.webp", kind: "keepsake",
     desc: "El pin que te dio Beka el día que dejasteis de fingir que solo erais rivales. No se usa ni se regala: es un recuerdo de todo el camino." },
+  /* Cuadros de Vera (ver VERA_STORY): kind:"painting", no consumible ni regalable (igual
+     que los pines, sin botón de acción en InventoryPanel), pero sí vendibles a Coco —
+     ITEMS[id].sellMin/sellMax es lo único que gatilla el botón VENDER en CocoShop (ver
+     openSell), sin necesitar ningún caso especial para "painting" en ese código. Los 7
+     cuadros de campaña llevan precio fijo (sellMin===sellMax, el documento pide un precio
+     exacto creciente); el cuadro genérico semanal usa el rango 100–300 que pide el
+     documento, resuelto con el mismo rollSellPrice que ya usan los peces de Nina. */
+  cuadro_primer_toque: { name: "Cuadro: Primer toque", icon: "🖼️", img: "/images/cuadros/Primer%20toque.png", kind: "painting", sellMin: 100, sellMax: 100,
+    desc: "El primer cuadro de Vera desde que empezó a observarte. El día en el que decidiste dar el primer paso." },
+  cuadro_no_parar: { name: "Cuadro: No parar", icon: "🖼️", img: "/images/cuadros/No%20parar.png", kind: "painting", sellMin: 150, sellMax: 150,
+    desc: "La parte aburrida de la constancia, la que nadie aplaude. Vera dice que ahí estaba el cuadro de verdad." },
+  cuadro_despues_del_esfuerzo: { name: "Cuadro: Después del esfuerzo", icon: "🖼️", img: "/images/cuadros/Despues%20del%20esfuerzo.png", kind: "painting", sellMin: 200, sellMax: 200,
+    desc: "Lo que pasa cuando termina el esfuerzo. Vera quería pintar la otra mitad de la historia que nadie pinta." },
+  cuadro_donde_el_ruido_termina: { name: "Cuadro: Donde el ruido termina", icon: "🖼️", img: "/images/cuadros/Donde%20el%20ruido%20termina.png", kind: "painting", sellMin: 250, sellMax: 250,
+    desc: "El segundo en el que el ruido de todo lo demás desaparece. El mar, y nada más que el mar." },
+  cuadro_una_noche_mas: { name: "Cuadro: Una noche más", icon: "🖼️", img: "/images/cuadros/Una%20noche%20mas.png", kind: "painting", sellMin: 300, sellMax: 300,
+    desc: "Una noche sin ninguna consecuencia, que mañana ya sería solo un recuerdo. Vera dice que no necesitaba que ganaras nada para pintarla." },
+  cuadro_la_gente_que_pasa: { name: "Cuadro: La gente que pasa", icon: "🖼️", img: "/images/cuadros/La%20gente%20que%20pasa.png", kind: "painting", sellMin: 350, sellMax: 350,
+    desc: "Pequeños momentos de la gente de la ciudad, ninguno importante por sí solo. Vera dice que solo tenían que ser reales." },
+  cuadro_lo_que_queda: { name: "Cuadro: Lo que queda", icon: "🖼️", img: "/images/cuadros/Lo%20que%20queda.png", kind: "painting", sellMin: 400, sellMax: 400,
+    desc: "La síntesis de todo lo que Vera estuvo observando: el principio, la constancia, el descanso, la gente. Todo junto por fin." },
+  cuadro_generico: { name: "Cuadro de Vera", icon: "🖼️", img: "/images/cuadros/cuadro%20generico.png", kind: "painting", sellMin: 100, sellMax: 300,
+    desc: "Uno más de los cuadros que Vera sigue pintando cada semana desde que terminasteis su campaña. Nunca sabes cuál va a traer." },
   /* capturas de Nina: objetos normales del inventario (kind:"fish"), sin sistema aparte —
      ver FishingSequence y FISH_RARITY para cómo se muestran en la pantalla de captura.
      sellMin/sellMax: precio al que Coco los compra (ver sellPriceFor/COCO_STORY) — son
@@ -6681,6 +7043,33 @@ function FishingSequence({ entry, onConfirm }) {
         <div className="fishing-fish-rarity" style={{ color: rarity.color, borderColor: rarity.color }}>{rarity.label}</div>
       </div>
       <div className="fishing-hint">toca para continuar</div>
+    </div>);
+}
+
+/* Pantalla grande de entrega de un cuadro de Vera (ver VERA_STORY/reward y
+   game.pendingCuadroReveal): "imagen grande -> efectos -> click para continuar" que pide
+   el documento de Vera. Reutiliza la misma estructura visual que la revelación de pesca de
+   Nina (FishingSequence, fase "reveal") en vez de inventar un patrón nuevo: mismo glow,
+   misma animación de aparición (fishpop/fishglow), solo con sus propias clases "cuadro-*"
+   porque el layout (imagen más ancha, sin tarjeta de rareza) es distinto. itemId puede ser
+   el id de uno de los 8 ITEMS de tipo "painting", o el sentinel especial "vera_completion"
+   (cierre de campaña, sin objeto de inventario: usa vera_playa_regalo con un tratamiento
+   ligeramente más grande, tal como pide el documento). */
+function CuadroReveal({ itemId, onClose }) {
+  const isCompletion = itemId === "vera_completion";
+  const item = !isCompletion ? ITEMS[itemId] : null;
+  const img = isCompletion ? NPCS.vera.arts.playa_regalo : item && item.img;
+  const title = isCompletion ? "La historia de Vera" : item && item.name;
+  const subtitle = isCompletion ? "Campaña completada · Inspiración libre desbloqueada" : "Nuevo cuadro conseguido";
+  return (
+    <div className="cuadro-reveal-ov" onClick={onClose}>
+      <div className={"cuadro-reveal-card" + (isCompletion ? " cuadro-reveal-big" : "")} style={{ "--cuadro-glow": NPCS.vera.color }}>
+        <div className="cuadro-reveal-glow" />
+        {img && <img src={img} alt={title} className="cuadro-reveal-img" />}
+        <div className="cuadro-reveal-name">{title}</div>
+        <div className="cuadro-reveal-sub">{subtitle}</div>
+      </div>
+      <div className="fishing-hint cuadro-reveal-hint">toca para continuar</div>
     </div>);
 }
 
@@ -8645,11 +9034,28 @@ export default function App() {
     });
     return out;
   };
+  /* Vera, modo INSPIRACIÓN LIBRE (ver VERA_FREE_BEATS): mismo patrón día-activo/ausente que
+     refreshCocoVisit, pero sin tienda — solo una escena corta que entrega un cuadro genérico
+     con applyOnRead.grantItem/reveal (ver applyOnRead más abajo), 1 vez cada 7 días, y solo
+     después de completar la campaña (game.veraStoryComplete). */
+  const refreshVeraFreeVisit = (g) => {
+    if (!g.veraStoryComplete) return g;
+    const today = todayStr();
+    if (g.veraFreeVisit && g.veraFreeVisit.day === today) return g;
+    let nextDay = g.veraNextFreeDay;
+    if (g.veraFreeVisit && g.veraFreeVisit.day !== today && !nextDay) nextDay = addDays(g.veraFreeVisit.day, 7);
+    if (nextDay && dayDiff(today, nextDay) > 0) {
+      return g.veraFreeVisit ? { ...g, veraFreeVisit: null, veraNextFreeDay: nextDay } : g;
+    }
+    let out = addScene(g, "Vera", VERA_FREE_BEATS, { zone: "parque",
+      applyOnRead: { grantItem: "cuadro_generico", reveal: "cuadro_generico" } });
+    return { ...out, veraFreeVisit: { day: today }, veraNextFreeDay: addDays(today, 7) };
+  };
   /* comprueba si alguna zona de la ciudad se acaba de desbloquear (Karla)
      y, si es la primera vez, encola su escena de presentación. Se llama tras cualquier
      acción que pueda mover el requisito: media, goles de carrera o ascenso de categoría. */
   const checkZoneUnlocks = (g) => {
-    let out = refreshCocoVisit(g);
+    let out = refreshVeraFreeVisit(refreshCocoVisit(g));
     [...ZONES, ...EXTRA_NPCS].forEach((z) => {
       if (!z.metFlag || out[z.metFlag] || (out.introQueued && out.introQueued[z.metFlag]) || !z.unlocked(out)) return;
       /* el flag "ya lo conoces" no se marca aquí: se marca cuando el jugador lee la escena
@@ -8758,7 +9164,10 @@ export default function App() {
   };
 
   /* aplica lo que una escena "confirma" solo al leerla de verdad: flags de "ya conoces a X"
-     y/o el arranque o avance de una misión. Así el estado nunca se adelanta a la conversación. */
+     y/o el arranque o avance de una misión. Así el estado nunca se adelanta a la conversación.
+     grantItem/reveal: usados por la entrega semanal de Vera (ver refreshVeraFreeVisit), que no
+     pasa por STORIES/reward — añade el objeto al inventario y marca qué cuadro debe mostrar la
+     pantalla grande (ver game.pendingCuadroReveal/CuadroReveal) solo al leer la escena de verdad. */
   const applyOnRead = (g, patch) => {
     if (!patch) return g;
     let out = g;
@@ -8767,6 +9176,8 @@ export default function App() {
       stories: { ...(out.stories || {}), [patch.story.key]: patch.story.state },
       /* libera el "esperando lectura": si no, checkStories se saltaría esta historia para siempre */
       storyPending: { ...(out.storyPending || {}), [patch.story.key]: false } };
+    if (patch.grantItem) { const inv = { ...(out.inventory || {}) }; inv[patch.grantItem] = (inv[patch.grantItem] || 0) + 1; out = { ...out, inventory: inv }; }
+    if (patch.reveal) out = { ...out, pendingCuadroReveal: patch.reveal };
     return out;
   };
   /* cola de diálogos: avanzar, elegir respuesta, resolver oferta */
@@ -9532,6 +9943,13 @@ export default function App() {
           que el diálogo de personaje más abajo: el contenedor de pestañas anima un transform
           y eso rompe position:fixed en los hijos si se dibuja dentro de él. */}
       {openCard && <CardDetail npc={openCard} game={game} onClose={() => setOpenCard(null)} />}
+      {/* pantalla grande de entrega de cuadro de Vera (ver CuadroReveal/pendingCuadroReveal):
+          nivel de App como el resto de overlays de esta lista, no depende de qué pestaña o
+          zona esté abierta porque el reward() que la dispara puede ocurrir en cualquier
+          momento (ver checkStories/applyOnRead). */}
+      {game.pendingCuadroReveal && (
+        <CuadroReveal itemId={game.pendingCuadroReveal}
+          onClose={() => setGame((g) => ({ ...g, pendingCuadroReveal: null }))} />)}
       {/* visitar una zona: fondo a toda pantalla + flecha para volver */}
       {tab === "chat" && visitedZoneObj && (
         <ZoneScreen zone={visitedZoneObj} pendingNpc={visitedActiveNpc} game={game}
@@ -9830,6 +10248,23 @@ function StyleTag() {
         letter-spacing:1px; color:#EFEEE3; margin-top:4px; }
       .fishing-fish-rarity { position:relative; z-index:1; font-family:'Oswald',sans-serif; font-size:11.5px;
         letter-spacing:2px; text-transform:uppercase; border:1.5px solid; border-radius:20px; padding:3px 14px; }
+      /* --- entrega de cuadros de Vera (ver CuadroReveal) --- */
+      .cuadro-reveal-ov { position:fixed; inset:0; z-index:30; display:flex; flex-direction:column;
+        align-items:center; justify-content:center; gap:22px;
+        background:radial-gradient(ellipse at 50% 20%, #241A3A, #05070d 78%); cursor:pointer; }
+      .cuadro-reveal-card { position:relative; display:flex; flex-direction:column; align-items:center;
+        gap:8px; animation:fishpop .5s cubic-bezier(.2,1.4,.4,1) both; }
+      .cuadro-reveal-glow { position:absolute; top:50%; left:50%; width:320px; height:320px;
+        transform:translate(-50%,-50%); border-radius:50%; background:radial-gradient(circle, var(--cuadro-glow) 0%, transparent 70%);
+        opacity:.5; filter:blur(6px); animation:fishglow 1.8s ease-in-out infinite; pointer-events:none; }
+      .cuadro-reveal-img { position:relative; z-index:1; max-height:44vh; max-width:82vw; object-fit:contain;
+        border-radius:6px; filter:drop-shadow(0 14px 30px rgba(0,0,0,.6)); }
+      .cuadro-reveal-big .cuadro-reveal-img { max-height:52vh; }
+      .cuadro-reveal-name { position:relative; z-index:1; font-family:'Oswald',sans-serif; font-size:20px;
+        letter-spacing:1px; color:#EFEEE3; margin-top:4px; text-align:center; }
+      .cuadro-reveal-sub { position:relative; z-index:1; font-family:'Oswald',sans-serif; font-size:11.5px;
+        letter-spacing:1.5px; text-transform:uppercase; color:#8A6FD6; text-align:center; }
+      .cuadro-reveal-hint { animation:npccaret 1s ease-in-out infinite; }
       /* --- motor 2D del partido --- */
       .match-ov { background:radial-gradient(ellipse at 50% -10%, #14300F, #05070d 72%);
         justify-content:flex-start; padding:26px 14px 16px; overflow-y:auto; }

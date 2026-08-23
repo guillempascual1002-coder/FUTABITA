@@ -1255,6 +1255,16 @@ const careerAssists = (g) => (g.matchHistory || []).reduce((a, m) => a + (m.myAs
    que repetir en cada misión los mismos tres campos (gym/comida/sueño) a mano. */
 const daysGoalsCompletedSince = (g, sinceDay) =>
   Object.entries(g.logs || {}).filter(([d, l]) => d >= sinceDay && l.closed && (l.pct || 0) >= 70).length;
+/* mismo conteo que daysGoalsCompletedSince pero exigiendo solo el objetivo de proteína (o
+   proteína+sueño), para las misiones que piden eso específicamente en vez del % general
+   del día — así su barra de progreso (ver stageProgress) también puede mostrar avance
+   parcial en vez de quedarse a 0% hasta el último día. */
+const proteinDaysSince = (g, sinceDay) =>
+  Object.entries(g.logs || {}).filter(([d, l]) =>
+    d >= sinceDay && l.closed && (l.prot || 0) >= g.player.goals.protein).length;
+const proteinSleepDaysSince = (g, sinceDay) =>
+  Object.entries(g.logs || {}).filter(([d, l]) => d >= sinceDay && l.closed &&
+    (l.prot || 0) >= g.player.goals.protein && l.sleep != null && l.sleep >= g.player.goals.sleepGoal).length;
 /* ¿ha visitado esta zona desde una fecha? (ver g.zoneVisits, que registra la última vez que
    se abrió cada zona — infraestructura mínima añadida para objetivos tipo "visita X",
    que hasta ahora ningún capítulo necesitaba: ver BEKA_STORY) */
@@ -2430,6 +2440,7 @@ const LOPEZ_STORY = {
         ],
         setFlags: ["lopezStoryStarted"],
         snap: (g) => ({ since: todayStr() }),
+        progressCount: (g, snap) => daysGoalsCompletedSince(g, snap.since), progressGoal: 3,
         check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3 },
       /* CAPÍTULO 2 — El código del vestuario */
       { title: "El código del vestuario", zone: "ciudad-dep",
@@ -2479,6 +2490,7 @@ const LOPEZ_STORY = {
         ],
         setFlags: ["lopezCaptainTalk"],
         snap: () => ({}),
+        progressCount: (g) => g.player.streak || 0, progressGoal: 5,
         check: (g) => (g.player.streak || 0) >= 5 },
       /* CAPÍTULO 5 — La mala tarde */
       { title: "La mala tarde", zone: "ciudad-dep",
@@ -2540,6 +2552,7 @@ const LOPEZ_STORY = {
         ],
         setFlags: ["lopezTrust"],
         snap: () => ({}),
+        progressCount: (g) => g.player.streak || 0, progressGoal: 6,
         check: (g) => (g.player.streak || 0) >= 6 },
       /* CAPÍTULO 9 — Playa sin uniforme */
       { title: "Playa sin uniforme", zone: "playa",
@@ -2722,8 +2735,8 @@ const IGOR_STORY = {
         ],
         setFlags: ["igorRecipe"],
         snap: () => ({ since: todayStr() }),
-        check: (g, snap) => Object.entries(g.logs || {}).filter(([d, l]) =>
-          d >= snap.since && l.closed && (l.prot || 0) >= g.player.goals.protein).length >= 3 },
+        progressCount: (g, snap) => proteinDaysSince(g, snap.since), progressGoal: 3,
+        check: (g, snap) => proteinDaysSince(g, snap.since) >= 3 },
       /* CAPÍTULO 2 — La receta */
       { title: "La receta", zone: "casa",
         objective: "Cumple el objetivo de proteína durante 3 días.",
@@ -2735,8 +2748,8 @@ const IGOR_STORY = {
           { m: "happy", t: "Una dieta te dice qué tienes que hacer. Una receta te invita a querer hacerlo." },
         ],
         snap: () => ({ since: todayStr() }),
-        check: (g, snap) => Object.entries(g.logs || {}).filter(([d, l]) =>
-          d >= snap.since && l.closed && (l.prot || 0) >= g.player.goals.protein).length >= 3 },
+        progressCount: (g, snap) => proteinDaysSince(g, snap.since), progressGoal: 3,
+        check: (g, snap) => proteinDaysSince(g, snap.since) >= 3 },
       /* CAPÍTULO 3 — La guindilla */
       { title: "La guindilla", zone: "restaurante",
         objective: "Completa un entrenamiento y una comida objetivo.",
@@ -2797,8 +2810,8 @@ const IGOR_STORY = {
           { m: "happy", t: "El problema es que no tiene subtítulos." },
         ],
         snap: () => ({ since: todayStr() }),
-        check: (g, snap) => Object.entries(g.logs || {}).filter(([d, l]) => d >= snap.since && l.closed &&
-          (l.prot || 0) >= g.player.goals.protein && l.sleep != null && l.sleep >= g.player.goals.sleepGoal).length >= 4 },
+        progressCount: (g, snap) => proteinSleepDaysSince(g, snap.since), progressGoal: 4,
+        check: (g, snap) => proteinSleepDaysSince(g, snap.since) >= 4 },
       /* CAPÍTULO 7 — No todo es proteína */
       { title: "No todo es proteína", zone: "restaurante",
         objective: "Cierra un día sin caer en forma mala.",
@@ -2821,6 +2834,7 @@ const IGOR_STORY = {
         ],
         setFlags: ["igorBurnout"],
         snap: () => ({}),
+        progressCount: (g) => g.player.streak || 0, progressGoal: 5,
         check: (g) => (g.player.streak || 0) >= 5 },
       /* CAPÍTULO 9 — La receta que no está escrita */
       { title: "La receta que no está escrita", zone: "barrio",
@@ -2861,6 +2875,7 @@ const IGOR_STORY = {
         ],
         setFlags: ["igorBalance"],
         snap: () => ({}),
+        progressCount: (g) => g.player.streak || 0, progressGoal: 6,
         check: (g) => (g.player.streak || 0) >= 6 },
       /* CAPÍTULO 12 — Tu receta */
       { title: "Tu receta", zone: "casa",
@@ -2872,8 +2887,8 @@ const IGOR_STORY = {
           { m: "orgulloso", t: "Porque ya no eres el chico que vino a preguntarme cuánta proteína tenía todo." },
         ],
         snap: () => ({ since: todayStr() }),
-        check: (g, snap) => Object.entries(g.logs || {}).filter(([d, l]) =>
-          d >= snap.since && l.closed && (l.prot || 0) >= g.player.goals.protein).length >= 4 },
+        progressCount: (g, snap) => proteinDaysSince(g, snap.since), progressGoal: 4,
+        check: (g, snap) => proteinDaysSince(g, snap.since) >= 4 },
       /* CAPÍTULO 13 — La gran noche */
       { title: "La gran noche", zone: "estadio",
         objective: "Gana un partido importante o alcanza un hito de temporada.",
@@ -3187,6 +3202,7 @@ const KARLA_STORY = {
           { m: "personal_orgullosa", t: "Tú me has obligado a acordarme." },
         ],
         snap: () => ({}),
+        progressCount: (g) => g.player.streak || 0, progressGoal: 7,
         check: (g) => (g.player.streak || 0) >= 7 },
       /* CAPÍTULO 15 — La última negociación */
       { title: "La última negociación", zone: "patro",
@@ -3701,8 +3717,8 @@ const NINA_STORY = {
           { m: "happy", t: "Ya no eres completamente nuevo." },
         ],
         snap: (g) => ({ since: todayStr() }),
-        check: (g, snap) => Object.entries(g.logs || {}).filter(([d, l]) => d >= snap.since && l.closed &&
-          (l.prot || 0) >= g.player.goals.protein).length >= 2 },
+        progressCount: (g, snap) => proteinDaysSince(g, snap.since), progressGoal: 2,
+        check: (g, snap) => proteinDaysSince(g, snap.since) >= 2 },
       /* CAPÍTULO 3 — Ya empiezas a entenderlo */
       { title: "Ya empiezas a entenderlo", zone: "playa",
         objective: "Captura una lubina y completa 2 días de alimentación.",
@@ -3720,6 +3736,7 @@ const NINA_STORY = {
           { m: "happy", t: "Empiezas a tener mano." },
         ],
         snap: (g) => ({ since: todayStr() }),
+        progressCount: (g, snap) => daysGoalsCompletedSince(g, snap.since), progressGoal: 2,
         check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 2 },
       /* CAPÍTULO 4 — Lo que llevas a casa */
       { title: "Lo que llevas a casa", zone: "playa",
@@ -3738,6 +3755,7 @@ const NINA_STORY = {
           { m: "seria", t: "Y recuerda algo: no necesitas comer perfecto. Solo necesitas empezar a cuidar un poco más lo que haces cada día." },
         ],
         snap: (g) => ({ since: todayStr() }),
+        progressCount: (g, snap) => daysGoalsCompletedSince(g, snap.since), progressGoal: 3,
         check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3 },
       /* CAPÍTULO 5 — El silencio */
       { title: "El silencio", zone: "playa",
@@ -3757,6 +3775,7 @@ const NINA_STORY = {
           { m: "seria", t: "Eso es más importante de lo que parece." },
         ],
         snap: () => ({}),
+        progressCount: (g) => g.player.streak || 0, progressGoal: 3,
         check: (g) => (g.player.streak || 0) >= 3 },
       /* CAPÍTULO 6 — Algo grande */
       { title: "Algo grande", zone: "playa",
@@ -3774,8 +3793,8 @@ const NINA_STORY = {
           { m: "orgullosa", t: "Bueno... sí. Estoy impresionada." },
         ],
         snap: (g) => ({ since: todayStr() }),
-        check: (g, snap) => Object.entries(g.logs || {}).filter(([d, l]) => d >= snap.since && l.closed &&
-          (l.prot || 0) >= g.player.goals.protein).length >= 3 },
+        progressCount: (g, snap) => proteinDaysSince(g, snap.since), progressGoal: 3,
+        check: (g, snap) => proteinDaysSince(g, snap.since) >= 3 },
       /* CAPÍTULO 7 — El pez espada */
       { title: "El pez espada", zone: "playa",
         objective: "Captura un pez espada y completa 3 días de objetivos de alimentación.",
@@ -3794,6 +3813,7 @@ const NINA_STORY = {
           { m: "orgullosa", t: "Eso ha sido muy bueno." },
         ],
         snap: (g) => ({ since: todayStr() }),
+        progressCount: (g, snap) => daysGoalsCompletedSince(g, snap.since), progressGoal: 3,
         check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3 },
       /* CAPÍTULO 8 — Una idea terrible */
       { title: "Una idea terrible", zone: "playa",
@@ -3813,6 +3833,7 @@ const NINA_STORY = {
           { m: "orgullosa", t: "Pero ha valido la pena." },
         ],
         snap: (g) => ({ since: todayStr() }),
+        progressCount: (g, snap) => daysGoalsCompletedSince(g, snap.since), progressGoal: 4,
         check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 4 },
       /* CAPÍTULO 9 — El pez que nunca olvidó (sin captura: prepara la del capítulo 10) */
       { title: "El pez que nunca olvidó", zone: "playa",
@@ -3831,8 +3852,8 @@ const NINA_STORY = {
         ],
         setFlags: ["ninaTrustUp"],
         snap: (g) => ({ since: todayStr() }),
-        check: (g, snap) => Object.entries(g.logs || {}).filter(([d, l]) => d >= snap.since && l.closed &&
-          (l.prot || 0) >= g.player.goals.protein && l.sleep != null && l.sleep >= g.player.goals.sleepGoal).length >= 4 },
+        progressCount: (g, snap) => proteinSleepDaysSince(g, snap.since), progressGoal: 4,
+        check: (g, snap) => proteinSleepDaysSince(g, snap.since) >= 4 },
       /* CAPÍTULO 10 — El pez luna (captura emocional de la campaña) */
       { title: "El pez luna", zone: "playa",
         objective: "Captura un pez luna.",
@@ -5457,6 +5478,10 @@ function stageProgress(game, stageDef, snap) {
     const met = stageDef.subs.filter((fn) => fn(game, snap)).length;
     return met / stageDef.subs.length;
   }
+  /* etapas de un único objetivo "acumula N de algo" (días cumplidos, racha...) sin subs:
+     progressCount/progressGoal dan la cuenta real en vez de dejar la barra a 0% hasta
+     el último día, que es justo lo que hacía parecer que un día bueno "no contaba". */
+  if (stageDef.progressCount) return Math.min(stageDef.progressCount(game, snap) / stageDef.progressGoal, 1);
   return stageDef.check(game, snap) ? 1 : 0;
 }
 

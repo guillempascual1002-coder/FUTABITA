@@ -6935,29 +6935,31 @@ export default function App() {
 
   /* mensajes en 2ª persona -> cola de diálogos NPC; 3ª persona -> artículo del periódico.
      Mantiene la firma histórica: los ~20 puntos que llaman addMsg no cambian. */
+  /* tope de cola: si el jugador estuvo días sin abrir, no se apilan decenas de diálogos.
+     12 y no menos: las escenas narrativas más largas (el prólogo y el final de la campaña
+     de Elisa tienen 7 beats) solo llevan applyOnRead en la ÚLTIMA frase, así que con un
+     tope más bajo la propia escena se autodesalojaba su primer beat según se iba encolando.
+     Las ofertas y los mensajes que confirman un hito (applyOnRead) nunca se descartan: si
+     se perdieran, el estado avanzaría sin que el jugador hubiera leído la escena.
+     El desalojo se lleva la escena ENTERA (mismo sceneId) de una vez, nunca una frase
+     suelta: si solo se descartara la frase encontrada, una escena larga podía perder sus
+     primeras frases y dejar solo la última (protegida por su applyOnRead) — el jugador
+     entraba a la burbuja y "saltaba" directo al cierre, sin ver el resto de la conversación.
+     Muta `q` in situ y devuelve si consiguió liberar algo (false = ya no queda nada
+     desalojable, todo lo que hay está protegido). */
+  const evictOneForRoom = (q) => {
+    const bad = q.find((e) => e.kind !== "offer" && !e.applyOnRead
+      && !q.some((o) => e.sceneId && o.sceneId === e.sceneId && o.applyOnRead));
+    if (!bad) return false;
+    if (bad.sceneId) { for (let i = q.length - 1; i >= 0; i--) if (q[i].sceneId === bad.sceneId) q.splice(i, 1); }
+    else q.splice(q.indexOf(bad), 1);
+    return true;
+  };
   const addMsg = (g, from, text, extra = {}) => {
     const npc = senderToNpc(from);
     if (npc) {
       const q = [...(g.npcQueue || [])];
-      /* tope de cola: si el jugador estuvo días sin abrir, no se apilan decenas de diálogos.
-         12 y no menos: las escenas narrativas más largas (el prólogo y el final de la
-         campaña de Elisa tienen 7 beats) solo llevan applyOnRead en la ÚLTIMA frase, así
-         que con un tope más bajo la propia escena se autodesalojaba su primer beat según
-         se iba encolando. Las ofertas y los mensajes que confirman un hito (applyOnRead)
-         nunca se descartan: si se perdieran, el estado avanzaría sin que el jugador hubiera
-         leído la escena. */
-      /* el desalojo debe llevarse la escena ENTERA (mismo sceneId), nunca una frase suelta:
-         si solo se descartara la frase encontrada, una escena larga podía perder sus primeras
-         frases y dejar solo la última (protegida por su applyOnRead) — el jugador entraba a
-         la burbuja y "saltaba" directo al cierre, sin ver el resto de la conversación. */
-      if (q.length >= 12) {
-        const bad = q.find((e) => e.kind !== "offer" && !e.applyOnRead
-          && !q.some((o) => e.sceneId && o.sceneId === e.sceneId && o.applyOnRead));
-        if (bad) {
-          if (bad.sceneId) { for (let i = q.length - 1; i >= 0; i--) if (q[i].sceneId === bad.sceneId) q.splice(i, 1); }
-          else q.splice(q.indexOf(bad), 1);
-        }
-      }
+      while (q.length >= 12 && evictOneForRoom(q)) { /* hueco para el mensaje que entra */ }
       q.push({ id: Date.now() + Math.random(), npc, mood: extra.mood || moodOf(npc, text), text,
         kind: extra.kind, offer: extra.offer, replies: extra.replies, applyOnRead: extra.applyOnRead, zone: extra.zone,
         fish: extra.fish, afterBeats: extra.afterBeats, freeFish: extra.freeFish, sceneId: extra.sceneId });
@@ -6979,6 +6981,16 @@ export default function App() {
   const addScene = (g, from, beats, extra = {}) => {
     let out = g;
     const sceneId = beats.length > 1 ? Date.now() + Math.random() : undefined;
+    /* hace hueco para la escena ENTERA antes de encolar su primera frase: si el tope se
+       comprobara frase a frase mientras la escena se está construyendo, sus primeras
+       frases (sin applyOnRead todavía, porque esa marca solo la lleva la última) no
+       tenían nada que las protegiera de un desalojo disparado por sus propias frases
+       siguientes — la escena podía autodesalojarse a medias antes de terminar de encolarse. */
+    if (beats.length > 1) {
+      const q = [...(out.npcQueue || [])];
+      while (q.length + beats.length > 12 && evictOneForRoom(q)) { /* sigue haciendo hueco */ }
+      out = { ...out, npcQueue: q };
+    }
     beats.forEach((b, i) => {
       out = addMsg(out, from, b.t, i === beats.length - 1
         ? { mood: b.m, ...extra, sceneId } : { mood: b.m, zone: extra.zone, sceneId });

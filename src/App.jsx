@@ -5797,10 +5797,18 @@ const COCO_STORY = {
    reacción a este objetivo NO va en esta intro; va al principio de la
    siguiente etapa" — aquí "la siguiente etapa" es la de entrega.
 
-   Cada reward() añade su cuadro (ver ITEMS) Y marca game.pendingCuadroReveal
-   con el id de ese objeto: eso es lo que dispara <CuadroReveal>, la
-   pantalla grande de "imagen → efectos → click para continuar" que pide
-   el documento (ver App, justo debajo del render de <NpcDialogue>).
+   Cada etapa de ENTREGA lleva grantItem/reveal (no reward()): a diferencia
+   de los pines de las otras 8 campañas, aquí SÍ importa que la entrega
+   ocurra durante la conversación, no en el instante en que se cumple el
+   objetivo — así que el cuadro se añade al inventario y se dispara
+   <CuadroReveal> (la pantalla grande "imagen → efectos → click para
+   continuar" que pide el documento) solo cuando el jugador de verdad lee
+   la última frase de esa escena (ver applyOnRead/queueStageScene), nunca
+   antes. Con reward() (como usan las demás campañas) la entrega salta en
+   cuanto checkStories detecta el objetivo cumplido, aunque el jugador
+   todavía no haya hablado con el personaje — para un pin silencioso eso
+   pasa desapercibido, pero para la pantalla grande de un cuadro se nota
+   muchísimo (el popup salta solo, sin que Vera "te lo dé" en la charla).
 
    Moods: el documento no define asset para [suave] (solo lista idle,
    happy, seria, preocupada, pintora, pintora_pensando, playa,
@@ -5865,11 +5873,7 @@ const VERA_STORY = {
             { m: "idle", t: "Ayer parecía un día cualquiera. Y, sin embargo, ahora puedo mirarlo y decir que fue el principio de algo." },
             { m: "seria", t: "Eso es lo que quería ver." },
           ],
-          reward: (g) => {
-            const inv = { ...(g.inventory || {}) };
-            inv.cuadro_primer_toque = (inv.cuadro_primer_toque || 0) + 1;
-            return { ...g, inventory: inv, pendingCuadroReveal: "cuadro_primer_toque" };
-          } },
+          grantItem: "cuadro_primer_toque", reveal: "cuadro_primer_toque" },
       ] },
     { id: "cap2", title: "No parar", trigger: () => true,
       stages: [
@@ -5892,11 +5896,7 @@ const VERA_STORY = {
             { m: "seria", t: "No parece una cifra enorme escrita en una pantalla, pero ahora entiendo por qué me interesaba." },
             { m: "idle", t: "Has vuelto a hacerlo incluso después de que la novedad desapareciera." },
           ],
-          reward: (g) => {
-            const inv = { ...(g.inventory || {}) };
-            inv.cuadro_no_parar = (inv.cuadro_no_parar || 0) + 1;
-            return { ...g, inventory: inv, pendingCuadroReveal: "cuadro_no_parar" };
-          } },
+          grantItem: "cuadro_no_parar", reveal: "cuadro_no_parar" },
       ] },
     { id: "cap3", title: "Después del esfuerzo", trigger: () => true,
       stages: [
@@ -5922,11 +5922,7 @@ const VERA_STORY = {
             { m: "idle", t: "No puedes separar el esfuerzo de lo que haces para recuperarte de él." },
             { m: "seria", t: "He pasado tanto tiempo buscando movimiento para mis cuadros que me había olvidado de algo muy sencillo." },
           ],
-          reward: (g) => {
-            const inv = { ...(g.inventory || {}) };
-            inv.cuadro_despues_del_esfuerzo = (inv.cuadro_despues_del_esfuerzo || 0) + 1;
-            return { ...g, inventory: inv, pendingCuadroReveal: "cuadro_despues_del_esfuerzo" };
-          } },
+          grantItem: "cuadro_despues_del_esfuerzo", reveal: "cuadro_despues_del_esfuerzo" },
       ] },
     { id: "cap4", title: "Donde el ruido termina", trigger: () => true,
       stages: [
@@ -5955,11 +5951,7 @@ const VERA_STORY = {
             { m: "happy", t: "Pensaba que iba a ser imposible hacer un cuadro sobre descanso y acabar aquí." },
             { m: "idle", t: "Pero supongo que descansar no significa quedarse quieto para siempre." },
           ],
-          reward: (g) => {
-            const inv = { ...(g.inventory || {}) };
-            inv.cuadro_donde_el_ruido_termina = (inv.cuadro_donde_el_ruido_termina || 0) + 1;
-            return { ...g, inventory: inv, pendingCuadroReveal: "cuadro_donde_el_ruido_termina" };
-          } },
+          grantItem: "cuadro_donde_el_ruido_termina", reveal: "cuadro_donde_el_ruido_termina" },
       ] },
     { id: "cap5", title: "Una noche más", trigger: () => true,
       stages: [
@@ -5987,11 +5979,7 @@ const VERA_STORY = {
             { m: "idle", t: "No por la pintura. Bueno, también por la pintura." },
             { m: "seria", t: "Me di cuenta de que cuando intentaba recordar lo que había visto, no recordaba las luces." },
           ],
-          reward: (g) => {
-            const inv = { ...(g.inventory || {}) };
-            inv.cuadro_una_noche_mas = (inv.cuadro_una_noche_mas || 0) + 1;
-            return { ...g, inventory: inv, pendingCuadroReveal: "cuadro_una_noche_mas" };
-          } },
+          grantItem: "cuadro_una_noche_mas", reveal: "cuadro_una_noche_mas" },
       ] },
     { id: "cap6", title: "La gente que pasa", trigger: () => true,
       stages: [
@@ -6023,11 +6011,7 @@ const VERA_STORY = {
             { m: "seria", t: "Pero no estaba escondida." },
             { m: "happy", t: "Estaba en todo lo que has ido haciendo." },
           ],
-          reward: (g) => {
-            const inv = { ...(g.inventory || {}) };
-            inv.cuadro_la_gente_que_pasa = (inv.cuadro_la_gente_que_pasa || 0) + 1;
-            return { ...g, inventory: inv, pendingCuadroReveal: "cuadro_la_gente_que_pasa" };
-          } },
+          grantItem: "cuadro_la_gente_que_pasa", reveal: "cuadro_la_gente_que_pasa" },
       ] },
     { id: "cap7", title: "Lo que queda", trigger: () => true,
       stages: [
@@ -6062,11 +6046,7 @@ const VERA_STORY = {
             { m: "happy", t: "Lo terminamos." },
             { m: "suave", t: "Bueno. Lo terminé yo. Pero me entiendes." },
           ],
-          reward: (g) => {
-            const inv = { ...(g.inventory || {}) };
-            inv.cuadro_lo_que_queda = (inv.cuadro_lo_que_queda || 0) + 1;
-            return { ...g, inventory: inv, pendingCuadroReveal: "cuadro_lo_que_queda" };
-          } },
+          grantItem: "cuadro_lo_que_queda", reveal: "cuadro_lo_que_queda" },
       ] },
     /* FINAL — El cuadro que faltaba (capítulo de cierre: sin MISIÓN propia, narración de
        cierre + desbloqueo de INSPIRACIÓN LIBRE, ver refreshVeraFreeVisit. Pantalla especial
@@ -6089,7 +6069,7 @@ const VERA_STORY = {
             { m: "happy", t: "Gracias por ayudarme a encontrarlo." },
           ],
           setFlags: ["veraStoryComplete"],
-          reward: (g) => ({ ...g, pendingCuadroReveal: "vera_completion" }) },
+          reveal: "vera_completion" },
       ] },
   ],
 };
@@ -9224,12 +9204,19 @@ export default function App() {
       out = reserveQueueRoom(out, before.length + 1);
       out = addScene(out, npcName, before, { zone, sceneId, preReserved: true });
       out = addMsg(out, npcName, "", { mood: "lanzandocaña", kind: "fishing", zone, sceneId, skipEvict: true,
-        fish: stageObj.fish, afterBeats: after, applyOnRead: { story: { key, state }, flags: stageObj.setFlags } });
+        fish: stageObj.fish, afterBeats: after, applyOnRead: { story: { key, state }, flags: stageObj.setFlags,
+          grantItem: stageObj.grantItem, reveal: stageObj.reveal } });
       return out;
     }
     const beats = (beatsOverride || stageObj.intro).map((b) => ({ m: b.m, t: fillTpl(b.t, flavorCtx(out)) }));
+    /* grantItem/reveal (ver VERA_STORY): a diferencia de reward(), que checkStories dispara
+       en el momento en que se CUMPLE el objetivo (antes de que el jugador haya leído nada),
+       esto viaja dentro de applyOnRead y por tanto solo se aplica cuando el jugador de
+       verdad lee la última frase de la escena — así Vera "te da" el cuadro durante la
+       conversación, no en un popup que salta solo al cerrar el día. */
     return addScene(out, npcName, beats, { zone, replies: stageObj.replies,
-      applyOnRead: { story: { key, state }, flags: stageObj.setFlags } });
+      applyOnRead: { story: { key, state }, flags: stageObj.setFlags,
+        grantItem: stageObj.grantItem, reveal: stageObj.reveal } });
   };
   const checkStories = (g) => {
     let out = g;

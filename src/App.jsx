@@ -1040,11 +1040,11 @@ const NPCS = {
      mood [suave] que su guion usa varias veces — igual que con Coco, se deja el mood tal
      cual y cae automáticamente a "idle" (npc.def) mediante el fallback ya existente
      (npc.arts[entry.mood] || npc.arts[npc.def]), sin inventar un asset nuevo. */
-  vera: { name: "Vera", color: "#8A6FD6", voice: "/audio/vozchica02.mp3", icon: "/images/vera/vera_icon.png",
-    arts: { idle: "/images/vera/vera_idle.png", happy: "/images/vera/vera_happy.png",
-      seria: "/images/vera/vera_seria.png", preocupada: "/images/vera/vera_preocupada.png",
-      pintora: "/images/vera/vera_pintora.png", pintora_pensando: "/images/vera/vera_pintora_pensando.png",
-      playa: "/images/vera/vera_playa.png", playa_regalo: "/images/vera/vera_playa_regalo.png" }, def: "idle" },
+  vera: { name: "Vera", color: "#8A6FD6", voice: "/audio/vozchica02.mp3", icon: "/images/vera/vera_icon.webp",
+    arts: { idle: "/images/vera/vera_idle.webp", happy: "/images/vera/vera_happy.webp",
+      seria: "/images/vera/vera_seria.webp", preocupada: "/images/vera/vera_preocupada.webp",
+      pintora: "/images/vera/vera_pintora.webp", pintora_pensando: "/images/vera/vera_pintora_pensando.webp",
+      playa: "/images/vera/vera_playa.webp", playa_regalo: "/images/vera/vera_playa_regalo.webp" }, def: "idle" },
 };
 /* el sender siempre es el nombre real del personaje ahora (la zona ya no crea una
    identidad de sender distinta: es contexto de la escena, ver campo "zone" en addMsg/addScene) */
@@ -6078,9 +6078,9 @@ const ITEMS = {
     desc: "Una mezcla que Igor trae de sus viajes de cocina. Nadie sabe bien qué lleva, pero funciona." },
   amuleto_suerte: { name: "Amuleto de la Suerte", icon: "🍀", img: "/images/objects/amuleto_suerte.webp", kind: "consumable", stat: "FUE", xp: 50,
     desc: "Dicen que trae suerte. Lo que seguro trae es fuerza, si te acuerdas de usarlo." },
-  bebida_energetica: { name: "Bebida Energética", icon: "🥤", img: "/images/objects/bebida_energetica.png", kind: "consumable", stat: "MEN", xp: 50,
+  bebida_energetica: { name: "Bebida Energética", icon: "🥤", img: "/images/objects/bebida_energetica.webp", kind: "consumable", stat: "MEN", xp: 50,
     desc: "Justo lo que hace falta para afinar la cabeza antes de un día exigente." },
-  zapatillas: { name: "Zapatillas de Entrenamiento", icon: "👟", img: "/images/objects/zapatillas_de_entrenamiento.png", kind: "consumable", stat: "FIS", xp: 50,
+  zapatillas: { name: "Zapatillas de Entrenamiento", icon: "👟", img: "/images/objects/zapatillas_de_entrenamiento.webp", kind: "consumable", stat: "FIS", xp: 50,
     desc: "Un par nuevo, todavía sin estrenar del todo. Dan ganas de salir a correr." },
   perfume_lujo: { name: "Perfume de Lujo", icon: "🧴", img: "/images/objects/perfume_lujo.webp", kind: "gift", giveTo: "lisa",
     desc: "Un frasco carísimo que Milly guardaba 'para una ocasión especial'. Le pega mucho a Karla." },
@@ -6107,21 +6107,21 @@ const ITEMS = {
      cuadros de campaña llevan precio fijo (sellMin===sellMax, el documento pide un precio
      exacto creciente); el cuadro genérico semanal usa el rango 100–300 que pide el
      documento, resuelto con el mismo rollSellPrice que ya usan los peces de Nina. */
-  cuadro_primer_toque: { name: "Cuadro: Primer toque", icon: "🖼️", img: "/images/cuadros/Primer%20toque.png", kind: "painting", sellMin: 100, sellMax: 100,
+  cuadro_primer_toque: { name: "Cuadro: Primer toque", icon: "🖼️", img: "/images/cuadros/Primer%20toque.webp", kind: "painting", sellMin: 100, sellMax: 100,
     desc: "El primer cuadro de Vera desde que empezó a observarte. El día en el que decidiste dar el primer paso." },
-  cuadro_no_parar: { name: "Cuadro: No parar", icon: "🖼️", img: "/images/cuadros/No%20parar.png", kind: "painting", sellMin: 150, sellMax: 150,
+  cuadro_no_parar: { name: "Cuadro: No parar", icon: "🖼️", img: "/images/cuadros/No%20parar.webp", kind: "painting", sellMin: 150, sellMax: 150,
     desc: "La parte aburrida de la constancia, la que nadie aplaude. Vera dice que ahí estaba el cuadro de verdad." },
-  cuadro_despues_del_esfuerzo: { name: "Cuadro: Después del esfuerzo", icon: "🖼️", img: "/images/cuadros/Despues%20del%20esfuerzo.png", kind: "painting", sellMin: 200, sellMax: 200,
+  cuadro_despues_del_esfuerzo: { name: "Cuadro: Después del esfuerzo", icon: "🖼️", img: "/images/cuadros/Despues%20del%20esfuerzo.webp", kind: "painting", sellMin: 200, sellMax: 200,
     desc: "Lo que pasa cuando termina el esfuerzo. Vera quería pintar la otra mitad de la historia que nadie pinta." },
-  cuadro_donde_el_ruido_termina: { name: "Cuadro: Donde el ruido termina", icon: "🖼️", img: "/images/cuadros/Donde%20el%20ruido%20termina.png", kind: "painting", sellMin: 250, sellMax: 250,
+  cuadro_donde_el_ruido_termina: { name: "Cuadro: Donde el ruido termina", icon: "🖼️", img: "/images/cuadros/Donde%20el%20ruido%20termina.webp", kind: "painting", sellMin: 250, sellMax: 250,
     desc: "El segundo en el que el ruido de todo lo demás desaparece. El mar, y nada más que el mar." },
-  cuadro_una_noche_mas: { name: "Cuadro: Una noche más", icon: "🖼️", img: "/images/cuadros/Una%20noche%20mas.png", kind: "painting", sellMin: 300, sellMax: 300,
+  cuadro_una_noche_mas: { name: "Cuadro: Una noche más", icon: "🖼️", img: "/images/cuadros/Una%20noche%20mas.webp", kind: "painting", sellMin: 300, sellMax: 300,
     desc: "Una noche sin ninguna consecuencia, que mañana ya sería solo un recuerdo. Vera dice que no necesitaba que ganaras nada para pintarla." },
-  cuadro_la_gente_que_pasa: { name: "Cuadro: La gente que pasa", icon: "🖼️", img: "/images/cuadros/La%20gente%20que%20pasa.png", kind: "painting", sellMin: 350, sellMax: 350,
+  cuadro_la_gente_que_pasa: { name: "Cuadro: La gente que pasa", icon: "🖼️", img: "/images/cuadros/La%20gente%20que%20pasa.webp", kind: "painting", sellMin: 350, sellMax: 350,
     desc: "Pequeños momentos de la gente de la ciudad, ninguno importante por sí solo. Vera dice que solo tenían que ser reales." },
-  cuadro_lo_que_queda: { name: "Cuadro: Lo que queda", icon: "🖼️", img: "/images/cuadros/Lo%20que%20queda.png", kind: "painting", sellMin: 400, sellMax: 400,
+  cuadro_lo_que_queda: { name: "Cuadro: Lo que queda", icon: "🖼️", img: "/images/cuadros/Lo%20que%20queda.webp", kind: "painting", sellMin: 400, sellMax: 400,
     desc: "La síntesis de todo lo que Vera estuvo observando: el principio, la constancia, el descanso, la gente. Todo junto por fin." },
-  cuadro_generico: { name: "Cuadro de Vera", icon: "🖼️", img: "/images/cuadros/cuadro%20generico.png", kind: "painting", sellMin: 100, sellMax: 300,
+  cuadro_generico: { name: "Cuadro de Vera", icon: "🖼️", img: "/images/cuadros/cuadro%20generico.webp", kind: "painting", sellMin: 100, sellMax: 300,
     desc: "Uno más de los cuadros que Vera sigue pintando cada semana desde que terminasteis su campaña. Nunca sabes cuál va a traer." },
   /* capturas de Nina: objetos normales del inventario (kind:"fish"), sin sistema aparte —
      ver FishingSequence y FISH_RARITY para cómo se muestran en la pantalla de captura.

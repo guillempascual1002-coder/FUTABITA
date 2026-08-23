@@ -5499,7 +5499,13 @@ function QuestPanel({ game, onClose, storiesRegistry }) {
   const [replay, setReplay] = useState(null); // { npc, name, beats, idx } | null
   const startReplay = (npcKey, name, stageDef) => {
     const ctx = flavorCtx(game);
-    const beats = (stageDef.intro || []).map((b) => ({ m: b.m, t: fillTpl(b.t, ctx) }));
+    /* las etapas de pesca (ver NINA_STORY) no tienen "intro": su guion se parte en
+       introBefore + la captura + introAfter. Para el replay, que es solo texto, se
+       reconstruye la conversación entera juntando las dos mitades — si no, estas
+       etapas se quedaban sin cinemática que repetir y el botón no hacía nada. */
+    const src = stageDef.intro
+      || [...(stageDef.introBefore || []), ...(stageDef.introAfter || [])];
+    const beats = src.map((b) => ({ m: b.m, t: fillTpl(b.t, ctx) }));
     if (!beats.length) return;
     setReplay({ npc: npcKey, name, beats, idx: 0 });
   };
@@ -7003,19 +7009,21 @@ export default function App() {
      Solo la ÚLTIMA frase lleva los extras (replies, kind, offer...); la zona (si la escena
      tiene una) va en TODAS las frases, para que la burbuja "+N en espera" de esa zona
      cuente la escena entera y no solo su último mensaje. */
+  /* hace hueco para las `n` entradas que van a encolarse juntas. Si el tope se comprobara
+     entrada a entrada mientras la escena se construye, sus primeras frases (sin applyOnRead
+     todavía, porque esa marca solo la lleva la última) no tendrían nada que las protegiera
+     de un desalojo disparado por sus propias frases siguientes: la escena podía
+     autodesalojarse a medias antes de terminar de encolarse. */
+  const reserveQueueRoom = (g, n) => {
+    const q = [...(g.npcQueue || [])];
+    while (q.length + n > 12 && evictOneForRoom(q)) { /* sigue haciendo hueco */ }
+    return { ...g, npcQueue: q };
+  };
   const addScene = (g, from, beats, extra = {}) => {
-    let out = g;
-    const sceneId = beats.length > 1 ? Date.now() + Math.random() : undefined;
-    /* hace hueco para la escena ENTERA antes de encolar su primera frase: si el tope se
-       comprobara frase a frase mientras la escena se está construyendo, sus primeras
-       frases (sin applyOnRead todavía, porque esa marca solo la lleva la última) no
-       tenían nada que las protegiera de un desalojo disparado por sus propias frases
-       siguientes — la escena podía autodesalojarse a medias antes de terminar de encolarse. */
-    if (beats.length > 1) {
-      const q = [...(out.npcQueue || [])];
-      while (q.length + beats.length > 12 && evictOneForRoom(q)) { /* sigue haciendo hueco */ }
-      out = { ...out, npcQueue: q };
-    }
+    const sceneId = extra.sceneId || (beats.length > 1 ? Date.now() + Math.random() : undefined);
+    /* preReserved: quien llama ya ha reservado sitio para un bloque mayor que estos beats
+       (ver la rama de pesca de queueStageScene, que encola frases + captura como una unidad) */
+    let out = extra.preReserved ? g : reserveQueueRoom(g, beats.length);
     beats.forEach((b, i) => {
       out = addMsg(out, from, b.t, i === beats.length - 1
         ? { mood: b.m, ...extra, sceneId } : { mood: b.m, zone: extra.zone, sceneId });
@@ -7103,9 +7111,15 @@ export default function App() {
     const zone = stageObj.zone || (def.npc === "coco" && out.cocoVisit ? out.cocoVisit.zone : undefined);
     if (stageObj.fish) {
       const before = (stageObj.introBefore || []).map((b) => ({ m: b.m, t: fillTpl(b.t, flavorCtx(out)) }));
-      out = addScene(out, npcName, before, { zone });
       const after = (stageObj.introAfter || []).map((b) => ({ m: b.m, t: fillTpl(b.t, flavorCtx(out)) }));
-      out = addMsg(out, npcName, "", { mood: "lanzandocaña", kind: "fishing", zone,
+      /* las frases previas y la entrada de pesca son UNA sola escena: comparten sceneId y
+         se reserva sitio para el bloque entero de una vez. Si no, el tope de cola podía
+         quedarse solo con la parte protegida (la de pesca, la única con applyOnRead) y
+         tirar las frases de antes: Nina aparecía lanzando la caña sin haber dicho nada. */
+      const sceneId = Date.now() + Math.random();
+      out = reserveQueueRoom(out, before.length + 1);
+      out = addScene(out, npcName, before, { zone, sceneId, preReserved: true });
+      out = addMsg(out, npcName, "", { mood: "lanzandocaña", kind: "fishing", zone, sceneId,
         fish: stageObj.fish, afterBeats: after, applyOnRead: { story: { key, state }, flags: stageObj.setFlags } });
       return out;
     }
@@ -8203,8 +8217,14 @@ function StyleTag() {
         align-items:center; justify-content:center; gap:22px;
         background:radial-gradient(ellipse at 50% 20%, #0E3A4A, #05070d 78%); cursor:pointer; }
       .fishing-pose { display:flex; align-items:center; justify-content:center; }
+      /* animación propia, NO npcin: aquella lleva incrustado un translateX(-50%) porque
+         .npc-art se centra con position:absolute + left:50%. La pose de pesca se centra
+         con flexbox, así que ese -50% la desplazaba media anchura a la izquierda (y con
+         fill-mode:both se quedaba ahí, cortada por el borde). */
       .fishing-pose-img { max-height:52vh; max-width:80vw; object-fit:contain;
-        filter:drop-shadow(0 14px 30px rgba(0,0,0,.6)); animation:npcin .3s cubic-bezier(.2,1.2,.4,1) both; }
+        filter:drop-shadow(0 14px 30px rgba(0,0,0,.6)); animation:fishingin .3s cubic-bezier(.2,1.2,.4,1) both; }
+      @keyframes fishingin { from { opacity:0; transform:translateY(24px) scale(.96); }
+        to { opacity:1; transform:translateY(0) scale(1); } }
       .fishing-pose-fallback { width:150px; height:150px; border-radius:50%; background:#2E9EC9;
         display:flex; align-items:center; justify-content:center; font-family:'Oswald',sans-serif; font-size:64px; color:#fff; }
       .fishing-shake .fishing-pose-img { animation:fishingshake .35s ease-in-out infinite; }

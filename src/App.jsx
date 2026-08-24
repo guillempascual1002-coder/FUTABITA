@@ -1415,7 +1415,7 @@ const ZONES = [
   { id: "cantera", kind: "npc", npc: "lopez", label: "Cantera", icon: "🎓", x: 88.18, y: 46.28,
     pts: "377.1 345.61 437.36 343.57 426.63 442.12 363.83 442.12 377.1 345.61",
     unlocked: (g) => isZoneUnlocked(g, "cantera") },
-  { id: "tienda", kind: "npc", npc: ["yuna", "lopez"], label: "Tienda Oficial", icon: "🛍️", x: 84.10, y: 65.63,
+  { id: "tienda", kind: "npc", npc: ["yuna", "lopez"], label: "Centro Comercial", icon: "🛍️", x: 84.10, y: 65.63,
     pts: "342.38 511.57 346.97 559.57 424.08 552.42 420 507.48 342.38 511.57",
     unlocked: (g) => isZoneUnlocked(g, "tienda") },
   { id: "estadio", kind: "npc", npc: ["lopez", "yuna", "elisa", "milly", "igor", "beka"], label: "Gran Estadio", icon: "🏆", x: 74.47, y: 89.16,

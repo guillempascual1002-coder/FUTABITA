@@ -7567,37 +7567,40 @@ function QuestPanel({ game, onClose, storiesRegistry }) {
           const stageDef = chapter.stages[st.stage];
           const waitingToTalk = !st.done && !!(game.storyPending && game.storyPending[key]);
           const pct = st.done || waitingToTalk ? 1 : stageProgress(game, stageDef, st.snap);
+          const portrait = (
+            <img src={npc.icon} alt={npc.name} className="quest-portrait-img" />);
           return (
-            <div key={key} className="panel" style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            <div key={key} className="quest-card">
               {/* recordatorio de la cinemática de la etapa activa: solo si hay una etapa en
                   marcha (no en historias ya completadas/cerradas) — replay de solo lectura,
                   no reinicia la misión ni repite ningún efecto de esa escena */}
               {st.done ? (
-                <img src={npc.icon} alt={npc.name} style={{ width: 44, height: 44, borderRadius: "50%",
-                  objectFit: "cover", flexShrink: 0, border: "1.5px solid #16190F" }} />
+                <div className="quest-portrait">{portrait}</div>
               ) : (
                 <button onClick={() => startReplay(def.npc, npc.name, stageDef)}
-                  aria-label={`Volver a ver la escena de ${npc.name}`}
-                  style={{ padding: 0, border: "none", background: "none", cursor: "pointer", flexShrink: 0 }}>
-                  <img src={npc.icon} alt={npc.name} style={{ width: 44, height: 44, borderRadius: "50%",
-                    objectFit: "cover", border: "1.5px solid #16190F" }} />
+                  aria-label={`Volver a ver la escena de ${npc.name}`} className="quest-portrait quest-portrait-btn">
+                  {portrait}
+                  <span className="quest-replay-hint">↻</span>
                 </button>)}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 13, marginBottom: 2 }}>{chapter.title}</div>
+              <div className="quest-body">
+                <div className="quest-chapter">{chapter.title}</div>
                 {st.done ? (
-                  <div style={{ fontSize: 12, color: st.failed ? "#9a9e8e" : "#3F8F2B", fontWeight: 600 }}>
+                  <div className="quest-status" style={{ color: st.failed ? "#9a9e8e" : "#3F8F2B" }}>
                     {st.failed ? "Historia cerrada" : "✓ Completada"}</div>
                 ) : (
                   <>
-                    <div style={{ fontSize: 11.5, color: "#6F7563" }}>{stageDef.title}</div>
+                    <div className="quest-stage">{stageDef.title}</div>
                     {waitingToTalk ? (
-                      <div style={{ fontSize: 12.5, marginTop: 3, color: "#3F8F2B", fontWeight: 600 }}>
+                      <div className="quest-status" style={{ color: "#3F8F2B" }}>
                         ✓ Completada · habla con {npc.name}</div>
                     ) : (
-                      <div style={{ fontSize: 12.5, marginTop: 3 }}>{stageDef.objective}</div>
+                      <div className="quest-objective">{stageDef.objective}</div>
                     )}
-                    <div className="track" style={{ marginTop: 6 }}>
-                      <div className="fill" style={{ width: `${pct * 100}%`, background: pct >= 1 ? "#2E9E44" : "#CDF546" }} />
+                    <div className="quest-track-row">
+                      <div className="track quest-track">
+                        <div className="fill" style={{ width: `${pct * 100}%`, background: pct >= 1 ? "#2E9E44" : "#CDF546" }} />
+                      </div>
+                      <span className="quest-pct">{Math.round(pct * 100)}%</span>
                     </div>
                   </>)}
               </div>
@@ -10167,6 +10170,24 @@ function StyleTag() {
       .ptitle { font-family:'Oswald',sans-serif; font-size:14px; letter-spacing:.5px; color:#16190F; margin-bottom:10px; }
       .track { height:14px; background:#E4E3D5; border-radius:999px; overflow:hidden; padding:3px; box-sizing:border-box; }
       .fill { height:100%; border-radius:999px; transition:width .5s ease; }
+      /* --- misiones (ver QuestPanel): retrato grande sin recorte circular, toca la imagen
+         para repetir la cinemática de la etapa activa (mismo startReplay de siempre) --- */
+      .quest-card { display:flex; gap:14px; align-items:stretch; background:#FDFDF8;
+        border:1.5px solid rgba(20,23,14,.1); border-radius:16px; padding:10px; margin-top:10px; }
+      .quest-portrait { position:relative; width:88px; height:88px; flex-shrink:0; border-radius:12px;
+        overflow:hidden; border:1.5px solid rgba(20,23,14,.14); padding:0; background:#E4E3D5; }
+      .quest-portrait-img { width:100%; height:100%; object-fit:cover; display:block; }
+      .quest-portrait-btn { cursor:pointer; }
+      .quest-replay-hint { position:absolute; right:4px; bottom:4px; width:22px; height:22px; border-radius:50%;
+        background:rgba(5,7,13,.62); color:#EFEEE3; font-size:13px; line-height:22px; text-align:center; }
+      .quest-body { flex:1; min-width:0; display:flex; flex-direction:column; justify-content:center; gap:2px; }
+      .quest-chapter { font-family:'Oswald',sans-serif; font-size:14.5px; color:#16190F; }
+      .quest-stage { font-size:12px; color:#6F7563; }
+      .quest-objective { font-size:13px; color:#26291D; margin-top:3px; line-height:1.4; }
+      .quest-status { font-size:12.5px; font-weight:600; margin-top:2px; }
+      .quest-track-row { display:flex; align-items:center; gap:8px; margin-top:7px; }
+      .quest-track { flex:1; }
+      .quest-pct { font-family:'Oswald',sans-serif; font-size:11px; color:#7A7F62; width:32px; text-align:right; flex-shrink:0; }
       .stat-box { background:#FDFDF8; border:1.5px solid rgba(20,23,14,.1); border-radius:16px;
         padding:12px 6px; text-align:center; }
       .sb-num { font-family:'Oswald',sans-serif; font-size:17px; color:#16190F; }

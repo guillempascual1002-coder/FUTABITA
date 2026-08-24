@@ -1638,7 +1638,7 @@ const ELISA_STORY = {
         setFlags: ["elisaStoryStarted", "elisaOfficeUnlocked"],
         snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
         subs: [
-          (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3,
+          { count: (g, snap) => daysGoalsCompletedSince(g, snap.since), goal: 3 },
           (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
         ],
         check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3 &&
@@ -1666,7 +1666,7 @@ const ELISA_STORY = {
         subs: [
           (g, snap) => careerGoals(g) > snap.goals,
           (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
-          (g) => (g.player.streak || 0) >= 3,
+          { count: (g) => g.player.streak || 0, goal: 3 },
         ],
         check: (g, snap) => careerGoals(g) > snap.goals &&
           (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") && (g.player.streak || 0) >= 3 },
@@ -1731,7 +1731,7 @@ const ELISA_STORY = {
         setFlags: ["elisaTrainingRoutine"],
         snap: (g) => ({ since: todayStr(), ovr: calcOVR(g.player.stats) }),
         subs: [
-          (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 5,
+          { count: (g, snap) => daysGoalsCompletedSince(g, snap.since), goal: 5 },
           (g, snap) => calcOVR(g.player.stats) > snap.ovr,
         ],
         check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 5 && calcOVR(g.player.stats) > snap.ovr },
@@ -1817,7 +1817,7 @@ const ELISA_STORY = {
         subs: [
           (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.derbi && m.res === "V"),
           (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => (m.myGoals || 0) > 0 || (m.myAssists || 0) > 0),
-          (g) => (g.player.streak || 0) >= 6,
+          { count: (g) => g.player.streak || 0, goal: 6 },
         ],
         check: (g, snap) => {
           const ms = (g.matchHistory || []).slice(snap.matchCount);
@@ -1877,7 +1877,7 @@ const ELISA_STORY = {
         subs: [
           (g) => g.player.form === "buen" || g.player.form === "alza",
           (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
-          (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3,
+          { count: (g, snap) => daysGoalsCompletedSince(g, snap.since), goal: 3 },
         ],
         check: (g, snap) => (g.player.form === "buen" || g.player.form === "alza") &&
           (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") && daysGoalsCompletedSince(g, snap.since) >= 3 },
@@ -1906,7 +1906,7 @@ const ELISA_STORY = {
         snap: (g) => ({ tierId: g.tier.id, seasonNum: g.season.num }),
         subs: [
           (g, snap) => g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum,
-          (g) => (g.player.streak || 0) >= 5,
+          { count: (g) => g.player.streak || 0, goal: 5 },
         ],
         check: (g, snap) => (g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum) && (g.player.streak || 0) >= 5 },
       /* CAPÍTULO 11 — Lo que elegimos */
@@ -1933,7 +1933,7 @@ const ELISA_STORY = {
         snap: (g) => ({ tierId: g.tier.id, seasonNum: g.season.num }),
         subs: [
           (g, snap) => g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum,
-          (g) => (g.player.streak || 0) >= 5,
+          { count: (g) => g.player.streak || 0, goal: 5 },
         ],
         check: (g, snap) => (g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum) && (g.player.streak || 0) >= 5 },
       /* CAPÍTULO 12 — Hasta arriba */
@@ -1963,7 +1963,7 @@ const ELISA_STORY = {
         subs: [
           (g) => g.tier.id >= TIERS[TIERS.length - 1].id,
           (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
-          (g) => (g.player.streak || 0) >= 6,
+          { count: (g) => g.player.streak || 0, goal: 6 },
           (g, snap) => calcOVR(g.player.stats) > snap.ovr || (g.bestRating || 0) > snap.bestRating,
         ],
         check: (g, snap) => {
@@ -2122,7 +2122,7 @@ const MILLY_STORY = {
         setFlags: ["millyNotes"],
         snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
         subs: [
-          (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3,
+          { count: (g, snap) => daysGoalsCompletedSince(g, snap.since), goal: 3 },
           (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
         ],
         check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3 &&
@@ -2148,10 +2148,10 @@ const MILLY_STORY = {
         ],
         snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
         subs: [
-          (g, snap) => Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.gym),
+          { count: (g, snap) => daysGoalsCompletedSince(g, snap.since), goal: 3 },
           (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
         ],
-        check: (g, snap) => Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.gym) &&
+        check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3 &&
           (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") },
       /* CAPÍTULO 4 — La historia detrás del marcador */
       { title: "La historia detrás del marcador", zone: "prensa",
@@ -2206,7 +2206,7 @@ const MILLY_STORY = {
         setFlags: ["millyEthics"],
         snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
         subs: [
-          (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 4,
+          { count: (g, snap) => daysGoalsCompletedSince(g, snap.since), goal: 4 },
           (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
         ],
         check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 4 &&
@@ -2237,7 +2237,7 @@ const MILLY_STORY = {
         setFlags: ["millyKioskCrisis"],
         snap: (g) => ({ ovr: calcOVR(g.player.stats) }),
         subs: [
-          (g) => (g.player.streak || 0) >= 6,
+          { count: (g) => g.player.streak || 0, goal: 6 },
           (g, snap) => calcOVR(g.player.stats) > snap.ovr,
         ],
         check: (g, snap) => (g.player.streak || 0) >= 6 && calcOVR(g.player.stats) > snap.ovr },
@@ -2314,7 +2314,7 @@ const MILLY_STORY = {
         ],
         snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
         subs: [
-          (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3,
+          { count: (g, snap) => daysGoalsCompletedSince(g, snap.since), goal: 3 },
           (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
         ],
         check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3 &&
@@ -2374,7 +2374,7 @@ const MILLY_STORY = {
         ],
         snap: (g) => ({ tierId: g.tier.id, seasonNum: g.season.num }),
         subs: [
-          (g) => (g.player.streak || 0) >= 6,
+          { count: (g) => g.player.streak || 0, goal: 6 },
           (g, snap) => g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum,
         ],
         check: (g, snap) => (g.player.streak || 0) >= 6 && (g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum) },
@@ -2614,7 +2614,7 @@ const YUNA_STORY = {
         setFlags: ["yunaFirstGift"],
         snap: (g) => ({ since: todayStr(), goals: careerGoals(g) }),
         subs: [
-          (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3,
+          { count: (g, snap) => daysGoalsCompletedSince(g, snap.since), goal: 3 },
           (g, snap) => careerGoals(g) > snap.goals,
         ],
         check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3 && careerGoals(g) > snap.goals },
@@ -2643,7 +2643,7 @@ const YUNA_STORY = {
         ],
         snap: (g) => ({ matchCount: (g.matchHistory || []).length }),
         subs: [
-          (g) => (g.player.streak || 0) >= 3,
+          { count: (g) => g.player.streak || 0, goal: 3 },
           (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
         ],
         check: (g, snap) => (g.player.streak || 0) >= 3 && (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") },
@@ -2752,7 +2752,7 @@ const YUNA_STORY = {
         setFlags: ["yunaJealous", "yunaCrush"],
         snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
         subs: [
-          (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 4,
+          { count: (g, snap) => daysGoalsCompletedSince(g, snap.since), goal: 4 },
           (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
         ],
         check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 4 &&
@@ -2784,7 +2784,7 @@ const YUNA_STORY = {
         setFlags: ["yunaConfessionReady"],
         snap: (g) => ({ tierId: g.tier.id, seasonNum: g.season.num }),
         subs: [
-          (g) => (g.player.streak || 0) >= 5,
+          { count: (g) => g.player.streak || 0, goal: 5 },
           (g, snap) => g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum,
         ],
         check: (g, snap) => (g.player.streak || 0) >= 5 && (g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum) },
@@ -2862,7 +2862,7 @@ const YUNA_STORY = {
         ],
         snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
         subs: [
-          (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3,
+          { count: (g, snap) => daysGoalsCompletedSince(g, snap.since), goal: 3 },
           (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
         ],
         check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3 &&
@@ -2896,7 +2896,7 @@ const YUNA_STORY = {
         setFlags: ["yunaRelationship"],
         snap: (g) => ({ tierId: g.tier.id, seasonNum: g.season.num }),
         subs: [
-          (g) => (g.player.streak || 0) >= 6,
+          { count: (g) => g.player.streak || 0, goal: 6 },
           (g, snap) => g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum,
         ],
         check: (g, snap) => (g.player.streak || 0) >= 6 && (g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum) },
@@ -3107,7 +3107,7 @@ const LOPEZ_STORY = {
         ],
         snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
         subs: [
-          (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 4,
+          { count: (g, snap) => daysGoalsCompletedSince(g, snap.since), goal: 4 },
           (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
         ],
         check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 4 &&
@@ -3222,7 +3222,7 @@ const LOPEZ_STORY = {
         snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
         subs: [
           (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "D"),
-          (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 2,
+          { count: (g, snap) => daysGoalsCompletedSince(g, snap.since), goal: 2 },
         ],
         check: (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "D") &&
           daysGoalsCompletedSince(g, snap.since) >= 2 },
@@ -3450,7 +3450,7 @@ const LOPEZ_STORY = {
         ],
         snap: (g) => ({ matchCount: (g.matchHistory || []).length }),
         subs: [
-          (g) => (g.player.streak || 0) >= 7,
+          { count: (g) => g.player.streak || 0, goal: 7 },
           (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
         ],
         check: (g, snap) => (g.player.streak || 0) >= 7 &&
@@ -3799,7 +3799,7 @@ const IGOR_STORY = {
         ],
         snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
         subs: [
-          (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3,
+          { count: (g, snap) => daysGoalsCompletedSince(g, snap.since), goal: 3 },
           (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
         ],
         check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3 &&
@@ -4627,7 +4627,7 @@ const BEKA_STORY = {
         ],
         snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length, bestRating: g.bestRating || 0 }),
         subs: [
-          (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3,
+          { count: (g, snap) => daysGoalsCompletedSince(g, snap.since), goal: 3 },
           (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => (m.rating || 0) >= snap.bestRating),
         ],
         check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3 &&
@@ -4708,8 +4708,8 @@ const BEKA_STORY = {
         ],
         snap: () => ({ since: todayStr() }),
         subs: [
-          (g) => (g.player.streak || 0) >= 3,
-          (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3,
+          { count: (g) => g.player.streak || 0, goal: 3 },
+          { count: (g, snap) => daysGoalsCompletedSince(g, snap.since), goal: 3 },
         ],
         check: (g, snap) => (g.player.streak || 0) >= 3 && daysGoalsCompletedSince(g, snap.since) >= 3 },
       /* CAPÍTULO 6 — Que suba el nivel */
@@ -4732,7 +4732,7 @@ const BEKA_STORY = {
         snap: (g) => ({ ovr: calcOVR(g.player.stats), since: todayStr() }),
         subs: [
           (g, snap) => calcOVR(g.player.stats) > snap.ovr,
-          (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 4,
+          { count: (g, snap) => daysGoalsCompletedSince(g, snap.since), goal: 4 },
         ],
         check: (g, snap) => calcOVR(g.player.stats) > snap.ovr && daysGoalsCompletedSince(g, snap.since) >= 4 },
       /* CAPÍTULO 7 — La gente empieza a mirar */
@@ -4792,7 +4792,7 @@ const BEKA_STORY = {
         snap: () => ({ since: todayStr() }),
         subs: [
           (g, snap) => zoneVisitedSince(g, "discoteca", snap.since),
-          (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 2,
+          { count: (g, snap) => daysGoalsCompletedSince(g, snap.since), goal: 2 },
         ],
         check: (g, snap) => zoneVisitedSince(g, "discoteca", snap.since) && daysGoalsCompletedSince(g, snap.since) >= 2 },
       /* CAPÍTULO 9 — Te estás alejando */
@@ -4844,7 +4844,7 @@ const BEKA_STORY = {
         snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
         subs: [
           (g) => g.player.form === "buen" || g.player.form === "alza",
-          (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3,
+          { count: (g, snap) => daysGoalsCompletedSince(g, snap.since), goal: 3 },
           (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
         ],
         check: (g, snap) => (g.player.form === "buen" || g.player.form === "alza") &&
@@ -4903,7 +4903,7 @@ const BEKA_STORY = {
         ],
         snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
         subs: [
-          (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3,
+          { count: (g, snap) => daysGoalsCompletedSince(g, snap.since), goal: 3 },
           (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
         ],
         check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3 &&
@@ -6014,7 +6014,7 @@ const VERA_STORY = {
           snap: (g) => ({ tierId: g.tier.id, ovr: calcOVR(g.player.stats) }),
           subs: [
             (g, snap) => g.tier.id !== snap.tierId || calcOVR(g.player.stats) > snap.ovr,
-            (g) => (g.player.streak || 0) >= 5,
+            { count: (g) => g.player.streak || 0, goal: 5 },
           ],
           check: (g, snap) => (g.tier.id !== snap.tierId || calcOVR(g.player.stats) > snap.ovr) && (g.player.streak || 0) >= 5 },
         { title: "Lo que queda", final: true,
@@ -7498,14 +7498,22 @@ function PaperModal({ game, onRead, onClose }) {
 
 /* progreso DENTRO de la etapa activa (no de la historia entera): si la etapa declara
    "subs" (las sub-condiciones que componen su objetivo, ver stage.subs en STORIES),
-   la barra es cuántas de esas sub-condiciones ya se cumplen ahora mismo — así "gana
-   dos partidos" sube al 50% tras el primero y al 100% tras el segundo. Las etapas sin
-   "subs" (objetivo de una sola condición, o un "o" donde cualquiera vale el 100% de
-   golpe) caen al binario de siempre: 0% hasta que stage.check() se cumple. */
+   la barra es cuánto se ha cumplido de cada una ahora mismo — así "gana dos partidos"
+   sube al 50% tras el primero y al 100% tras el segundo. Cada sub puede ser:
+     - una función (g, snap) => boolean: cuenta como 0 o 1 (un solo hito, todo o nada);
+     - un objeto { count: (g, snap) => número, goal: número }: cuenta como count/goal
+       (hasta 1), para que una sub-condición que en realidad es "N de M" (3 días de
+       objetivos, una racha de 5...) reparta su propio peso proporcionalmente en vez de
+       quedarse a 0% hasta el último día y disparar entera de golpe.
+   Las etapas sin "subs" (objetivo de una sola condición, o un "o" donde cualquiera vale
+   el 100% de golpe) caen al binario de siempre: 0% hasta que stage.check() se cumple. */
 function stageProgress(game, stageDef, snap) {
   if (stageDef.subs && stageDef.subs.length) {
-    const met = stageDef.subs.filter((fn) => fn(game, snap)).length;
-    return met / stageDef.subs.length;
+    const sum = stageDef.subs.reduce((acc, sub) => {
+      if (typeof sub === "function") return acc + (sub(game, snap) ? 1 : 0);
+      return acc + Math.min(sub.count(game, snap) / sub.goal, 1);
+    }, 0);
+    return sum / stageDef.subs.length;
   }
   /* etapas de un único objetivo "acumula N de algo" (días cumplidos, racha...) sin subs:
      progressCount/progressGoal dan la cuenta real en vez de dejar la barra a 0% hasta

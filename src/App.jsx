@@ -201,7 +201,7 @@ const DEFAULT_ROUTINES = [
   { id: "r-pierna", name: "Pierna", emoji: "🦵", ex: ["sentadilla", "prensa", "curl-femoral", "extension-cuadriceps", "gemelos"] },
   { id: "r-torso", name: "Torso completo", emoji: "🏔️", ex: ["press-militar", "elevaciones-laterales", "remo-polea", "press-banca-manc", "plancha"] },
 ];
-const emptyGym = () => ({ routines: DEFAULT_ROUTINES.map((r) => ({ ...r })), custom: [], sessions: [], prs: {}, active: null, restDefault: 90 });
+const emptyGym = () => ({ routines: DEFAULT_ROUTINES.map((r) => ({ ...r })), custom: [], sessions: [], prs: {}, active: null, restDefault: 150 });
 const allExercises = (gym) => [...EX_CATALOG, ...((gym && gym.custom) || [])];
 const exById = (gym, id) => allExercises(gym).find((e) => e.id === id) || { id, name: id, muscle: "pecho", type: "w" };
 /* 1RM estimado (Epley) para comparar progresión entre pesos y repeticiones distintas */
@@ -299,8 +299,13 @@ function sanitizeGame(g) {
      incompatibles con el puesto fijo y el ciclo de días alternos. Se descartan las dos:
      refreshCocoVisit generará una visita nueva y correcta en el Centro Comercial. */
   if (out.cocoVisit && out.cocoVisit.zone !== "tienda") { delete out.cocoVisit; delete out.cocoNextVisitDay; }
-  /* gym: crear estructura en partidas anteriores al módulo y compactar sesiones antiguas */
-  out.gym = pruneGym({ ...emptyGym(), ...(out.gym || {}) });
+  /* gym: crear estructura en partidas anteriores al módulo y compactar sesiones antiguas.
+     restDefault nunca ha sido configurable por el jugador (no existe UI para cambiarlo), así
+     que cualquier partida guardada con el antiguo valor de 90s (1:30) se migra al nuevo
+     default de 150s (2:30) en vez de quedarse con el objeto viejo por el spread. */
+  const gymIn = { ...(out.gym || {}) };
+  if (gymIn.restDefault === 90) gymIn.restDefault = 150;
+  out.gym = pruneGym({ ...emptyGym(), ...gymIn });
   /* Karlos, Mabel, Dino, Yuni, Lili, Cubarsí, Yamal, Irina, Punky y Fortuna se han
      quitado del juego (roster recortado a menos personajes, mejor desarrollados):
      limpia rastros de partidas guardadas antes de cada recorte para que no se quede
@@ -8246,7 +8251,7 @@ function GymTab({ game, api, notify }) {
 
         {restLeft > 0 && (
           <div className="rest-bar">
-            <div className="rest-fill" style={{ width: (restLeft / (act.restLen || 90)) * 100 + "%" }} />
+            <div className="rest-fill" style={{ width: (restLeft / (act.restLen || 150)) * 100 + "%" }} />
             <div className="rest-txt">⏱️ Descanso {fmtDur(restLeft)}
               <span>
                 <button className="chip" style={{ padding: "3px 9px" }} onClick={() => api.updateActive((a) => ({ ...a, restUntil: a.restUntil + 30000 }))}>+30s</button>
@@ -9823,7 +9828,7 @@ export default function App() {
         for (let i = 0; i < 3; i++) sets.push({ exId, w: last ? last.w : "", reps: last ? last.reps : "", done: false });
       });
       return { ...gy, active: { routineId, name: r ? r.name : "Entreno libre", startedAt: Date.now(),
-        sets, restUntil: null, restLen: gy.restDefault || 90 } };
+        sets, restUntil: null, restLen: gy.restDefault || 150 } };
     }),
     updateActive: (fn) => setGym((gy) => (gy.active ? { ...gy, active: fn(gy.active) } : gy)),
     setField: (i, k, v) => setGym((gy) => ({ ...gy, active: { ...gy.active,
@@ -9854,7 +9859,7 @@ export default function App() {
         }
         const sets = a.sets.map((x, j) => (j === i ? { ...x, done: marcando } : x));
         return { ...g2, prs, active: { ...a, sets,
-          restUntil: marcando ? Date.now() + (a.restLen || 90) * 1000 : a.restUntil } };
+          restUntil: marcando ? Date.now() + (a.restLen || 150) * 1000 : a.restUntil } };
       });
       setTimeout(() => {
         if (marco) buzz(15);

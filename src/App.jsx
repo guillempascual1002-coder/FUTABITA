@@ -293,6 +293,12 @@ function sanitizeGame(g) {
     const valid = ls.kind === "xp" || ls.kind === "fichas" || (ls.kind === "item" && ITEMS[ls.itemId]);
     if (!valid) delete out.casinoLastSpin;
   }
+  /* Coco v2 (ver refreshCocoVisit): antes rotaba por Parque/Barrio cada 5 días. Una partida
+     guardada a mitad de aquel ciclo podía dejarla plantada en una zona que ya no le
+     corresponde, o con una "próxima visita" hasta 5 días por delante — ambas cosas
+     incompatibles con el puesto fijo y el ciclo de días alternos. Se descartan las dos:
+     refreshCocoVisit generará una visita nueva y correcta en el Centro Comercial. */
+  if (out.cocoVisit && out.cocoVisit.zone !== "tienda") { delete out.cocoVisit; delete out.cocoNextVisitDay; }
   /* gym: crear estructura en partidas anteriores al módulo y compactar sesiones antiguas */
   out.gym = pruneGym({ ...emptyGym(), ...(out.gym || {}) });
   /* Karlos, Mabel, Dino, Yuni, Lili, Cubarsí, Yamal, Irina, Punky y Fortuna se han
@@ -1028,11 +1034,12 @@ const NPCS = {
     arts: { happy: "/images/nina/nina_happy.webp", orgullosa: "/images/nina/nina_orgullosa.webp",
       seria: "/images/nina/nina_seria.webp", sorprendida: "/images/nina/nina_sorprendida.webp",
       "lanzandocaña": "/images/nina/nina_lanzandocaña.webp" }, def: "seria" },
-  /* Coco: la tendera errante (ver COCO_STORY y game.cocoVisit/refreshCocoVisit — no tiene
-     zona fija, cambia de localización cada 5 días). El documento solo define idle/blush/
-     sorprendida (y pide explícitamente "no hacen falta más poses por ahora"), pero su
-     guion sí usa [seria] varias veces sin asset propio — sustituido por "idle", su
-     registro neutro, en vez de dejar una imagen rota o inventar un asset nuevo. */
+  /* Coco: la tendera pija del Centro Comercial (ver COCO_STORY y game.cocoVisit/
+     refreshCocoVisit — puesto fijo, presente un día sí y otro no). El documento solo
+     define idle/blush/sorprendida (y pide explícitamente "no hacen falta poses nuevas por
+     ahora"), pero su guion sí usa [seria] y [happy] sin asset propio: se dejan tal cual y
+     caen automáticamente a "idle" (npc.def) por el fallback ya existente del motor
+     (npc.arts[mood] || npc.arts[npc.def]), sin inventar assets nuevos. */
   coco: { name: "Coco", color: "#2EA88A", voice: "/audio/vozchica01.mp3", icon: "/images/coco/coco_icon.webp",
     arts: { idle: "/images/coco/coco_idle.webp", blush: "/images/coco/coco_blush.webp",
       sorprendida: "/images/coco/coco_sorprendida.webp" }, def: "idle" },
@@ -1397,7 +1404,7 @@ const ZONES = [
     unlocked: (g) => isZoneUnlocked(g, "casa") },
   /* varios personajes comparten esta zona de calle: la burbuja muestra a quien tenga
      algo pendiente ahora mismo (ver EXTRA_NPCS y CityMap); en reposo, el puntito de siempre */
-  { id: "barrio", kind: "npc", npc: ["yuna", "elisa", "milly", "lopez", "igor", "beka", "coco"], label: "El Barrio", icon: "🌆", x: 57.78, y: 58.78,
+  { id: "barrio", kind: "npc", npc: ["yuna", "elisa", "milly", "lopez", "igor", "beka"], label: "El Barrio", icon: "🌆", x: 57.78, y: 58.78,
     pts: "217.78 461.01 217.78 507.48 318.38 500 318.38 465.1 217.78 461.01",
     unlocked: (g) => isZoneUnlocked(g, "barrio") },
   { id: "car", kind: "npc", npc: ["lopez", "lisa", "elisa", "igor", "beka"], label: "Centro de Alto Rendimiento", icon: "🏋️", x: 66.84, y: 18.18,
@@ -1415,7 +1422,7 @@ const ZONES = [
   { id: "cantera", kind: "npc", npc: "lopez", label: "Cantera", icon: "🎓", x: 88.18, y: 46.28,
     pts: "377.1 345.61 437.36 343.57 426.63 442.12 363.83 442.12 377.1 345.61",
     unlocked: (g) => isZoneUnlocked(g, "cantera") },
-  { id: "tienda", kind: "npc", npc: ["yuna", "lopez"], label: "Centro Comercial", icon: "🛍️", x: 84.10, y: 65.63,
+  { id: "tienda", kind: "npc", npc: ["coco", "yuna", "lopez"], label: "Centro Comercial", icon: "🛍️", x: 84.10, y: 65.63,
     pts: "342.38 511.57 346.97 559.57 424.08 552.42 420 507.48 342.38 511.57",
     unlocked: (g) => isZoneUnlocked(g, "tienda") },
   { id: "estadio", kind: "npc", npc: ["lopez", "yuna", "elisa", "milly", "igor", "beka"], label: "Gran Estadio", icon: "🏆", x: 74.47, y: 89.16,
@@ -1453,18 +1460,18 @@ const ZONES = [
 /* home zone de cada personaje: dónde "vive" por defecto si una escena no especifica zona
    explícita (varios personajes están asignados a más de una zona ahora que la zona es
    contexto de escena y no una identidad de npc distinta, ver NPCS más arriba) */
-const HOME_ZONE = { elisa: "oficina", lopez: "ciudad-dep", milly: "kiosco", yuna: "barrio", lisa: "patro", igor: "restaurante", beka: "barrio", nina: "playa", vera: "parque" };
+const HOME_ZONE = { elisa: "oficina", lopez: "ciudad-dep", milly: "kiosco", yuna: "barrio", lisa: "patro", igor: "restaurante", beka: "barrio", nina: "playa", vera: "parque", coco: "tienda" };
 /* una zona puede tener uno o varios personajes asignados (p.ej. El Barrio) */
 const zoneNpcList = (z) => (Array.isArray(z.npc) ? z.npc : z.npc ? [z.npc] : []);
 /* una entrada de npcQueue cuenta para una zona si su "zone" explícito coincide, o si no
    lleva zone y esta es la home zone del personaje (compat con escenas sin contexto de zona) */
 const entryMatchesZone = (e, zoneId) => e.zone ? e.zone === zoneId : HOME_ZONE[e.npc] === zoneId;
 /* quién de esa zona tiene algo pendiente que contar AHORA MISMO (null si nadie).
-   Coco no tiene zona fija (ver game.cocoVisit/refreshCocoVisit): mientras esté de
-   visita en esta zona, aparece como "activa" aquí igual que cualquier personaje con
-   una escena pendiente, tenga o no diálogo de historia en la cola ahora mismo (así su
-   tienda ambulante siempre se ve en el mapa durante toda la visita, no solo el rato en
-   que hay una frase nueva que leer). */
+   Coco tiene puesto fijo en el Centro Comercial pero solo está un día sí y otro no (ver
+   game.cocoVisit/refreshCocoVisit): los días que está, aparece como "activa" aquí igual
+   que cualquier personaje con una escena pendiente, tenga o no diálogo de historia en la
+   cola ahora mismo — así su tienda se ve en el mapa durante todo el día activo, no solo
+   el rato en que hay una frase nueva que leer. */
 const zoneActiveNpc = (z, npcQueue, game) => {
   if (game && game.cocoVisit && game.cocoVisit.zone === z.id) return "coco";
   return zoneNpcList(z).find((n) => npcQueue.some((e) => e.npc === n && entryMatchesZone(e, z.id))) || null;
@@ -5443,16 +5450,17 @@ const NINA_STORY = {
 };
 
 /* ============================================================
-   COCO · la tendera errante. No tiene zona fija: cada 5 días reaparece
-   en una localización desbloqueada al azar (ver refreshCocoVisit,
-   llamado desde checkZoneUnlocks — así se comprueba en cada punto en
-   el que ya se comprobaban zonas/historias, sin tocar cada llamada
-   una a una). Su función principal es la tienda (comprar/vender
-   objetos, ver CocoShop/buyFromCoco/sellToCoco más abajo en App);
-   su historia es un hilo secundario sobre esa misma tienda.
+   COCO · la tendera del Centro Comercial (ver
+   FUTABITA_Coco_Rework_v2_Centro_Comercial.docx). Su etapa de comerciante
+   errante quedó atrás: ahora tiene puesto fijo en el Centro Comercial (id
+   interno "tienda", el documento permite explícitamente conservarlo) y
+   aparece UN DÍA SÍ Y UN DÍA NO — nada de rotar entre Parque/Barrio ni del
+   antiguo ciclo de 5 días. Su función principal sigue siendo la tienda
+   (comprar/vender objetos, ver CocoShop/buyFromCoco/sellToCoco más abajo en
+   App); su historia es un hilo secundario sobre esa misma tienda.
 
    game.cocoVisit = { day, zone, products: [{ id, price, sold }] } —
-   generado una vez cada 5 días y fijo hasta la siguiente visita (el
+   generado una vez por día activo y fijo durante todo ese día (el
    documento pide explícitamente que abrir/cerrar la tienda no
    rerollee nada). game.cocoLog = últimas transacciones (compra/venta,
    con precio, día, zona y a qué visita pertenecían) — es lo que usan
@@ -5461,27 +5469,30 @@ const NINA_STORY = {
    matchHistory se usa para los objetivos de partido en el resto de
    personajes. */
 const COCO_CONSUMABLES = ["botiquin", "libreta_tactica", "especias_raras", "bebida_energetica", "amuleto_suerte", "zapatillas"];
-/* Coco solo aparece en Parque o Barrio, y solo UN día cada 5 (no está "presente 5 días
-   y luego cambia de zona": ver FUTABITA_Coco_Rework_Historia_e_Aparicion_para_Code.docx,
-   sección 1-3). game.cocoNextVisitDay guarda cuándo toca la siguiente visita; mientras
-   la visita de hoy ya no sea la de hoy, game.cocoVisit se vacía (Coco desaparece) hasta
-   que today alcance cocoNextVisitDay, momento en que se genera una visita nueva. */
-const COCO_VALID_ZONES = ["parque", "barrio"];
+/* Patrón exacto del documento: ACTIVA 1 DÍA -> AUSENTE 1 DÍA -> ACTIVA 1 DÍA...
+   game.cocoNextVisitDay guarda qué día le toca volver; mientras no se alcance, cocoVisit
+   se vacía (Coco ausente). Al generar una visita nueva se apunta el día siguiente + 1 como
+   próxima, de modo que el jugador que se salta días la encuentra igualmente disponible en
+   cuanto vuelve (nunca se queda "encallada" en una fecha pasada). */
+const COCO_ZONE = "tienda";
 const refreshCocoVisit = (g) => {
   const today = todayStr();
   if (g.cocoVisit && g.cocoVisit.day === today) return g; /* visita de hoy ya generada: no rerollear nada */
-  let nextVisitDay = g.cocoNextVisitDay;
-  if (g.cocoVisit && g.cocoVisit.day !== today && !nextVisitDay) nextVisitDay = addDays(g.cocoVisit.day, 5);
-  if (nextVisitDay && dayDiff(today, nextVisitDay) > 0) {
-    /* todavía no toca: Coco permanece ausente */
-    return g.cocoVisit ? { ...g, cocoVisit: null, cocoNextVisitDay: nextVisitDay } : g;
+  /* día de descanso: solo el día INMEDIATAMENTE posterior a una visita. Si han pasado dos
+     o más días desde la última, ya le toca volver a estar. */
+  const restingToday = !!(g.cocoVisit && dayDiff(g.cocoVisit.day, today) === 1)
+    || !!(g.cocoNextVisitDay && dayDiff(today, g.cocoNextVisitDay) > 0);
+  if (restingToday) {
+    const next = g.cocoNextVisitDay || addDays(g.cocoVisit.day, 2);
+    return g.cocoVisit ? { ...g, cocoVisit: null, cocoNextVisitDay: next } : g;
   }
-  const validZones = ZONES.filter((z) => COCO_VALID_ZONES.includes(z.id) && z.unlocked(g));
-  if (!validZones.length) return { ...g, cocoVisit: null, cocoNextVisitDay: nextVisitDay || today };
-  const zone = pick(validZones).id;
+  const zoneDef = ZONES.find((z) => z.id === COCO_ZONE);
+  /* si el Centro Comercial todavía no está desbloqueado, Coco simplemente no aparece —
+     nunca se la manda a otra zona (regla crítica del documento) */
+  if (!zoneDef || !zoneDef.unlocked(g)) return g.cocoVisit ? { ...g, cocoVisit: null } : g;
   const ids = [...COCO_CONSUMABLES].sort(() => Math.random() - 0.5).slice(0, 3);
   const products = ids.map((id) => ({ id, price: Math.floor(rnd(30, 61)), sold: false }));
-  return { ...g, cocoVisit: { day: today, zone, products }, cocoNextVisitDay: addDays(today, 5) };
+  return { ...g, cocoVisit: { day: today, zone: COCO_ZONE, products }, cocoNextVisitDay: addDays(today, 2) };
 };
 /* precio de venta al azar dentro del rango del pez (ver ITEMS[id].sellMin/sellMax) —
    se roza una sola vez por apertura del panel VENDER (ver CocoShop), no en cada render,
@@ -5502,157 +5513,122 @@ const COCO_STORY = {
     title: "La historia de Coco",
     trigger: () => true,
     stages: [
-      /* PRÓLOGO — La chica que vende cosas (rework de diálogos, ver
-         FUTABITA_Coco_Rework_Historia_e_Aparicion_para_Code.docx — no toca
-         objetivos ni comportamiento de la historia, solo sustituye el texto
-         de las escenas). Mismo fix de contradicción temporal que el resto de
-         personajes: los bloques de reacción se han movido al PRINCIPIO de la
-         intro del capítulo siguiente. Los moods [happy]/[seria] del documento
-         no tienen asset propio en NPCS.coco.arts (solo idle/blush/sorprendida
-         — el propio documento pide explícitamente no añadir poses nuevas);
-         se mantienen tal cual porque el motor ya cae automáticamente a "idle"
-         cuando un mood no existe (ver npc.arts[entry.mood] || npc.arts[npc.def]),
-         igual que ya hacía el código anterior de Coco sin sustitución explícita. */
-      { title: "La chica que vende cosas", zone: "barrio",
+      /* PRÓLOGO — La chica de la tienda (rework v2, ver
+         FUTABITA_Coco_Rework_v2_Centro_Comercial.docx: nueva personalidad pija +
+         puesto fijo en el Centro Comercial). Este documento ya viene escrito con la
+         estructura correcta de reacciones — cada capítulo abre reaccionando a lo que
+         acabas de hacer y plantea su propio objetivo al final, sin bloques de reacción
+         embebidos tras la línea de MISIÓN — así que no ha hecho falta reordenar nada,
+         a diferencia de los reworks anteriores.
+         Todas las etapas llevan zone:"tienda" (Centro Comercial): Coco ya no cambia de
+         localización, así que la escena siempre ocurre en su tienda. */
+      { title: "La chica de la tienda", zone: "tienda",
         objective: "Consigue 20 monedas y vuelve a hablar con Coco.",
         intro: [
-          { m: "idle", t: "¿Tú eres nuevo por aquí?" },
-          { m: "happy", t: "No pongas esa cara. No te estoy intentando vender nada todavía." },
+          { m: "idle", t: "¿Tú eres el nuevo?" },
+          { m: "happy", t: "No pongas esa cara. No te estoy vendiendo nada todavía." },
           { m: "blush", t: "Bueno... todavía." },
-          { m: "idle", t: "Me llamo Coco. Voy de un sitio a otro vendiendo cosas." },
-          { m: "happy", t: "Cosas útiles, cosas raras y cosas que la gente dice que no necesita hasta que las necesita." },
-          { m: "idle", t: "Llevo mucho tiempo haciendo esto." },
-          { m: "happy", t: "Es una vida bastante cómoda si no te importa dormir cada noche en un sitio distinto." },
-          { m: "seria", t: "Aunque tiene una ventaja." },
-          { m: "happy", t: "Siempre encuentras algo nuevo." },
-          { m: "idle", t: "Yo aparezco, monto el puesto, hago mis negocios y cuando toca marcharse... me marcho." },
-          { m: "blush", t: "Así que si quieres volver a verme, tendrás que acordarte de cuándo paso por la ciudad." },
-          { m: "happy", t: "No voy a estar aquí todos los días. Si lo hiciera, dejaría de ser una tendera errante." },
+          { m: "idle", t: "Soy Coco. Y esta es mi tienda." },
+          { m: "happy", t: "Antes iba de un lado a otro con mis cosas, pero sinceramente, cariño, cargar bolsas por media ciudad deja de ser glamuroso bastante rápido." },
+          { m: "seria", t: "Ahora tengo un sitio fijo en el Centro Comercial." },
+          { m: "happy", t: "Y mira qué monada. Todo ordenadito, todo colocado, buena iluminación... una chica necesita un mínimo de dignidad." },
+          { m: "idle", t: "Aquí vendo cosas útiles, cosas curiosas y alguna que otra cosa que la gente compra simplemente porque le parece monísima." },
+          { m: "blush", t: "No voy a juzgar. Yo también tengo mis debilidades." },
+          { m: "happy", t: "Si quieres hacer negocios conmigo, primero tendrás que demostrarme que tienes algo de dinero." },
         ],
         setFlags: ["cocoMet"],
         snap: (g) => ({ fichas: g.fichas || 0 }),
         check: (g, snap) => (g.fichas || 0) >= snap.fichas + 20 },
       /* CAPÍTULO 1 — Primera compra */
-      { title: "Primera compra",
+      { title: "Primera compra", zone: "tienda",
         objective: "Compra un consumible a Coco.",
         intro: [
-          { m: "happy", t: "Bien." },
-          { m: "idle", t: "Ya tienes tus primeras monedas preparadas." },
-          { m: "blush", t: "Ahora veremos si eres de los que compra cosas útiles o de los que compra cosas porque son bonitas." },
-          { m: "happy", t: "Cuando vuelva, quizá tenga algo interesante." },
-          { m: "idle", t: "Y si no estoy... tendrás que esperar a la próxima visita." },
-          { m: "happy", t: "Mira, justo a tiempo." },
-          { m: "idle", t: "Hoy sí tengo algunas cosas que podrían interesarte." },
-          { m: "blush", t: "Y no, no lo digo porque quiera venderte algo." },
-          { m: "happy", t: "Bueno, sí. Exactamente por eso." },
-          { m: "idle", t: "Mi mercancía cambia cada vez que vengo." },
-          { m: "happy", t: "Lo que ves hoy puede no volver a aparecer la próxima vez." },
-          { m: "idle", t: "Por eso tienes que aprender a mirar y decidir." },
-          { m: "blush", t: "Comprar todo tampoco cuenta como estrategia, ¿eh?" },
+          { m: "happy", t: "Ah, has vuelto." },
+          { m: "idle", t: "Te estaba viendo mirar la tienda como si estuvieras decidiendo qué bolso comprar." },
+          { m: "blush", t: "No te preocupes, es una decisión importante. Una nunca debe comprar cualquier cosa." },
+          { m: "happy", t: "Hoy tengo varias cositas nuevas." },
+          { m: "idle", t: "Mi mercancía cambia cada visita, así que si ves algo que te interesa, no te quedes contemplándolo eternamente." },
+          { m: "seria", t: "Y recuerda que los precios también pueden variar." },
+          { m: "happy", t: "Vamos, haz tu primera compra." },
+          { m: "blush", t: "Quiero comprobar si tienes criterio o simplemente compras lo primero que brilla." },
         ],
         snap: () => ({ since: todayStr() }),
         check: (g, snap) => (g.cocoLog || []).some((e) => e.type === "buy" && e.day >= snap.since) },
       /* CAPÍTULO 2 — También compro */
-      { title: "También compro",
-        objective: "Vende un pez a Coco (los peces se consiguen pescando).",
+      { title: "También compro", zone: "tienda",
+        objective: "Vende un objeto a Coco.",
         intro: [
-          { m: "idle", t: "Lo consumes y notas el efecto." },
-          { m: "happy", t: "Mucho más práctico que llevar una piedra de recuerdo en el bolsillo." },
-          { m: "blush", t: "Y recuerda: mañana ya no estaré aquí." },
-          { m: "idle", t: "Si quieres volver a comprar, tendrás que esperar a que vuelva a pasar por la ciudad." },
-          { m: "idle", t: "¿Sabes cuál es la otra mitad de mi trabajo?" },
-          { m: "happy", t: "Comprar cosas." },
-          { m: "blush", t: "Sí, ya sé que parece demasiado obvio." },
-          { m: "idle", t: "Pero si quieres que siga trayendo mercancía, necesito que alguien me venda cosas a mí." },
-          { m: "happy", t: "Y ahí entras tú." },
-          { m: "idle", t: "Lo que tú ya no necesitas puede ser justo lo que alguien está buscando." },
-          { m: "blush", t: "Y si yo puedo convertirlo en monedas para ti, mejor para los dos." },
-          { m: "happy", t: "Esa es la gracia de tener una tienda ambulante." },
+          { m: "idle", t: "Hay una cosa que todavía no te he explicado." },
+          { m: "happy", t: "Yo no solo vendo. También compro." },
+          { m: "blush", t: "Sí, cariño. Ese objeto que llevas guardado desde hace siglos puede tener una vida mucho más interesante que estar acumulando polvo." },
+          { m: "idle", t: "Lo que tú ya no necesitas puede ser justo lo que otra persona está buscando." },
+          { m: "happy", t: "Tú me lo vendes, yo te doy monedas y todos contentos." },
+          { m: "seria", t: "Además, un inventario lleno no es precisamente sinónimo de buen gusto." },
+          { m: "blush", t: "No digo que el tuyo esté mal. Solo... tiene personalidad." },
+          { m: "happy", t: "Así que cuando tengas algo que ya no uses, tráemelo." },
         ],
         snap: () => ({ since: todayStr() }),
         check: (g, snap) => (g.cocoLog || []).some((e) => e.type === "sell" && e.day >= snap.since) },
-      /* CAPÍTULO 3 — No todo vale lo mismo */
-      { title: "No todo vale lo mismo",
+      /* CAPÍTULO 3 — Los precios, cariño */
+      { title: "Los precios, cariño", zone: "tienda",
         objective: "Compra un objeto cuyo precio sea de 40 monedas o menos.",
         intro: [
-          { m: "happy", t: "Tú consigues monedas y yo consigo mercancía." },
-          { m: "blush", t: "Los dos salimos ganando. En teoría." },
-          { m: "idle", t: "Ahora me voy." },
-          { m: "happy", t: "Pero tranquila, tranquila... no estoy desapareciendo para siempre." },
-          { m: "idle", t: "Solo toca esperar hasta mi próxima vuelta." },
-          { m: "seria", t: "Te voy a enseñar algo importante." },
-          { m: "idle", t: "Los precios cambian." },
-          { m: "happy", t: "No me mires así. El mundo funciona de esa manera." },
-          { m: "blush", t: "Bueno... mi mundo, por lo menos." },
-          { m: "idle", t: "Cada vez que vuelvo puedo haber conseguido la misma cosa a un precio distinto." },
-          { m: "happy", t: "Si ves una ganga, cómprala." },
-          { m: "idle", t: "Si está cara, quizá quieras esperar." },
-          { m: "seria", t: "Y ahí está la parte divertida." },
-          { m: "happy", t: "Nunca sabes qué voy a traer en la siguiente visita." },
-          { m: "blush", t: "Ni cuánto te voy a pedir por ello." },
+          { m: "seria", t: "Hoy vamos a hablar de algo muy importante: precios." },
+          { m: "idle", t: "No todo cuesta lo mismo cada vez que vienes." },
+          { m: "happy", t: "La mercancía cambia, lo que me cuesta conseguirla cambia y, naturalmente, mi precio cambia." },
+          { m: "blush", t: "¿Es injusto? Qué palabra tan fea." },
+          { m: "happy", t: "Yo prefiero decir que es el mercado." },
+          { m: "idle", t: "Si ves una ganga, aprovecha." },
+          { m: "seria", t: "Si está caro, siempre puedes esperar a mi siguiente día disponible." },
+          { m: "blush", t: "Aunque luego no vengas llorando si alguien se te adelanta." },
+          { m: "happy", t: "Los buenos clientes saben cuándo comprar." },
         ],
         snap: () => ({ since: todayStr() }),
         check: (g, snap) => (g.cocoLog || []).some((e) => e.type === "buy" && e.day >= snap.since && e.price <= 40) },
-      /* CAPÍTULO 4 — ¿De dónde sacas todo esto? */
-      { title: "¿De dónde sacas todo esto?",
-        objective: "Compra 2 consumibles en dos visitas diferentes.",
+      /* CAPÍTULO 4 — De dónde sale la mercancía */
+      { title: "De dónde sale la mercancía", zone: "tienda",
+        objective: "Compra 2 consumibles en dos visitas diferentes de Coco.",
         intro: [
-          { m: "happy", t: "Buena elección." },
-          { m: "idle", t: "Hoy te ha salido bien la jugada." },
-          { m: "blush", t: "La próxima vez ya veremos." },
-          { m: "idle", t: "Siempre me preguntáis lo mismo." },
-          { m: "happy", t: "¿De dónde saco las cosas?" },
-          { m: "blush", t: "De sitios." },
-          { m: "happy", t: "Muy concretamente, de sitios." },
-          { m: "seria", t: "Hay cosas que encuentro, cosas que intercambio y cosas que compro antes de que nadie sepa que las quiere." },
-          { m: "happy", t: "Ese último método es mi favorito." },
-          { m: "idle", t: "Mi ruta cambia constantemente." },
-          { m: "seria", t: "Si mañana descubro que en otro sitio hay algo interesante, voy allí." },
-          { m: "happy", t: "Luego vuelvo por aquí cuando me toca." },
-          { m: "blush", t: "No es tan misterioso." },
-          { m: "idle", t: "Bueno... quizá un poquito." },
+          { m: "idle", t: "Siempre me preguntáis de dónde saco las cosas." },
+          { m: "happy", t: "Qué curiosos sois." },
+          { m: "seria", t: "Antes tenía que moverme muchísimo para conseguir mercancía." },
+          { m: "idle", t: "Hablaba con gente, intercambiaba cosas, encontraba oportunidades y compraba productos antes de que los demás se dieran cuenta de que los querían." },
+          { m: "happy", t: "Era divertido." },
+          { m: "blush", t: "Pero cargar media tienda encima no tenía absolutamente nada de glamour." },
+          { m: "seria", t: "Ahora tengo contactos y un sitio fijo donde traer todo." },
+          { m: "happy", t: "El Centro Comercial es muchísimo más cómodo." },
+          { m: "blush", t: "Y, sinceramente, una tienda así me pega bastante más." },
         ],
         snap: () => ({ since: todayStr() }),
         check: (g, snap) => cocoDistinctVisits(g, snap.since, ["buy"]) >= 2 },
       /* CAPÍTULO 5 — Lo que llevas encima */
-      { title: "Lo que llevas encima",
-        objective: "Vende peces hasta conseguir 100 monedas acumuladas.",
+      { title: "Lo que llevas encima", zone: "tienda",
+        objective: "Vende objetos hasta conseguir 100 monedas acumuladas.",
         intro: [
-          { m: "happy", t: "¿Ves?" },
-          { m: "idle", t: "Ya empiezas a entender cómo funciona mi negocio." },
-          { m: "blush", t: "Una visita hoy, otra dentro de unos días." },
-          { m: "happy", t: "Y entre medias, nada de Coco." },
-          { m: "idle", t: "Tienes más cosas de las que pensaba." },
-          { m: "happy", t: "¿Guardas todo?" },
-          { m: "blush", t: "¿Incluso cosas que claramente no vas a usar?" },
-          { m: "idle", t: "No te preocupes. Yo no juzgo." },
-          { m: "happy", t: "Bueno, un poquito." },
-          { m: "idle", t: "Pero piénsalo así." },
-          { m: "seria", t: "Un inventario lleno no siempre significa que tengas más." },
-          { m: "happy", t: "A veces solo significa que tienes cosas que otra persona podría aprovechar mejor." },
-          { m: "blush", t: "Y ahí es donde entro yo." },
-          { m: "idle", t: "No necesitas venderme todo." },
-          { m: "seria", t: "Solo aquello que ya no tenga sentido para ti." },
+          { m: "idle", t: "Madre mía. ¿De verdad llevas todo eso en el inventario?" },
+          { m: "happy", t: "Cariño, hay una diferencia entre estar preparado y llevar media vida contigo." },
+          { m: "blush", t: "Aunque no voy a juzgarte demasiado." },
+          { m: "seria", t: "Un inventario lleno no significa necesariamente que tengas más." },
+          { m: "idle", t: "A veces solo significa que tienes cosas que otra persona podría aprovechar mejor." },
+          { m: "happy", t: "Si ya no utilizas algo, véndelo." },
+          { m: "blush", t: "Y haz espacio para cosas que sí vayas a usar." },
+          { m: "idle", t: "Créeme, saber desprenderse también tiene bastante estilo." },
         ],
         snap: () => ({ since: todayStr() }),
         check: (g, snap) => (g.cocoLog || []).filter((e) => e.type === "sell" && e.day >= snap.since)
           .reduce((sum, e) => sum + e.price, 0) >= 100 },
       /* CAPÍTULO 6 — La mercancía rara */
-      { title: "La mercancía rara",
+      { title: "La mercancía rara", zone: "tienda",
         objective: "Compra un consumible y consúmelo.",
         intro: [
-          { m: "seria", t: "No necesitas convertir cada cosa en dinero." },
-          { m: "idle", t: "Pero si no vas a usar algo, quizá otra persona pueda aprovecharlo." },
-          { m: "happy", t: "Y cuando me vaya hoy, recuerda que tendrás unos días para decidir qué quieres traerme la próxima vez." },
-          { m: "sorprendida", t: "Espera." },
-          { m: "sorprendida", t: "¿Sabes lo que tengo hoy?" },
-          { m: "happy", t: "No. Mejor dicho: lo que conseguí hoy." },
-          { m: "idle", t: "No aparece todos los días." },
-          { m: "blush", t: "Y tampoco voy a contarte cómo lo conseguí." },
-          { m: "sorprendida", t: "Algunas cosas solo aparecen si estás en el sitio correcto en el momento correcto." },
-          { m: "happy", t: "Y yo tengo la suerte de moverme mucho." },
-          { m: "idle", t: "Así que hoy puedes aprovecharlo." },
-          { m: "blush", t: "Mañana ya no puedo prometerte que siga aquí." },
+          { m: "sorprendida", t: "Espera. Mira lo que tengo hoy." },
+          { m: "happy", t: "Esto no aparece todos los días." },
+          { m: "idle", t: "Algunas cosas dependen de estar en el sitio correcto, conocer a la persona adecuada o simplemente tener buen ojo." },
+          { m: "blush", t: "Y yo, evidentemente, tengo muchísimo buen ojo." },
+          { m: "happy", t: "Por eso cuando encuentro algo interesante lo aprovecho." },
+          { m: "seria", t: "Tú también deberías aprender a guardar unas monedas." },
+          { m: "idle", t: "Porque nunca sabes cuándo va a aparecer algo que realmente merezca la pena." },
+          { m: "blush", t: "Y sería bastante triste verlo y no poder comprarlo." },
         ],
         snap: (g) => ({ since: todayStr(), itemsUsedCount: g.itemsUsedCount || 0 }),
         subs: [
@@ -5661,91 +5637,73 @@ const COCO_STORY = {
         ],
         check: (g, snap) => (g.cocoLog || []).some((e) => e.type === "buy" && e.day >= snap.since) &&
           (g.itemsUsedCount || 0) > snap.itemsUsedCount },
-      /* CAPÍTULO 7 — Una ciudad llena de cosas */
-      { title: "Una ciudad llena de cosas",
-        objective: "Encuentra a Coco en una localización distinta a la visita anterior y compra o vende un objeto.",
+      /* CAPÍTULO 7 — Una tienda de verdad. Único objetivo que el documento cambia de
+         verdad: antes era "encuéntrala en una localización distinta a la visita anterior",
+         imposible ahora que su puesto es fijo — pasa a ser "hazlo durante una NUEVA
+         visita", que es la misma idea (esperar a que vuelva) adaptada al ciclo de días
+         alternos. El check compara contra el día de visita que estaba activo al empezar
+         la etapa, igual que antes comparaba contra la zona anterior. */
+      { title: "Una tienda de verdad", zone: "tienda",
+        objective: "Realiza una compra o venta con Coco durante una nueva visita.",
         intro: [
-          { m: "happy", t: "¿Ves?" },
-          { m: "idle", t: "A veces merece la pena guardar monedas." },
-          { m: "blush", t: "Sobre todo cuando sabes que una oportunidad puede durar solo una visita." },
-          { m: "happy", t: "¿Te sorprende verme?" },
-          { m: "idle", t: "A mí no." },
-          { m: "happy", t: "Si vendo siempre en el mismo sitio, dejo de ser una tendera errante." },
-          { m: "seria", t: "Además, cada barrio tiene cosas diferentes." },
-          { m: "happy", t: "Y clientes diferentes." },
-          { m: "idle", t: "A veces me gusta el Parque porque la gente viene sin prisa." },
-          { m: "blush", t: "Y otras veces prefiero el Barrio porque siempre aparece alguien que necesita algo." },
-          { m: "happy", t: "Hoy estoy aquí." },
-          { m: "idle", t: "Mañana no." },
-          { m: "seria", t: "Esa es la gracia." },
+          { m: "happy", t: "¿Sabes qué me gusta de estar aquí?" },
+          { m: "idle", t: "Que ya no tengo que montar y desmontar mi negocio todo el rato." },
+          { m: "seria", t: "Antes era bolsas, cajas, caminar, buscar sitio y volver a recogerlo todo." },
+          { m: "happy", t: "Ahora tengo una tienda fija." },
+          { m: "blush", t: "Buena iluminación, espacio, escaparates... una maravilla." },
+          { m: "idle", t: "Y lo mejor es que la gente sabe dónde encontrarme." },
+          { m: "happy", t: "Creo que me he acostumbrado bastante rápido." },
+          { m: "seria", t: "Quizá tener un sitio al que volver no esté tan mal." },
         ],
-        snap: (g) => ({ since: todayStr(), prevZone: g.cocoVisit ? g.cocoVisit.zone : null }),
+        snap: (g) => ({ since: todayStr(), prevVisitDay: g.cocoVisit ? g.cocoVisit.day : null }),
         check: (g, snap) => (g.cocoLog || []).some((e) => (e.type === "buy" || e.type === "sell") &&
-          e.day >= snap.since && e.zone !== snap.prevZone) },
+          e.day >= snap.since && e.visitDay && e.visitDay !== snap.prevVisitDay) },
       /* CAPÍTULO 8 — Una buena oportunidad */
-      { title: "Una buena oportunidad",
+      { title: "Una buena oportunidad", zone: "tienda",
         objective: "Compra un consumible por 30–35 monedas.",
         intro: [
-          { m: "happy", t: "Bien." },
-          { m: "idle", t: "Ya has visto que no siempre aparezco en el mismo sitio." },
-          { m: "blush", t: "Pero solo tengo dos lugares donde me gusta montar el puesto." },
-          { m: "happy", t: "Parque o Barrio." },
-          { m: "idle", t: "Nada de perseguirme por toda la ciudad." },
           { m: "idle", t: "Hoy estás de suerte." },
-          { m: "happy", t: "No porque hayas ganado en el casino." },
-          { m: "blush", t: "Aunque tampoco voy a preguntarte cómo te fue." },
-          { m: "idle", t: "Tengo una cosa que normalmente vendería mucho más cara." },
-          { m: "happy", t: "Pero voy a hacerte un precio especial." },
+          { m: "happy", t: "Tengo algo que normalmente vendería un poquito más caro." },
+          { m: "blush", t: "Pero voy a hacerte un precio especial." },
           { m: "seria", t: "No porque me haya vuelto generosa de repente." },
-          { m: "blush", t: "Simplemente quiero que vuelvas la próxima vez." },
-          { m: "happy", t: "Una buena clientela vale más que ganar unas monedas extra una sola tarde." },
-          { m: "idle", t: "Eso sí: el precio de hoy dura hoy." },
+          { m: "happy", t: "Simplemente me interesa que vuelvas." },
+          { m: "idle", t: "Una buena clientela vale muchísimo más que ganar unas monedas extra una sola tarde." },
+          { m: "blush", t: "Y tú estás empezando a ser bastante buen cliente." },
+          { m: "happy", t: "No te emociones." },
+          { m: "blush", t: "Todavía no tienes tarjeta VIP." },
         ],
         snap: () => ({ since: todayStr() }),
         check: (g, snap) => (g.cocoLog || []).some((e) => e.type === "buy" && e.day >= snap.since && e.price >= 30 && e.price <= 35) },
-      /* CAPÍTULO 9 — La ruta de Coco */
-      { title: "La ruta de Coco",
+      /* CAPÍTULO 9 — Mi clientela */
+      { title: "Mi clientela", zone: "tienda",
         objective: "Realiza compras o ventas con Coco en 3 visitas diferentes.",
         intro: [
-          { m: "blush", t: "No digas que nunca hago descuentos." },
-          { m: "happy", t: "Pero no esperes que pase todos los días." },
-          { m: "idle", t: "Tendrás que esperar a mi siguiente visita para descubrir qué traigo entonces." },
-          { m: "seria", t: "¿Sabes qué es lo más cansado de ir de un sitio a otro?" },
-          { m: "happy", t: "Que todo el mundo cree que es divertido." },
-          { m: "seria", t: "Y sí, lo es." },
-          { m: "idle", t: "Pero también significa que nunca tienes un lugar que sea realmente tuyo." },
-          { m: "seria", t: "Montas tus cosas, conoces gente, haces negocios..." },
-          { m: "happy", t: "...y cuando empiezas a sentirte demasiado cómoda, toca marcharse." },
-          { m: "idle", t: "Supongo que por eso me gusta volver aquí." },
-          { m: "blush", t: "Ya conozco algunas caras." },
-          { m: "happy", t: "Y algunas personas incluso compran cosas." },
-          { m: "idle", t: "Eso hace que una parada cualquiera empiece a parecerse un poquito a volver a casa." },
+          { m: "seria", t: "Creo que ya llevas suficiente tiempo viniendo como para que pueda llamarte cliente habitual." },
+          { m: "happy", t: "No pongas esa cara. Es un cumplido." },
+          { m: "idle", t: "Una tienda no son solo los productos." },
+          { m: "seria", t: "También son las personas que vuelven, las conversaciones y la confianza." },
+          { m: "blush", t: "Después de pasar tanto tiempo moviéndome de un lado a otro, tener caras conocidas aquí se siente bastante bien." },
+          { m: "happy", t: "No voy a ponerme sentimental." },
+          { m: "idle", t: "Pero me gusta que vuelvas." },
+          { m: "blush", t: "Y no, eso no significa que tengas descuento." },
+          { m: "happy", t: "Aún." },
         ],
         snap: () => ({ since: todayStr() }),
         check: (g, snap) => cocoDistinctVisits(g, snap.since, ["buy", "sell"]) >= 3 },
-      /* CAPÍTULO 10 — Lo que realmente busca */
-      { title: "Lo que realmente busca",
-        objective: "Compra un objeto y vende un pez en la misma visita.",
+      /* CAPÍTULO 10 — Lo que realmente buscaba */
+      { title: "Lo que realmente buscaba", zone: "tienda",
+        objective: "Compra un objeto y vende otro en la misma visita.",
         intro: [
-          { m: "happy", t: "Tres visitas." },
-          { m: "blush", t: "Eso significa que llevamos bastante tiempo coincidiendo." },
-          { m: "idle", t: "No te acostumbres demasiado." },
-          { m: "happy", t: "Sigo siendo una comerciante ambulante." },
           { m: "seria", t: "Te voy a contar un secreto." },
-          { m: "blush", t: "Pero si se lo cuentas a todo el mundo, voy a negarlo." },
-          { m: "seria", t: "No empecé a viajar para vender cosas." },
-          { m: "idle", t: "Empecé porque buscaba algo." },
-          { m: "happy", t: "Una cosa concreta." },
-          { m: "seria", t: "Nunca lo encontré." },
-          { m: "happy", t: "Y con el tiempo me di cuenta de que quizá la gracia era seguir buscando." },
-          { m: "idle", t: "Cada ciudad, cada tienda, cada persona... siempre aparece algo que no esperabas." },
-          { m: "seria", t: "Supongo que por eso no me quedé en un solo sitio." },
-          { m: "blush", t: "Si hubiera encontrado aquello que buscaba, quizá habría dejado de viajar." },
-          { m: "happy", t: "Pero no ocurrió." },
-          { m: "idle", t: "Así que sigo viniendo." },
-          { m: "happy", t: "A veces por negocio." },
-          { m: "blush", t: "A veces porque me gusta encontrar caras conocidas." },
-          { m: "seria", t: "Y últimamente tú eres una de ellas." },
+          { m: "blush", t: "Si se lo cuentas a todo el mundo, lo voy a negar." },
+          { m: "seria", t: "Cuando empecé a viajar no lo hacía solamente para vender." },
+          { m: "idle", t: "Estaba buscando algo." },
+          { m: "happy", t: "Una cosa concreta que pensaba que algún día encontraría." },
+          { m: "seria", t: "Nunca la encontré." },
+          { m: "idle", t: "Y con el tiempo entendí que quizá esa era precisamente la gracia." },
+          { m: "happy", t: "Seguir buscando. Encontrar cosas nuevas. Conocer gente." },
+          { m: "blush", t: "Y ahora resulta que tengo una tienda en un Centro Comercial bastante mono." },
+          { m: "seria", t: "Quizá esto sea lo más parecido que he tenido a encontrar un sitio al que volver." },
         ],
         snap: () => ({ since: todayStr() }),
         check: (g, snap) => {
@@ -5754,30 +5712,43 @@ const COCO_STORY = {
           const sells = new Set(entries.filter((e) => e.type === "sell").map((e) => e.visitDay));
           return [...buys].some((v) => sells.has(v));
         } },
-      /* FINAL — Nos vemos en cinco días (última etapa: final:true, sin recompensa de
+      /* FINAL — Mi clientela favorita (última etapa: final:true, sin recompensa de
          objeto — el documento no pide ninguna, solo el flag de cierre) */
-      { title: "Nos vemos en cinco días", final: true,
+      { title: "Mi clientela favorita", zone: "tienda", final: true,
         intro: [
-          { m: "happy", t: "Eso es lo que hacemos tú y yo." },
-          { m: "blush", t: "Tú me traes cosas. Yo te traigo cosas." },
-          { m: "happy", t: "Y ninguno sabe exactamente qué vamos a encontrar la próxima vez." },
-          { m: "happy", t: "Bueno, ya sabes cómo funciona." },
-          { m: "idle", t: "Hoy estoy aquí." },
-          { m: "seria", t: "Mañana me marcho." },
-          { m: "happy", t: "Y después tendrás que esperar cinco días para volver a verme." },
-          { m: "blush", t: "Puede que traiga algo increíble." },
-          { m: "happy", t: "Puede que traiga basura." },
-          { m: "blush", t: "Y puede que te pida una cantidad absurda de dinero por cualquiera de las dos." },
-          { m: "seria", t: "Pero siempre puedes esperar a la siguiente visita." },
-          { m: "happy", t: "Aunque si ves una ganga... yo no esperaría demasiado." },
-          { m: "idle", t: "Supongo que ya formas parte de mi ruta." },
-          { m: "blush", t: "No te emociones." },
-          { m: "happy", t: "Solo significa que me gusta hacer negocios contigo." },
+          { m: "happy", t: "Bueno, mira quién ha vuelto." },
+          { m: "idle", t: "Creo que ya puedo decir que formas parte de mi clientela habitual." },
+          { m: "blush", t: "No te emociones. Eso no incluye descuento VIP." },
+          { m: "happy", t: "Todavía." },
+          { m: "seria", t: "He pasado mucho tiempo pensando en aquella cosa que buscaba cuando empecé a viajar." },
+          { m: "idle", t: "Y creo que ya sé qué era." },
+          { m: "happy", t: "No era un objeto." },
+          { m: "seria", t: "Era tener un sitio al que volver." },
+          { m: "happy", t: "Una tienda bonita, mercancía nueva, gente que reconozco cuando entra por la puerta..." },
+          { m: "blush", t: "Y algún cliente que vuelve demasiado a menudo." },
+          { m: "happy", t: "Pero bueno. Hay cosas peores." },
+          { m: "seria", t: "Así que supongo que me voy a quedar aquí un poquito más." },
+          { m: "blush", t: "No te acostumbres demasiado." },
+          { m: "happy", t: "Sigo teniendo una reputación que mantener." },
         ],
         setFlags: ["cocoStoryComplete"] },
     ],
   }],
 };
+/* Saludo recurrente de los días activos (sección 8 del documento). Solo se encola una vez
+   por día de visita y SOLO tras cerrar su campaña (cocoStoryComplete): mientras la historia
+   sigue viva son sus capítulos los que llevan la conversación, y meter un saludo genérico
+   en medio los pisaría. Es puro sabor: no arranca misiones ni toca la tienda, tal como pide
+   el documento ("no crear misiones recurrentes nuevas obligatorias"). */
+const COCO_GREETING = [
+  { m: "happy", t: "Cariño, hoy sí estoy aquí." },
+  { m: "blush", t: "Y he traído cositas bastante monas." },
+  { m: "idle", t: "Mira primero, decide después. Una chica con criterio no compra a lo loco." },
+  { m: "happy", t: "Aunque si quieres comprar varias cosas, yo no voy a impedírtelo." },
+  { m: "seria", t: "Si hoy no encuentras nada, no pasa nada." },
+  { m: "blush", t: "Mañana vuelvo a estar disponible. Ya sabes, agenda de chica ocupada." },
+  { m: "happy", t: "Ahora dime qué necesitas." },
+];
 
 /* ============================================================
    VERA · artista observadora, novena campaña y primera con recompensas
@@ -6256,7 +6227,7 @@ const CARDS = [
   { npc: "nina", unlocked: (g) => !!g.ninaMet,
     bio: "La pescadora de la Playa. Nunca tiene prisa — y poco a poco te enseña que tampoco hace falta tenerla siempre." },
   { npc: "coco", unlocked: (g) => !!g.cocoMet,
-    bio: "Tendera errante. Aparece cada cinco días en un sitio distinto con mercancía nueva — y siempre compra lo que ya no quieres." },
+    bio: "La tendera del Centro Comercial. Pija, coqueta y muy buena negociante — atiende un día sí y otro no, y siempre compra lo que ya no quieres." },
   { npc: "vera", unlocked: (g) => !!g.veraMet,
     bio: "Artista observadora, algo despistada. Busca inspiración en tu rutina y termina pintando momentos que merece la pena recordar." },
 ];
@@ -7336,9 +7307,9 @@ function ZoneScreen({ zone, pendingNpc, onBack, onOpenPaper, game, onOpenSobre, 
       {isCoco && (
         <div className="house-room">
           <div className="house-card">
-            <div className="house-title">🛍️ Coco está aquí</div>
+            <div className="house-title">🛍️ La tienda de Coco</div>
             <div style={{ fontSize: 12.5, color: "#9a9e8e", marginBottom: 10 }}>
-              Tendera errante — vuelve a aparecer cada 5 días en un sitio distinto.</div>
+              Hoy está abierta. Coco atiende un día sí y otro no, con mercancía nueva cada vez.</div>
             <button className="btn-gold sm" style={{ width: "100%" }} onClick={() => setShowCocoShop(true)}>
               🛒 Ver tienda</button>
           </div>
@@ -9148,11 +9119,20 @@ export default function App() {
       applyOnRead: { grantItem: "cuadro_generico", reveal: "cuadro_generico" } });
     return { ...out, veraFreeVisit: { day: today }, veraNextFreeDay: addDays(today, 7) };
   };
+  /* saludo de Coco de los días que está (ver COCO_GREETING): una sola escena por día de
+     visita y solo con su campaña ya cerrada — mientras la historia sigue viva son sus
+     capítulos los que hablan. game.cocoGreetDay evita repetirlo al reentrar en la zona. */
+  const refreshCocoGreeting = (g) => {
+    if (!g.cocoStoryComplete || !g.cocoVisit) return g;
+    if (g.cocoGreetDay === g.cocoVisit.day) return g;
+    const out = addScene(g, "Coco", COCO_GREETING, { zone: COCO_ZONE });
+    return { ...out, cocoGreetDay: g.cocoVisit.day };
+  };
   /* comprueba si alguna zona de la ciudad se acaba de desbloquear (Karla)
      y, si es la primera vez, encola su escena de presentación. Se llama tras cualquier
      acción que pueda mover el requisito: media, goles de carrera o ascenso de categoría. */
   const checkZoneUnlocks = (g) => {
-    let out = refreshVeraFreeVisit(refreshCocoVisit(g));
+    let out = refreshCocoGreeting(refreshVeraFreeVisit(refreshCocoVisit(g)));
     [...ZONES, ...EXTRA_NPCS].forEach((z) => {
       if (!z.metFlag || out[z.metFlag] || (out.introQueued && out.introQueued[z.metFlag]) || !z.unlocked(out)) return;
       /* el flag "ya lo conoces" no se marca aquí: se marca cuando el jugador lee la escena
@@ -9192,9 +9172,7 @@ export default function App() {
      reacción completa, exactamente igual que cualquier otra escena. */
   const queueStageScene = (out, def, key, stageObj, state, beatsOverride) => {
     const npcName = NPCS[def.npc].name;
-    /* Coco no tiene zona fija por etapa (ver COCO_STORY): fuera de su prólogo, sus
-       capítulos ocurren allá donde esté de visita ahora mismo (game.cocoVisit.zone). */
-    const zone = stageObj.zone || (def.npc === "coco" && out.cocoVisit ? out.cocoVisit.zone : undefined);
+    const zone = stageObj.zone;
     if (stageObj.fish) {
       const before = (stageObj.introBefore || []).map((b) => ({ m: b.m, t: fillTpl(b.t, flavorCtx(out)) }));
       const after = (stageObj.introAfter || []).map((b) => ({ m: b.m, t: fillTpl(b.t, flavorCtx(out)) }));

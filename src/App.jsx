@@ -8903,24 +8903,20 @@ function ProfileTab({ game, photo, onWeight, onPhoto, onRemovePhoto, crest, onCr
       </div>
       <div className="panel">
         <div className="ptitle">🃏 Cartas de personaje</div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 0, borderRadius: 10, overflow: "hidden" }}>
           {CARDS.map((c) => {
             const npc = NPCS[c.npc];
             const on = c.unlocked(game);
             return (
-              <button key={c.npc} onClick={() => on && onOpenCard(c.npc)} disabled={!on}
-                style={{ background: "#F0EFE5", borderRadius: 12, padding: "10px 6px", textAlign: "center",
-                  border: "none", cursor: on ? "pointer" : "default" }}>
+              <button key={c.npc} onClick={() => on && onOpenCard(c.npc)} disabled={!on} aria-label={on ? npc.name : "Carta sin desbloquear"}
+                style={{ position: "relative", aspectRatio: "1 / 1", background: "#D8D6C6", border: "none", padding: 0,
+                  cursor: on ? "pointer" : "default", overflow: "hidden" }}>
                 {on ? (
-                  <img src={npc.icon} alt={npc.name} style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover",
-                    border: "1.5px solid #16190F" }} />
+                  <img src={npc.icon} alt={npc.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                 ) : (
-                  <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#D8D6C6", margin: "0 auto",
-                    display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, color: "#9a9e8e" }}>❓</div>
+                  <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 26, color: "#9a9e8e" }}>❓</div>
                 )}
-                <div style={{ fontSize: 11, fontFamily: "'Oswald',sans-serif", marginTop: 6, color: on ? "#26291D" : "#9a9e8e" }}>
-                  {on ? npc.name : "???"}</div>
-                {on && <div style={{ fontSize: 9.5, color: "#6F7563", lineHeight: 1.35, marginTop: 3 }}>{c.bio}</div>}
               </button>);
           })}
         </div>

@@ -428,8 +428,12 @@ function dayPct(log, player, dateStr) {
   return Math.round(total * 100);
 }
 
-/* XP al cerrar un día */
-function applyDayClose(player, log, dateStr) {
+/* XP al cerrar un día. boost (ver game.activeBoost/ITEMS kind:"cassette"): { stat, mult } o
+   null — "ALL" en boost.stat multiplica los seis stats a la vez (cassette ALL IN). Fórmula
+   del documento de Alexia: XP final = XP base × bonus de racha × bonus de cassette; son
+   sistemas independientes, ninguno sustituye al otro. */
+function applyDayClose(player, log, dateStr, boost) {
+  const boostMultOf = (k) => (boost && (boost.stat === k || boost.stat === "ALL")) ? boost.mult : 1;
   const pct = dayPct(log, player, dateStr);
   const form = formFromPct(pct);
   const mult = form === "alza" ? 1.5 : form === "buen" ? 1 : form === "est" ? 0.35 : 0;
@@ -474,7 +478,7 @@ function applyDayClose(player, log, dateStr) {
     /* forma y racha multiplican juntas; la XP pasiva de MEN (flatMEN) queda fuera de
        AMBOS multiplicadores a propósito: es la recompensa fija por constancia de uso
        y no queremos tocar ese equilibrio */
-    xp[k] = (xp[k] || 0) + Math.round(gains[k] * mult * sMult) + (k === "MEN" ? flatMEN : 0);
+    xp[k] = (xp[k] || 0) + Math.round(gains[k] * mult * sMult * boostMultOf(k)) + (k === "MEN" ? flatMEN : 0);
     while (stats[k] < 99 && xp[k] >= xpToNext(stats[k])) { xp[k] -= xpToNext(stats[k]); stats[k] += 1; ups.push(k); }
   });
   let badDays = form === "caida" ? (player.badDays || 0) + 1 : 0;
@@ -486,6 +490,16 @@ function applyDayClose(player, log, dateStr) {
     badDays = 0; decayed = true;
   }
   return { player: { ...player, stats, xp, streak, badDays, form }, pct, form, ups, decayed };
+}
+/* consume un día del cassette activo (ver game.activeBoost/activateCassette): devuelve el
+   boost que debe aplicar ESTE cierre de día (o null si no hay ninguno) y el activeBoost que
+   debe quedar guardado después — un día por cada cierre real, tanto si el jugador cierra
+   manualmente como si la ventana de gracia cierra varios días atrasados de golpe. */
+function consumeBoostDay(activeBoost) {
+  if (!activeBoost || activeBoost.daysLeft <= 0) return { boost: null, next: null };
+  const boost = { stat: activeBoost.stat, mult: activeBoost.mult };
+  const daysLeft = activeBoost.daysLeft - 1;
+  return { boost, next: daysLeft > 0 ? { ...activeBoost, daysLeft } : null };
 }
 
 /* simulación de partido */
@@ -1057,6 +1071,14 @@ const NPCS = {
       seria: "/images/vera/vera_seria.webp", preocupada: "/images/vera/vera_preocupada.webp",
       pintora: "/images/vera/vera_pintora.webp", pintora_pensando: "/images/vera/vera_pintora_pensando.webp",
       playa: "/images/vera/vera_playa.webp", playa_regalo: "/images/vera/vera_playa_regalo.webp" }, def: "idle" },
+  /* Alexia: introduce los cassettes (ver ALEXIA_STORY/ITEMS kind:"cassette"). El documento
+     todavía no trae todos sus assets — solo idle e icon están listos por ahora; el resto de
+     moods que usa su guion (happy, blush, music, y seria — este último ni siquiera está en
+     la lista de assets del documento) caen al fallback ya existente del motor
+     (npc.arts[mood] || npc.arts[npc.def]) hasta que lleguen las ilustraciones reales, igual
+     que se ha hecho con Coco/Vera para moods sin imagen propia. */
+  alexia: { name: "Alexia", color: "#F2542D", voice: "/audio/vozchica01.mp3", icon: "/images/alexia/alexia_icon.webp",
+    arts: { idle: "/images/alexia/alexia_idle.webp" }, def: "idle" },
 };
 /* el sender siempre es el nombre real del personaje ahora (la zona ya no crea una
    identidad de sender distinta: es contexto de la escena, ver campo "zone" en addMsg/addScene) */
@@ -1071,6 +1093,7 @@ const senderToNpc = (from) => {
   if (from === "Nina") return "nina";
   if (from === "Coco") return "coco";
   if (from === "Vera") return "vera";
+  if (from === "Alexia") return "alexia";
   return null; /* prensa/afición/redes/club -> periódico */
 };
 const paperSec = (from) =>
@@ -1445,7 +1468,7 @@ const ZONES = [
   { id: "playa", kind: "npc", npc: ["elisa", "milly", "lopez", "lisa", "yuna", "igor", "nina", "vera"], label: "Playa", icon: "🏖️", x: 18.88, y: 62.76,
     pts: "76.85 417.61 148.34 442.12 135.57 514.12 96.25 602.97 31.4 583.57 76.85 417.61",
     unlocked: (g) => isZoneUnlocked(g, "playa") },
-  { id: "atico", kind: "npc", npc: ["elisa", "lisa"], label: "Ático de Lujo", icon: "🌇", x: 34.48, y: 19.29,
+  { id: "atico", kind: "npc", npc: ["elisa", "lisa", "alexia"], label: "Ático de Lujo", icon: "🌇", x: 34.48, y: 19.29,
     pts: "55.66 150.46 206.12 142.03 208.17 229.52 194.21 273.78 55.66 150.46",
     unlocked: (g) => isZoneUnlocked(g, "atico") },
   /* la presentación de Igor ya no depende de metFlag/intro (eso duplicaba el prólogo real
@@ -1465,7 +1488,7 @@ const ZONES = [
 /* home zone de cada personaje: dónde "vive" por defecto si una escena no especifica zona
    explícita (varios personajes están asignados a más de una zona ahora que la zona es
    contexto de escena y no una identidad de npc distinta, ver NPCS más arriba) */
-const HOME_ZONE = { elisa: "oficina", lopez: "ciudad-dep", milly: "kiosco", yuna: "barrio", lisa: "patro", igor: "restaurante", beka: "barrio", nina: "playa", vera: "parque", coco: "tienda" };
+const HOME_ZONE = { elisa: "oficina", lopez: "ciudad-dep", milly: "kiosco", yuna: "barrio", lisa: "patro", igor: "restaurante", beka: "barrio", nina: "playa", vera: "parque", coco: "tienda", alexia: "atico" };
 /* una zona puede tener uno o varios personajes asignados (p.ej. El Barrio) */
 const zoneNpcList = (z) => (Array.isArray(z.npc) ? z.npc : z.npc ? [z.npc] : []);
 /* una entrada de npcQueue cuenta para una zona si su "zone" explícito coincide, o si no
@@ -6064,9 +6087,320 @@ const VERA_FREE_BEATS = [
   { m: "happy", t: "Y quizá pueda darte algo a cambio." },
 ];
 
+/* ============================================================
+   ALEXIA · introduce los cassettes musicales (ver ITEMS kind:"cassette",
+   activateCassette/applyDayClose y refreshAlexiaVisit más abajo en App).
+
+   Misma partición SETUP+ENTREGA que usa VERA_STORY y por la misma razón:
+   el motor solo dispara reward()/grantItem al ENTRAR en una etapa
+   final:true, y esa entrada cierra el capítulo entero de inmediato (su
+   propio check, si lo tuviera, nunca se evaluaría). Alexia entrega 7
+   cassettes en puntos distintos de la historia (no solo un pin final), así
+   que cada "CAPÍTULO N" que reparte cassette se parte en dos etapas dentro
+   de su propio capítulo: una de SETUP (con el objective/check real) y una
+   de ENTREGA (final:true, solo la reacción al objetivo recién cumplido +
+   grantItem/reveal de ese cassette). Los capítulos que NO reparten cassette
+   (prólogo, cap1, cap8, cap10) no necesitan partirse: su reacción ya vive,
+   sin más, al principio de la intro de la etapa siguiente dentro del MISMO
+   capítulo — este documento, a diferencia de los primeros reworks de la
+   temporada, ya viene escrito con esa estructura correcta.
+
+   Checks: el documento pide expresamente no inventar mecánicas nuevas y
+   mapear cada misión a algo que el juego ya sepa comprobar.
+     - "20 XP en cualquier stat" (prólogo): no existe un contador de XP
+       total por stat (xp[k] se reinicia en cada subida de nivel), así que
+       se reconstruye con stats[k]*10000+xp[k] como progreso monótono
+       comparable entre snapshots — sube siempre que ganas XP, aunque subas
+       de nivel por el camino.
+     - "Consigue XP en <STAT> durante 2 días": no hay un registro de qué
+       stat ganó XP cada día, así que cada capítulo usa el campo real de
+       game.logs que de verdad genera XP en ESE stat en applyDayClose:
+       FUE -> día de gym, RES -> hábitos completados (disciplina/
+       concentración), NUT -> día con kcal Y proteína cumplidas, MEN -> día
+       en buena forma (alza/buen, claridad mental). REC ya tiene su propio
+       enunciado explícito ("cumple el objetivo de sueño"), sin ambigüedad.
+     - "Objetivo de progreso general" / "hito global de progreso": mismo
+       criterio que ya usan Beka/Karla/Yuna para "hito de carrera" —
+       daysGoalsCompletedSince para el primero (más ligero, constancia),
+       tier/OVR para el segundo (más grande, la síntesis de ALL IN). */
+const alexiaStatProgress = (g) => Object.fromEntries(STAT_KEYS.map((k) => [k, g.player.stats[k] * 10000 + (g.player.xp[k] || 0)]));
+const ALEXIA_STORY = {
+  npc: "alexia",
+  chapters: [
+    { id: "cap1", title: "Tu música", trigger: () => true,
+      stages: [
+        /* PRÓLOGO — Tu música (sin cassette: desarrolla la historia) */
+        { title: "Tu música", zone: "atico",
+          objective: "Consigue 20 XP en cualquier stat y vuelve a hablar con Alexia.",
+          intro: [
+            { m: "idle", t: "¿Tú también entrenas con música?" },
+            { m: "happy", t: "Vale, eso ya me cae bien." },
+            { m: "music", t: "Yo no puedo hacer casi nada sin música." },
+            { m: "idle", t: "No porque necesite ruido todo el rato. Una canción puede cambiar completamente cómo haces algo." },
+            { m: "happy", t: "La misma carrera puede sentirse horrible o increíble dependiendo de lo que estés escuchando." },
+            { m: "blush", t: "Suena un poco dramático, lo sé." },
+            { m: "idle", t: "Llevo años haciendo playlists para todo: entrenar, concentrarme, salir... hasta tengo una para limpiar mi habitación." },
+            { m: "happy", t: "Esa última casi nunca funciona." },
+            { m: "music", t: "Ahora quiero hacer algo distinto: cassettes." },
+            { m: "idle", t: "Algo físico. Eliges uno, lo pones y durante un rato entras en ese mood." },
+            { m: "happy", t: "Quiero preparar mezclas para distintos momentos, pero primero quiero ver cómo encajan contigo." },
+          ],
+          setFlags: ["alexiaMet"],
+          snap: (g) => ({ statProgress: alexiaStatProgress(g) }),
+          progressCount: (g, snap) => Math.max(...STAT_KEYS.map((k) => alexiaStatProgress(g)[k] - snap.statProgress[k])), progressGoal: 20,
+          check: (g, snap) => STAT_KEYS.some((k) => alexiaStatProgress(g)[k] - snap.statProgress[k] >= 20) },
+        /* CAPÍTULO 1 — Encontrar el ritmo (sin cassette: desarrolla la historia) */
+        { title: "Encontrar el ritmo", zone: "atico",
+          objective: "Completa una actividad de entrenamiento existente y vuelve a hablar con Alexia.",
+          intro: [
+            { m: "happy", t: "Así que has probado a moverte con música." },
+            { m: "idle", t: "¿Notas la diferencia?" },
+            { m: "music", t: "No hace falta que sea enorme. A veces solo necesitas el empujón para empezar." },
+            { m: "seria", t: "Hay días en los que tienes energía de sobra y otros en los que tu cuerpo quiere sofá." },
+            { m: "happy", t: "Ahí entra una buena canción." },
+            { m: "blush", t: "No hace milagros. Aunque alguna playlist mía se acerca bastante." },
+            { m: "music", t: "Estoy preparando una mezcla para esos días en los que necesitas velocidad." },
+            { m: "happy", t: "Algo que te haga pensar: venga, una más." },
+            { m: "idle", t: "Creo que debería ser el primero de mis cassettes." },
+          ],
+          snap: () => ({ since: todayStr() }),
+          check: (g, snap) => Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.closed && l.gym) },
+        /* CAPÍTULO 2 — FULL SPEED (setup) */
+        { title: "FULL SPEED", zone: "atico",
+          objective: "Mantén una racha de 2 días de objetivos diarios.",
+          intro: [
+            { m: "happy", t: "Dos días." },
+            { m: "idle", t: "Ya has empezado a encontrar tu ritmo." },
+            { m: "music", t: "He terminado la mezcla." },
+            { m: "happy", t: "Se llama FULL SPEED." },
+            { m: "seria", t: "No es para hacer todo más rápido sin pensar." },
+            { m: "idle", t: "Es para cuando necesitas dejar de darle vueltas y empezar a moverte." },
+            { m: "blush", t: "La probé entrenando y casi me paso de intensidad." },
+            { m: "happy", t: "Eso sí que es una buena señal." },
+            { m: "music", t: "Quiero que la tengas. Actívala cuando necesites ese pequeño empujón." },
+          ],
+          progressCount: (g) => g.player.streak || 0, progressGoal: 2,
+          snap: () => ({}),
+          check: (g) => (g.player.streak || 0) >= 2 },
+        /* ENTREGA — Cassette «FULL SPEED» (final:true: cierra el capítulo 1 y entrega el
+           cassette; su intro es la reacción que el documento escribe al principio de
+           "CAPÍTULO 3 — POWER BEAT") */
+        { title: "FULL SPEED", final: true,
+          intro: [
+            { m: "happy", t: "FULL SPEED te queda bastante bien." },
+            { m: "idle", t: "Pero no todo es velocidad." },
+          ],
+          grantItem: "cassette_full_speed", reveal: "cassette_full_speed" },
+      ] },
+    { id: "cap2", title: "POWER BEAT", trigger: () => true,
+      stages: [
+        { title: "POWER BEAT", zone: "atico",
+          objective: "Consigue XP en FUE durante 2 días.",
+          intro: [
+            { m: "seria", t: "Hay momentos en los que necesitas fuerza." },
+            { m: "music", t: "Por eso he hecho otra mezcla: POWER BEAT." },
+            { m: "idle", t: "Tiene una base mucho más pesada." },
+            { m: "blush", t: "De esas que hacen que hasta preparar la mochila parezca una misión importante." },
+            { m: "happy", t: "Úsala cuando estés trabajando la fuerza." },
+            { m: "seria", t: "No para hacerte invencible. Solo para darte ese momento de energía en el que dices: vale, puedo con esto." },
+          ],
+          progressCount: (g, snap) => Object.entries(g.logs || {}).filter(([d, l]) => d >= snap.since && l.closed && l.gym).length, progressGoal: 2,
+          snap: () => ({ since: todayStr() }),
+          check: (g, snap) => Object.entries(g.logs || {}).filter(([d, l]) => d >= snap.since && l.closed && l.gym).length >= 2 },
+        { title: "POWER BEAT", final: true,
+          intro: [
+            { m: "happy", t: "La fuerza está bien." },
+            { m: "idle", t: "Pero hay algo todavía más difícil: concentrarse." },
+          ],
+          grantItem: "cassette_power_beat", reveal: "cassette_power_beat" },
+      ] },
+    { id: "cap3", title: "LOCK IN", trigger: () => true,
+      stages: [
+        { title: "LOCK IN", zone: "atico",
+          objective: "Consigue XP en RES durante 2 días.",
+          intro: [
+            { m: "seria", t: "Puedes tener tiempo, energía y ganas y acabar mirando cualquier cosa menos lo que estabas haciendo." },
+            { m: "blush", t: "Soy experta. Una vez organicé una playlist durante dos horas para evitar una tarea." },
+            { m: "music", t: "Por eso hice LOCK IN." },
+            { m: "idle", t: "Menos ruido, menos distracciones." },
+            { m: "happy", t: "Quiero que lo pruebes cuando necesites mantener la cabeza en una cosa." },
+          ],
+          progressCount: (g, snap) => Object.entries(g.logs || {}).filter(([d, l]) => d >= snap.since && l.closed && (l.habitsDone || []).length > 0).length, progressGoal: 2,
+          snap: () => ({ since: todayStr() }),
+          check: (g, snap) => Object.entries(g.logs || {}).filter(([d, l]) => d >= snap.since && l.closed && (l.habitsDone || []).length > 0).length >= 2 },
+        { title: "LOCK IN", final: true,
+          intro: [
+            { m: "happy", t: "¿Sabes qué problema tiene una playlist perfecta?" },
+            { m: "idle", t: "Que no puede hacer todo el trabajo." },
+          ],
+          grantItem: "cassette_lock_in", reveal: "cassette_lock_in" },
+      ] },
+    { id: "cap4", title: "GOOD ENERGY", trigger: () => true,
+      stages: [
+        { title: "GOOD ENERGY", zone: "atico",
+          objective: "Consigue XP en NUT durante 2 días.",
+          intro: [
+            { m: "seria", t: "Puedes tener la mejor música, pero si no cuidas lo que metes en tu cuerpo, tarde o temprano se nota." },
+            { m: "happy", t: "No voy a convertirme en tu nutricionista." },
+            { m: "blush", t: "Tengo límites." },
+            { m: "music", t: "Pero sí hice una mezcla para esos días en los que quieres sentirte con energía." },
+            { m: "happy", t: "GOOD ENERGY." },
+            { m: "idle", t: "La idea es sencilla: comer bien, beber agua y no tratar la alimentación como algo secundario." },
+            { m: "seria", t: "La música puede acompañarte, pero el cuerpo necesita combustible." },
+          ],
+          progressCount: (g, snap) => Object.entries(g.logs || {}).filter(([d, l]) => d >= snap.since && l.closed && (l.kcal || 0) >= g.player.goals.kcal && (l.prot || 0) >= g.player.goals.protein).length, progressGoal: 2,
+          snap: () => ({ since: todayStr() }),
+          check: (g, snap) => Object.entries(g.logs || {}).filter(([d, l]) => d >= snap.since && l.closed && (l.kcal || 0) >= g.player.goals.kcal && (l.prot || 0) >= g.player.goals.protein).length >= 2 },
+        { title: "GOOD ENERGY", final: true,
+          intro: [
+            { m: "idle", t: "Ahora viene mi cassette favorito." },
+            { m: "happy", t: "No porque sea el más potente." },
+          ],
+          grantItem: "cassette_good_energy", reveal: "cassette_good_energy" },
+      ] },
+    { id: "cap5", title: "SLOW DOWN", trigger: () => true,
+      stages: [
+        { title: "SLOW DOWN", zone: "atico",
+          objective: "Cumple el objetivo de sueño durante 2 días.",
+          intro: [
+            { m: "music", t: "Precisamente porque no intenta serlo." },
+            { m: "seria", t: "SLOW DOWN." },
+            { m: "idle", t: "No todo tiene que servir para acelerar." },
+            { m: "happy", t: "A veces necesitas que alguien te recuerde que puedes bajar el ritmo." },
+            { m: "blush", t: "Incluso yo necesito eso." },
+            { m: "idle", t: "Dormir bien, descansar, dejar que la cabeza se apague." },
+            { m: "music", t: "Esta mezcla está hecha para eso." },
+            { m: "happy", t: "No tienes que hacer nada espectacular. Solo parar un poco." },
+          ],
+          progressCount: (g, snap) => Object.entries(g.logs || {}).filter(([d, l]) => d >= snap.since && l.closed && l.sleep != null && l.sleep >= g.player.goals.sleepGoal).length, progressGoal: 2,
+          snap: () => ({ since: todayStr() }),
+          check: (g, snap) => Object.entries(g.logs || {}).filter(([d, l]) => d >= snap.since && l.closed && l.sleep != null && l.sleep >= g.player.goals.sleepGoal).length >= 2 },
+        { title: "SLOW DOWN", final: true,
+          intro: [
+            { m: "happy", t: "Ya tenemos cinco." },
+            { m: "idle", t: "Y me falta uno que me costó bastante." },
+          ],
+          grantItem: "cassette_slow_down", reveal: "cassette_slow_down" },
+      ] },
+    { id: "cap6", title: "CLEAR MIND", trigger: () => true,
+      stages: [
+        { title: "CLEAR MIND", zone: "atico",
+          objective: "Consigue XP en MEN durante 2 días.",
+          intro: [
+            { m: "music", t: "CLEAR MIND." },
+            { m: "seria", t: "La cabeza es complicada." },
+            { m: "idle", t: "Puedes estar motivado y aun así tener un día horrible." },
+            { m: "happy", t: "Puedes estar cansado sin estar físicamente cansado." },
+            { m: "blush", t: "Y puedes pasar veinte minutos mirando una pantalla sin saber qué estabas haciendo." },
+            { m: "happy", t: "Créeme, me pasa." },
+            { m: "music", t: "Esta mezcla no intenta hacerte feliz a la fuerza." },
+            { m: "seria", t: "Solo intenta limpiar un poco el ruido." },
+          ],
+          progressCount: (g, snap) => Object.entries(g.logs || {}).filter(([d, l]) => d >= snap.since && l.closed && (l.form === "alza" || l.form === "buen")).length, progressGoal: 2,
+          snap: () => ({ since: todayStr() }),
+          check: (g, snap) => Object.entries(g.logs || {}).filter(([d, l]) => d >= snap.since && l.closed && (l.form === "alza" || l.form === "buen")).length >= 2 },
+        { title: "CLEAR MIND", final: true,
+          intro: [
+            { m: "happy", t: "Ya tienes casi toda la colección." },
+            { m: "idle", t: "FULL SPEED, POWER BEAT, LOCK IN, GOOD ENERGY, SLOW DOWN y CLEAR MIND." },
+          ],
+          grantItem: "cassette_clear_mind", reveal: "cassette_clear_mind" },
+      ] },
+    { id: "cap7", title: "Lo que falta", trigger: () => true,
+      stages: [
+        /* CAPÍTULO 8 — Lo que falta (sin cassette: desarrolla la historia) */
+        { title: "Lo que falta", zone: "atico",
+          objective: "Completa un objetivo existente de progreso general.",
+          intro: [
+            { m: "music", t: "Seis cassettes para seis momentos distintos." },
+            { m: "seria", t: "Pero mientras los hacía me di cuenta de algo." },
+            { m: "idle", t: "Yo estaba intentando separar cosas que en realidad nunca están separadas." },
+            { m: "happy", t: "La fuerza afecta a la cabeza. Dormir afecta al entrenamiento. Comer bien cambia tu energía." },
+            { m: "blush", t: "Y estar de buen humor hace que todo parezca un poquito más fácil." },
+            { m: "music", t: "Me falta una última mezcla." },
+            { m: "idle", t: "Una que no sea para un stat concreto." },
+          ],
+          progressCount: (g, snap) => daysGoalsCompletedSince(g, snap.since), progressGoal: 3,
+          snap: () => ({ since: todayStr() }),
+          check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3 },
+        /* CAPÍTULO 9 — ALL IN (setup: su propia reacción al CAP8 ya abre esta etapa, tal
+           como está escrito en el documento — no hace falta partir nada aquí) */
+        { title: "ALL IN", zone: "atico",
+          objective: "Completa un hito global de progreso existente.",
+          intro: [
+            { m: "happy", t: "Lo sabía." },
+            { m: "music", t: "Tenías que llegar hasta aquí." },
+            { m: "seria", t: "He terminado el último cassette." },
+            { m: "idle", t: "ALL IN." },
+            { m: "happy", t: "No es más rápido. No es más fuerte. No es más relajado." },
+            { m: "seria", t: "Es todo a la vez." },
+            { m: "music", t: "Porque al final no puedes separar una parte de ti del resto." },
+            { m: "idle", t: "Entrenar, comer, descansar, concentrarte y tener la cabeza en su sitio forman parte de lo mismo." },
+            { m: "blush", t: "Sí, quizá me estoy poniendo un poco filosófica." },
+            { m: "happy", t: "Pero me gusta." },
+            { m: "seria", t: "Quiero que lo tengas. Este no lo voy a volver a regalar." },
+          ],
+          snap: (g) => ({ tierId: g.tier.id, ovr: calcOVR(g.player.stats) }),
+          check: (g, snap) => g.tier.id !== snap.tierId || calcOVR(g.player.stats) > snap.ovr },
+        /* ENTREGA — Cassette «ALL IN» */
+        { title: "ALL IN", final: true,
+          intro: [
+            { m: "happy", t: "Mira eso." },
+            { m: "idle", t: "Ya no estás usando la música para que te diga qué hacer." },
+          ],
+          grantItem: "cassette_all_in", reveal: "cassette_all_in" },
+      ] },
+    { id: "cap8", title: "Tu propio ritmo", trigger: () => true,
+      stages: [
+        /* CAPÍTULO 10 — Tu propio ritmo (sin cassette: desarrolla la historia) */
+        { title: "Tu propio ritmo", zone: "atico",
+          objective: "Mantén una racha de 4 días.",
+          intro: [
+            { m: "seria", t: "La estás usando para acompañarte." },
+            { m: "music", t: "Eso era lo que quería conseguir desde el principio." },
+            { m: "happy", t: "No hay una canción que haga que entrenes por ti." },
+            { m: "idle", t: "Solo canciones que te ayudan a entrar en el estado adecuado." },
+            { m: "blush", t: "Y tu ritmo no tiene que ser igual al mío." },
+            { m: "happy", t: "Solo tiene que ser tuyo." },
+          ],
+          progressCount: (g) => g.player.streak || 0, progressGoal: 4,
+          snap: () => ({}),
+          check: (g) => (g.player.streak || 0) >= 4 },
+        /* FINAL — Tu playlist (última etapa: final:true, sin cassette — los 7 ya se
+           entregaron antes; solo cierra la campaña y desbloquea el modo infinito, ver
+           refreshAlexiaVisit) */
+        { title: "Tu playlist", zone: "atico", final: true,
+          intro: [
+            { m: "happy", t: "Así que hemos llegado al final." },
+            { m: "idle", t: "Bueno... al final de esta historia." },
+            { m: "music", t: "Porque la música no se termina." },
+            { m: "seria", t: "Tienes los siete cassettes." },
+            { m: "happy", t: "Los seis para momentos concretos y ALL IN para cuando quieras ir a por todo." },
+            { m: "blush", t: "Aunque espero que no lo pongas para hacer absolutamente cualquier cosa." },
+            { m: "idle", t: "No quiero ser responsable de que limpies tu habitación a velocidad absurda." },
+            { m: "happy", t: "A partir de ahora puedes usarlos cuando quieras." },
+            { m: "music", t: "Y yo seguiré preparando mezclas." },
+            { m: "seria", t: "Todavía hay canciones que no he encontrado." },
+            { m: "happy", t: "Así que supongo que nos veremos." },
+          ],
+          setFlags: ["alexiaStoryComplete"] },
+      ] },
+  ],
+};
+/* MODO INFINITO de Alexia (ver refreshAlexiaVisit): 1 día activa cada 5 (mismo patrón que
+   usaba Coco v1, distinto del ciclo alterno de Coco v2 — el documento de Alexia es
+   explícito: "Alexia aparece 1 día cada 5 días"), solo tras completar su campaña
+   (alexiaStoryComplete). Entrega 1 cassette aleatorio del pool de 6 (nunca ALL IN, que
+   queda como recompensa única de historia). */
+const ALEXIA_GREETING = [
+  { m: "happy", t: "Otra vez por aquí." },
+  { m: "music", t: "Llevo días dándole vueltas a una mezcla nueva." },
+  { m: "idle", t: "Toma, prueba esta." },
+];
+
 /* registro único: desde la fusión de La Metrópolis dentro de La Ciudad ya no hace
    falta separar por mapa (todas las zonas conviven en el mismo SVG). */
-const STORIES = { ...toStories(QUESTS), elisa: ELISA_STORY, milly: MILLY_STORY, yuna: YUNA_STORY, lopez: LOPEZ_STORY, igor: IGOR_STORY, lisa: KARLA_STORY, beka: BEKA_STORY, nina: NINA_STORY, coco: COCO_STORY, vera: VERA_STORY };
+const STORIES = { ...toStories(QUESTS), elisa: ELISA_STORY, milly: MILLY_STORY, yuna: YUNA_STORY, lopez: LOPEZ_STORY, igor: IGOR_STORY, lisa: KARLA_STORY, beka: BEKA_STORY, nina: NINA_STORY, coco: COCO_STORY, vera: VERA_STORY, alexia: ALEXIA_STORY };
 
 /* ============================================================
    OBJETOS COLECCIONABLES · dos tipos: "consumable" (los usas, dan
@@ -6168,7 +6502,33 @@ const ITEMS = {
     desc: "El pez que Nina nunca olvidó. Lo habéis conseguido juntos." },
   cangrejo: { name: "Cangrejo", icon: "🦀", img: "/images/peces/cangrejo.webp", kind: "fish", rarity: "especial", sellMin: 15, sellMax: 25,
     desc: "Técnicamente no es un pez. Pero ha mordido el anzuelo, así que cuenta como captura." },
+  /* Cassettes de Alexia (ver ALEXIA_STORY y activateCassette/applyDayClose más abajo):
+     kind:"cassette", no consumibles ni vendibles (a diferencia de los cuadros de Vera, el
+     documento es explícito: "no son recuerdos vendibles, son objetos funcionales" — por
+     eso no llevan sellMin/sellMax). boostStat/boostMult/boostDays son los datos que lee
+     activateCassette() para montar game.activeBoost; "ALL" en boostStat activa los seis
+     stats a la vez (solo ALL IN). Todavía no hay ilustración propia de la mayoría de
+     cassettes (el documento lo dice explícitamente): sin "img", caen al icono de emoji 📼
+     hasta que lleguen los assets reales — mismo criterio que ya se usó con
+     bebida_energetica/zapatillas antes de tener imagen. FULL SPEED ya tiene arte propio. */
+  cassette_full_speed: { name: "Cassette: FULL SPEED", icon: "📼", img: "/images/objects/cassette_full_speed.webp", kind: "cassette", boostStat: "FIS", boostMult: 1.5, boostDays: 4,
+    desc: "Para cuando necesitas dejar de darle vueltas y empezar a moverte. +50% XP FIS durante 4 días." },
+  cassette_power_beat: { name: "Cassette: POWER BEAT", icon: "📼", kind: "cassette", boostStat: "FUE", boostMult: 1.5, boostDays: 4,
+    desc: "Base pesada, de las que hacen que hasta preparar la mochila parezca importante. +50% XP FUE durante 4 días." },
+  cassette_lock_in: { name: "Cassette: LOCK IN", icon: "📼", kind: "cassette", boostStat: "RES", boostMult: 1.5, boostDays: 4,
+    desc: "Menos ruido, menos distracciones. +50% XP RES durante 4 días." },
+  cassette_good_energy: { name: "Cassette: GOOD ENERGY", icon: "📼", kind: "cassette", boostStat: "NUT", boostMult: 1.5, boostDays: 4,
+    desc: "Para los días en los que quieres sentirte con energía de verdad. +50% XP NUT durante 4 días." },
+  cassette_slow_down: { name: "Cassette: SLOW DOWN", icon: "📼", kind: "cassette", boostStat: "REC", boostMult: 1.5, boostDays: 4,
+    desc: "No todo tiene que servir para acelerar. +50% XP REC durante 4 días." },
+  cassette_clear_mind: { name: "Cassette: CLEAR MIND", icon: "📼", kind: "cassette", boostStat: "MEN", boostMult: 1.5, boostDays: 4,
+    desc: "No intenta hacerte feliz a la fuerza. Solo limpia un poco el ruido. +50% XP MEN durante 4 días." },
+  cassette_all_in: { name: "Cassette: ALL IN", icon: "📼", kind: "cassette", boostStat: "ALL", boostMult: 1.5, boostDays: 4,
+    desc: "No es más rápido, ni más fuerte, ni más relajado. Es todo a la vez. +50% XP a todos los stats durante 4 días. Recompensa única de historia: nunca vuelve a aparecer en el modo infinito." },
 };
+/* pool del modo infinito de Alexia (ver refreshAlexiaVisit): los 6 cassettes de stat,
+   nunca ALL IN — construido a partir de los ITEMS reales, no de una lista aparte. */
+const ALEXIA_CASSETTE_POOL = Object.keys(ITEMS).filter((id) => ITEMS[id].kind === "cassette" && id !== "cassette_all_in");
 /* pool del sobre diario del Casino (ver ITEMS kind:"card" y SobreReveal/openSobre más
    abajo): construido a partir de los ITEMS reales existentes, tal como pide el documento
    ("no inventar nombres de cartas que no existan") — nunca una lista aparte que pueda
@@ -6235,6 +6595,8 @@ const CARDS = [
     bio: "La tendera del Centro Comercial. Pija, coqueta y muy buena negociante — atiende un día sí y otro no, y siempre compra lo que ya no quieres." },
   { npc: "vera", unlocked: (g) => !!g.veraMet,
     bio: "Artista observadora, algo despistada. Busca inspiración en tu rutina y termina pintando momentos que merece la pena recordar." },
+  { npc: "alexia", unlocked: (g) => !!g.alexiaMet,
+    bio: "Relajada, segura y muy ligada a la música. Convierte distintos estados mentales en cassettes que dan un empujón temporal a tu entrenamiento." },
 ];
 
 /* --- EL PERIÓDICO · plantillas con titular y cuerpo, por secciones.
@@ -7092,16 +7454,22 @@ function FishingSequence({ entry, onConfirm }) {
    el id de uno de los 8 ITEMS de tipo "painting", o el sentinel especial "vera_completion"
    (cierre de campaña, sin objeto de inventario: usa vera_playa_regalo con un tratamiento
    ligeramente más grande, tal como pide el documento). */
+/* subtítulo genérico según el tipo de objeto — "painting" (cuadros de Vera), "cassette"
+   (mezclas de Alexia) y cualquier otro kind futuro caen a un "Nuevo objeto conseguido"
+   neutro en vez de dar por hecho que todo lo que pasa por esta pantalla es un cuadro. */
+const REWARD_KIND_LABEL = { painting: "Nuevo cuadro conseguido", cassette: "Nuevo cassette conseguido" };
 function CuadroReveal({ itemId, onClose }) {
   const isCompletion = itemId === "vera_completion";
   const item = !isCompletion ? ITEMS[itemId] : null;
   const img = isCompletion ? NPCS.vera.arts.playa_regalo : item && item.img;
   const title = isCompletion ? "La historia de Vera" : item && item.name;
-  const subtitle = isCompletion ? "Campaña completada · Inspiración libre desbloqueada" : "Nuevo cuadro conseguido";
+  const subtitle = isCompletion ? "Campaña completada · Inspiración libre desbloqueada"
+    : REWARD_KIND_LABEL[item && item.kind] || "Nuevo objeto conseguido";
+  const glow = isCompletion ? NPCS.vera.color : item && item.kind === "cassette" ? NPCS.alexia.color : NPCS.vera.color;
   useEffect(() => { rewardShimmer(); }, [itemId]);
   return (
     <div className="cuadro-reveal-ov" onClick={onClose}>
-      <div className={"cuadro-reveal-card" + (isCompletion ? " cuadro-reveal-big" : "")} style={{ "--cuadro-glow": NPCS.vera.color }}>
+      <div className={"cuadro-reveal-card" + (isCompletion ? " cuadro-reveal-big" : "")} style={{ "--cuadro-glow": glow }}>
         <div className="cuadro-reveal-glow" />
         {img && <img src={img} alt={title} className="cuadro-reveal-img" />}
         <div className="cuadro-reveal-name">{title}</div>
@@ -7649,13 +8017,23 @@ function ItemLightbox({ item, qty, actions, onClose }) {
    cantidad, como un inventario de videojuego); nombre/descripción/acción (Usar → XP a una
    stat, o Regalar a su personaje) se ven al tocar un slot, en el mismo ItemLightbox que ya
    usaba la tienda del Casino para el zoom. */
-function InventoryPanel({ game, onClose, onUseItem, onGiveItem }) {
+function InventoryPanel({ game, onClose, onUseItem, onGiveItem, onActivateCassette }) {
   const [zoomId, setZoomId] = useState(null);
+  /* activar un cassette mientras ya hay otro puesto pide confirmación explícita (el
+     documento lo exige: "requiere confirmación y sustituye el anterior"); activar sin
+     nada puesto no necesita ese paso extra. */
+  const [confirmSwap, setConfirmSwap] = useState(null); // itemId en espera de confirmación
   const inv = Object.entries(game.inventory || {}).filter(([, qty]) => qty > 0);
   const zoomItem = zoomId ? ITEMS[zoomId] : null;
   const zoomQty = zoomId ? (game.inventory || {})[zoomId] || 0 : 0;
   const recipient = zoomItem && zoomItem.kind === "gift" ? CARDS.find((c) => c.npc === zoomItem.giveTo) : null;
   const canGive = recipient && recipient.unlocked(game);
+  const activeBoost = game.activeBoost;
+  const activeCassette = activeBoost ? ITEMS[activeBoost.itemId] : null;
+  const tryActivate = (id) => {
+    if (activeBoost && activeBoost.itemId !== id) { setConfirmSwap(id); return; }
+    onActivateCassette(id); setZoomId(null);
+  };
   return (
     <div className="overlay" style={{ background: "rgba(5,7,13,.75)", zIndex: 65, alignItems: "flex-end", padding: 0 }} onClick={onClose}>
       <div className="sheet" style={{ maxHeight: "78vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
@@ -7689,8 +8067,30 @@ function InventoryPanel({ game, onClose, onUseItem, onGiveItem }) {
               ) : (
                 <div style={{ fontSize: 11.5, color: "#9a9e8e" }}>Todavía no conoces a {NPCS[zoomItem.giveTo].name} para dárselo.</div>
               ))}
+            {zoomItem.kind === "cassette" && (
+              activeBoost && activeBoost.itemId === zoomId ? (
+                <div style={{ fontSize: 12.5, color: "#5C7010", fontWeight: 600, textAlign: "center" }}>
+                  🔥 Activo · {activeBoost.daysLeft} {activeBoost.daysLeft === 1 ? "día" : "días"} restantes</div>
+              ) : (
+                <button className="btn-gold sm" style={{ width: "100%" }} onClick={() => tryActivate(zoomId)}>
+                  Activar · +{Math.round((zoomItem.boostMult - 1) * 100)}% XP {zoomItem.boostStat === "ALL" ? "todos los stats" : zoomItem.boostStat} · {zoomItem.boostDays} días</button>
+              ))}
           </>
         )} />
+      {confirmSwap && (
+        <div className="overlay" style={{ background: "rgba(5,7,13,.88)", zIndex: 95, padding: 14 }} onClick={() => setConfirmSwap(null)}>
+          <div className="sheet" style={{ maxWidth: 340 }} onClick={(e) => e.stopPropagation()}>
+            <div className="ptitle" style={{ fontSize: 15, marginBottom: 10 }}>🔥 Sustituir cassette activo</div>
+            <div style={{ fontSize: 13, color: "#26291D", lineHeight: 1.5, marginBottom: 14 }}>
+              Ya tienes <strong>{activeCassette && activeCassette.name}</strong> activo
+              ({activeBoost.daysLeft} {activeBoost.daysLeft === 1 ? "día" : "días"} restantes).
+              Activar <strong>{ITEMS[confirmSwap].name}</strong> ahora lo sustituye — el boost anterior se pierde.</div>
+            <button className="btn-gold sm" style={{ width: "100%", marginBottom: 8 }}
+              onClick={() => { onActivateCassette(confirmSwap); setConfirmSwap(null); setZoomId(null); }}>
+              Sustituir de todos modos</button>
+            <button className="btn-ghost sm" style={{ width: "100%" }} onClick={() => setConfirmSwap(null)}>Cancelar</button>
+          </div>
+        </div>)}
     </div>);
 }
 
@@ -8608,8 +9008,31 @@ function HomeTab({ game, photo, log, crest, crestScale }) {
   const pct = dayPct(log, p, todayStr());
   const notasHoy = notesOf(game, todayStr());
   const notasManana = notesOf(game, addDays(todayStr(), 1));
+  /* llama de boost activo (ver game.activeBoost/ITEMS kind:"cassette"): el documento pide
+     que aparezca en la pantalla principal mientras dure, y que al tocarla se vea el
+     cassette, el stat y el tiempo restante. */
+  const [showBoost, setShowBoost] = useState(false);
+  const boost = game.activeBoost;
+  const boostItem = boost ? ITEMS[boost.itemId] : null;
   return (
     <div style={{ padding: "18px 16px 96px" }}>
+      {boost && boostItem && (
+        <button onClick={() => setShowBoost(true)} className="btn-ghost sm"
+          style={{ display: "flex", alignItems: "center", gap: 6, margin: "0 auto 10px", background: "#2B140C",
+            color: "#EFEEE3", borderColor: "#F2542D" }}>
+          🔥 {boostItem.name} activo · {boost.daysLeft} {boost.daysLeft === 1 ? "día" : "días"}</button>)}
+      {showBoost && boost && boostItem && (
+        <div className="overlay" style={{ background: "rgba(5,7,13,.75)", zIndex: 65, padding: 14 }} onClick={() => setShowBoost(false)}>
+          <div className="sheet" style={{ maxWidth: 340, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 34 }}>🔥</div>
+            <div className="ptitle" style={{ fontSize: 15, marginTop: 6 }}>{boostItem.name}</div>
+            <div style={{ fontSize: 13, color: "#26291D", marginTop: 4 }}>
+              +{Math.round((boost.mult - 1) * 100)}% XP {boost.stat === "ALL" ? "en todos los stats" : boost.stat}</div>
+            <div style={{ fontSize: 12.5, color: "#6F7563", marginTop: 4 }}>
+              {boost.daysLeft} {boost.daysLeft === 1 ? "cierre de día restante" : "cierres de día restantes"}</div>
+            <button className="btn-ghost sm" style={{ width: "100%", marginTop: 14 }} onClick={() => setShowBoost(false)}>Cerrar</button>
+          </div>
+        </div>)}
       <div style={{ display: "flex", justifyContent: "center", marginTop: 6 }}>
         <PlayerCard player={p} photo={photo} club={game.club} crest={crest} crestScale={crestScale} />
       </div>
@@ -8646,15 +9069,18 @@ function HomeTab({ game, photo, log, crest, crestScale }) {
         </div>)}
       <div className="panel">
         <div className="ptitle">Progreso hacia el siguiente punto</div>
-        {STAT_KEYS.map((k) => (
+        {STAT_KEYS.map((k) => {
+          const boosted = boost && (boost.stat === k || boost.stat === "ALL");
+          return (
           <div key={k} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-            <span style={{ fontFamily: "'Oswald',sans-serif", width: 34, fontSize: 13 }}>{k}</span>
+            <span style={{ fontFamily: "'Oswald',sans-serif", width: 34, fontSize: 13 }}>{k}{boosted && " 🔥"}</span>
             <span style={{ fontFamily: "'Oswald',sans-serif", width: 24, fontSize: 14, color: "#16190F", fontWeight: 700 }}>{p.stats[k]}</span>
             <div className="track" style={{ flex: 1 }}>
-              <div className="fill" style={{ width: Math.min(100, ((p.xp[k] || 0) / xpToNext(p.stats[k])) * 100) + "%", background: "#CDF546" }} />
+              <div className="fill" style={{ width: Math.min(100, ((p.xp[k] || 0) / xpToNext(p.stats[k])) * 100) + "%", background: boosted ? "#8A5FD6" : "#CDF546" }} />
             </div>
             <span style={{ fontSize: 10, color: "#9a9e8e", width: 56, textAlign: "right" }}>{p.xp[k] || 0}/{xpToNext(p.stats[k])} XP</span>
-          </div>))}
+          </div>);
+        })}
       </div>
     </div>
   );
@@ -9131,6 +9557,26 @@ export default function App() {
       applyOnRead: { grantItem: "cuadro_generico", reveal: "cuadro_generico" } });
     return { ...out, veraFreeVisit: { day: today }, veraNextFreeDay: addDays(today, 7) };
   };
+  /* Alexia, modo infinito post-historia (ver ALEXIA_STORY): mismo patrón día-activo/ausente
+     que refreshVeraFreeVisit, pero con el ciclo 1 día activa / 4 ausente que pedía el
+     documento (el que tenía Coco en su v1, antes del rework a puesto fijo alterno) —
+     solo entrega un cassette de stat al azar (nunca ALL IN, que es recompensa única de
+     historia — ver ALEXIA_CASSETTE_POOL), y solo tras completar la campaña
+     (game.alexiaStoryComplete). */
+  const refreshAlexiaVisit = (g) => {
+    if (!g.alexiaStoryComplete) return g;
+    const today = todayStr();
+    if (g.alexiaVisit && g.alexiaVisit.day === today) return g;
+    let nextDay = g.alexiaNextVisitDay;
+    if (g.alexiaVisit && g.alexiaVisit.day !== today && !nextDay) nextDay = addDays(g.alexiaVisit.day, 5);
+    if (nextDay && dayDiff(today, nextDay) > 0) {
+      return g.alexiaVisit ? { ...g, alexiaVisit: null, alexiaNextVisitDay: nextDay } : g;
+    }
+    const itemId = ALEXIA_CASSETTE_POOL[Math.floor(Math.random() * ALEXIA_CASSETTE_POOL.length)];
+    let out = addScene(g, "Alexia", ALEXIA_GREETING, { zone: "atico",
+      applyOnRead: { grantItem: itemId, reveal: itemId } });
+    return { ...out, alexiaVisit: { day: today }, alexiaNextVisitDay: addDays(today, 5) };
+  };
   /* saludo de Coco de los días que está (ver COCO_GREETING): una sola escena por día de
      visita y solo con su campaña ya cerrada — mientras la historia sigue viva son sus
      capítulos los que hablan. game.cocoGreetDay evita repetirlo al reentrar en la zona. */
@@ -9144,7 +9590,7 @@ export default function App() {
      y, si es la primera vez, encola su escena de presentación. Se llama tras cualquier
      acción que pueda mover el requisito: media, goles de carrera o ascenso de categoría. */
   const checkZoneUnlocks = (g) => {
-    let out = refreshCocoGreeting(refreshVeraFreeVisit(refreshCocoVisit(g)));
+    let out = refreshAlexiaVisit(refreshCocoGreeting(refreshVeraFreeVisit(refreshCocoVisit(g))));
     [...ZONES, ...EXTRA_NPCS].forEach((z) => {
       if (!z.metFlag || out[z.metFlag] || (out.introQueued && out.introQueued[z.metFlag]) || !z.unlocked(out)) return;
       /* el flag "ya lo conoces" no se marca aquí: se marca cuando el jugador lee la escena
@@ -9456,8 +9902,10 @@ export default function App() {
     while (d < yesterday) {
       const log = out.logs[d] || EMPTY_LOG();
       if (!log.closed) {
-        const r = applyDayClose(out.player, log, d);
+        const { boost, next } = consumeBoostDay(out.activeBoost);
+        const r = applyDayClose(out.player, log, d, boost);
         out.player = r.player;
+        out.activeBoost = next;
         out.logs[d] = { ...log, closed: true, pct: r.pct, form: r.form };
         anyUp = anyUp.concat(r.ups);
         if (r.decayed) out = addMsg(out, "Elisa", "Te veo apagado en los entrenamientos. Dos días flojos seguidos y tu físico lo nota: has perdido puntos. Reacciona. 📉", { mood: "angry" });
@@ -9802,6 +10250,18 @@ export default function App() {
     if (reaction) out = addMsg(out, NPCS[reaction.npc].name, reaction.text, { mood: "happy" });
     return out;
   });
+  /* activar un cassette (ver ITEMS kind:"cassette"/game.activeBoost/applyDayClose): no se
+     gasta al activarlo — es una colección, no un consumible, y el documento deja claro que
+     "el jugador puede guardarlos para usarlos más adelante". Solo puede haber un boost
+     activo a la vez; sustituir uno ya en marcha lo decide el jugador antes de llamar a esto
+     (ver InventoryPanel, que pide confirmación si ya hay otro activo). */
+  const activateCassette = (itemId) => setGame((g) => {
+    const def = ITEMS[itemId];
+    if (!def || def.kind !== "cassette" || !(g.inventory || {})[itemId]) return g;
+    pushToast(`🔥 ${def.name} activado · ${def.boostDays} días`);
+    buzz([20, 30, 20]);
+    return { ...g, activeBoost: { itemId, stat: def.boostStat, mult: def.boostMult, daysLeft: def.boostDays } };
+  });
   const addWeight = (kg) => { setGame((g) => {
     const p = g.player;
     const stats = { ...p.stats }, xp = { ...p.xp };
@@ -9938,8 +10398,9 @@ export default function App() {
   const closePendingDay = (dateStr) => setGame((g) => {
     const log = g.logs[dateStr];
     if (!log || log.closed) return g;
-    const r = applyDayClose(g.player, log, dateStr);
-    let out = { ...g, player: r.player, logs: { ...g.logs, [dateStr]: { ...log, closed: true, pct: r.pct, form: r.form } } };
+    const { boost, next } = consumeBoostDay(g.activeBoost);
+    const r = applyDayClose(g.player, log, dateStr, boost);
+    let out = { ...g, player: r.player, activeBoost: next, logs: { ...g.logs, [dateStr]: { ...log, closed: true, pct: r.pct, form: r.form } } };
     if (r.decayed) out = addMsg(out, "Elisa", "Te veo apagado en los entrenamientos. Dos días flojos seguidos y tu físico lo nota: has perdido puntos. Reacciona. 📉", { mood: "angry" });
     if (r.ups.length) {
       const counts = {};
@@ -10088,7 +10549,8 @@ export default function App() {
       {tab === "chat" && showQuests && (
         <QuestPanel game={game} onClose={() => setShowQuests(false)} storiesRegistry={STORIES} />)}
       {tab === "chat" && showInventory && (
-        <InventoryPanel game={game} onClose={() => setShowInventory(false)} onUseItem={useItem} onGiveItem={giveItemTo} />)}
+        <InventoryPanel game={game} onClose={() => setShowInventory(false)} onUseItem={useItem} onGiveItem={giveItemTo}
+          onActivateCassette={activateCassette} />)}
       {game.pendingSummary && !liveMatch && (
         <div className="overlay" style={{ background: "radial-gradient(ellipse at 50% 0%, #0E3320, #05070d 75%)", overflowY: "auto" }}>
           <div className="pop-in" style={{ width: "100%", maxWidth: 340, padding: "30px 0" }}>

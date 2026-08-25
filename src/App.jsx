@@ -1606,6 +1606,107 @@ const toStories = (registry) => {
                     en game) que otros personajes podrán consultar
                     más adelante.
    ============================================================ */
+/* helper: camino elegido en el capítulo 11 ("cima" | "equilibrio" | "abierto" | null si aún
+   no se ha llegado a esa decisión), usado por los introBuild de C12/FINAL/EPÍLOGO para
+   sustituir una línea concreta según el camino — ver "8 · Variantes por decisión del
+   capítulo 11" en FUTABITA_Elisa_Rework_3.0.docx. */
+const elisaPathOf = (g) => g.elisaPath_cima ? "cima" : g.elisaPath_equilibrio ? "equilibrio" : g.elisaPath_abierto ? "abierto" : null;
+
+/* línea "Hay gente que dice..." del capítulo 12 — es la que sustituye introBuild según
+   el camino del 11 (ver sección 8 del documento); el texto de aquí es el "por defecto"
+   (sin camino elegido), idéntico al original. La línea siguiente ("Lo que no saben…")
+   no forma parte de la sustitución: se queda igual en las cuatro variantes. */
+const ELISA_C12_PATH_LINE = { m: "decidida", t: "Hay gente que dice que has llegado en el momento adecuado. Y tienen razón: has llegado en el momento adecuado." };
+const ELISA_C12_PATH_LINES = {
+  cima: { m: "decidida", t: "Dijiste que lo querías todo. Pues esto es «todo» visto de cerca. Sigue sin ser suficiente y ya lo sabías cuando lo dijiste." },
+  equilibrio: { m: "suave", t: "Dijiste que querías llegar sin dejar de ser tú. Y te he mirado mucho este año, más de lo que parece. Sigues siendo tú." },
+  abierto: { m: "idle", t: "Aquel día dejaste la página en blanco. No te voy a preguntar si ya sabes qué poner. Sólo te digo que la libreta la sigues llevando encima." },
+};
+/* última línea del bloque B del FINAL — mismo patrón, "por defecto" == "equilibrio". */
+const ELISA_FINAL_PATH_LINE = { m: "suave", t: "Con Nico aprendí a construir un jugador. Contigo he aprendido a acompañar a uno. Que resulta que es un oficio distinto." };
+const ELISA_FINAL_PATH_LINES = {
+  cima: { m: "suave", t: "Con Nico aprendí a construir un jugador. Contigo he aprendido que se puede empujar a alguien hasta arriba sin romperlo. No sabía que se podía." },
+  equilibrio: ELISA_FINAL_PATH_LINE,
+  abierto: { m: "suave", t: "Con Nico aprendí a construir un jugador. Contigo he aprendido a esperar. Y mira que se me daba mal." },
+};
+/* línea extra del epílogo, insertada justo antes del cierre solo si se eligió un camino
+   en el capítulo 11 — por defecto no hay línea añadida (ver doc, sección 8). El marcador
+   se filtra del array por defecto y solo se sustituye por una línea real si hay camino. */
+const ELISA_EPILOGO_PATH_MARKER = { m: "happy", t: "" };
+const ELISA_EPILOGO_PATH_LINES = {
+  cima: { m: "happy", t: "Y sigo teniendo por escrito que si algún día quieres bajarte, frenamos. Página uno. Sigue ahí." },
+  equilibrio: { m: "happy", t: "Y sigues siendo tú. Te lo he recordado unas cuantas veces, sí. Para eso me pagan." },
+  abierto: { m: "happy", t: "Por cierto, la página uno. Ya no está en blanco. No la he leído, tranquilo. Sólo he visto que hay letra." },
+};
+
+const ELISA_C12_INTRO = [
+  { m: "orgullosa", t: "Europa." },
+  { m: "idle", t: "Y lo has hecho manteniendo la rutina, que es exactamente la parte que no va a mirar nadie." },
+  { m: "happy", t: "Y por eso el ascensor de este edificio tiene espejo, música y un señor que te saluda por tu apellido." },
+  { m: "idle", t: "¿Te acuerdas de la primera vez que hablamos? Yo había venido en autobús." },
+  { m: "happy", t: "Traía una carpeta con dos páginas y media dentro. Y media era la portada." },
+  { m: "idle", t: "Esta mañana he impreso la carpeta actual por curiosidad." },
+  { m: "sorprendida", t: "No me entra en el bolso. He tenido que traerla en una bolsa." },
+  { m: "orgullosa", t: "Y sigo viendo al mismo jugador, por si te lo estabas preguntando." },
+  { m: "suave", t: "Solo que ahora sabes de lo que eres capaz, que es lo único que ha cambiado de verdad." },
+  { m: "idle", t: "Este ático es tuyo. Esa vista es tuya. Ese sofá absurdo también, y espero que no lo hayas elegido tú." },
+  { m: "decidida", t: "Y nada de esto empezó con un fichaje ni con una oferta." },
+  { m: "idle", t: "Empezó un martes cualquiera, cuando cerraste un día entero solo porque una desconocida en zapatillas te lo pidió en la calle." },
+  { m: "suave", t: "Entrenar. Comer. Dormir. Volver a intentarlo." },
+  { m: "orgullosa", t: "Todo lo demás vino detrás, y vino solo." },
+  { m: "decidida", t: "Falta una cosa, y ya sabes cuál." },
+  ELISA_C12_PATH_LINE,
+  { m: "decidida", t: "Lo que no saben es que el momento lo construiste tú, día a día, cuando todavía no era momento de nada." },
+  { m: "idle", t: "Quiero verte en Champions. Ganando el partido que toque, con la racha entera y con la mejor media de toda tu carrera." },
+  { m: "happy", t: "Y después te dejo descansar." },
+  { m: "happy", t: "Un poco." },
+];
+const ELISA_FINAL_INTRO = [
+  { m: "orgullosa", t: "Champions. Con la racha entera y con tu mejor media." },
+  { m: "happy", t: "Ya no queda ninguna categoría por encima que tenga nombre de competición." },
+  { m: "idle", t: "La siguiente no es una competición. Es la palabra que la gente usa cuando ya ha dejado de discutir contigo." },
+  { m: "idle", t: "Baja conmigo al césped. Está vacío. Me gusta mucho más así y nunca se lo he dicho a nadie." },
+  { m: "orgullosa", t: "Cuando te conocí estabas convencido de que tenías que demostrar algo en cada minuto de cada partido." },
+  { m: "idle", t: "Yo solo quería darte una oportunidad y ver qué pasaba. Nada más. No tenía ningún plan." },
+  { m: "orgullosa", t: "Luego me obligaste a darte otra. Y otra. Y otra más." },
+  { m: "happy", t: "Hubo semanas en las que trabajé el triple de lo que cobraba, y te juro que lo pensé en voz alta más de una vez." },
+  { m: "suave", t: "Pero en algún momento pasó algo con lo que yo no contaba." },
+  { m: "suave", t: "Dejé de mirar hasta dónde podías llegar." },
+  { m: "orgullosa", t: "Y empecé a disfrutar de estar aquí para verlo." },
+  { m: "idle", t: "He visto tus primeras victorias. Tus días malos. Las semanas en las que no me cogías el teléfono." },
+  { m: "idle", t: "Y todas las veces que volviste al gimnasio sin que te viera nadie." },
+  ELISA_FINAL_PATH_LINE,
+  { m: "decidida", t: "Falta lo último. Y esto no te lo pido yo: te lo pide el sitio en el que ya estás." },
+  { m: "idle", t: "Quiero que llegues al último escalón. El que ya no es una categoría." },
+  { m: "idle", t: "El que es directamente una palabra." },
+  { m: "suave", t: "Y cuando lo hagas, quiero estar en la fila alta, lado izquierdo. Como siempre." },
+];
+const ELISA_EPILOGO_INTRO = [
+  { m: "idle", t: "Ocho en punto." },
+  { m: "suave", t: "Leyenda. Lo pone ahí, en el informe, con esa palabra tan ridícula y tan enorme." },
+  { m: "happy", t: "Y tú sigues llegando a la hora." },
+  { m: "happy", t: "Menos mal. Ya empezaba a pensar que había hecho un mal trabajo." },
+  { m: "idle", t: "Siéntate. Tu taza sigue ahí, la fea del borde saltado. No he dejado que la use nadie más." },
+  { m: "suave", t: "¿Sabes qué es lo raro de todo esto?" },
+  { m: "idle", t: "Durante meses pensé que el día que llegaras arriba dejaríamos de tener motivos para vernos aquí." },
+  { m: "happy", t: "Y resulta que no." },
+  { m: "idle", t: "Mira la pared. ¿Ves el hueco que llevaba años vacío?" },
+  { m: "orgullosa", t: "Ahí está tu contrato. He tardado veinte minutos en decidir la altura y sigo pensando que está torcido." },
+  { m: "suave", t: "Una última cosa y te dejo ir, que tienes entrenamiento." },
+  { m: "idle", t: "A todos los que han pasado por esta oficina les di uno de estos al terminar. Es un pin. Es pequeño y no vale nada." },
+  { m: "happy", t: "Nico lo lleva colgado en la mochila de la tienda de bicicletas. Me mandó una foto y todavía no se lo he perdonado." },
+  { m: "suave", t: "No significa que hayas ganado nada. Significa que estuviste aquí cuando aquí no había nada." },
+  { m: "orgullosa", t: "Has llegado muy lejos, {player}." },
+  { m: "suave", t: "Y sí. Estoy orgullosa de ti." },
+  { m: "suave", t: "Solo lo voy a decir una vez en toda mi vida, así que dalo por dicho para siempre." },
+  { m: "idle", t: "Ahora vete. Tienes entrenamiento y yo tengo tres llamadas que llevan veinte minutos esperando." },
+  { m: "suave", t: "Y esto no es un final, que te veo la cara. La carrera sigue." },
+  { m: "idle", t: "Lo único que ha cambiado es que ya no tengo que enseñarte a empezar." },
+  { m: "suave", t: "Solo tengo que seguir aquí para ver qué haces después." },
+  ELISA_EPILOGO_PATH_MARKER,
+  { m: "happy", t: "Ocho en punto, {player}. Como siempre." },
+];
+
 const ELISA_STORY = {
   npc: "elisa",
   chapters: [{
@@ -1613,448 +1714,674 @@ const ELISA_STORY = {
     title: "La carrera de Elisa",
     trigger: () => true, /* es el primer NPC del juego: arranca en cuanto el motor puede evaluarla */
     stages: [
-      /* PRÓLOGO — La primera llamada (rework de diálogos, ver
-         FUTABITA_Elisa_Rework_Narrativo_para_Code.docx — no toca objetivos ni
-         comportamiento, solo sustituye el texto de las escenas).
-         Nota de continuidad narrativa: el motor reproduce la intro de una etapa
-         DE GOLPE al arrancarla (justo cuando el check() de la etapa ANTERIOR se
-         cumple); no hay forma de que una etapa "reaccione" a su propio objetivo
-         una vez completado, porque para entonces ya se ha avanzado a la
-         siguiente. El documento da, para cada capítulo, un bloque de reacción
-         pensado para sonar "cuando el jugador vuelve tras completar la misión"
-         — ese bloque se ha movido al PRINCIPIO de la etapa siguiente (antes de
-         su propio arranque), que es el único momento en que decirlo es cierto.
-         Mismo criterio que el fix de contradicciones de NINA_STORY. */
-      { title: "La primera llamada", zone: "barrio",
-        objective: "Completa un día de preparación: entrenamiento + alimentación + sueño.",
+      /* PRÓLOGO — Ocho menos diez (rework 3.0, ver FUTABITA_Elisa_Rework_3.0.docx).
+         Nota de continuidad narrativa: el motor lee la intro de una etapa DE GOLPE al
+         arrancarla (justo cuando el check() de la etapa ANTERIOR se cumple); no hay forma
+         de que una etapa "reaccione" a su propio objetivo una vez completado, porque para
+         entonces ya se ha avanzado a la siguiente. Por eso el bloque A (reacción) de cada
+         etapa vive al PRINCIPIO de la etapa siguiente, nunca al final de la suya. */
+      { title: "Ocho menos diez", zone: "barrio",
+        objective: "Cierra un día completo: entrena, cumple tu objetivo de comida y duerme lo que toca.",
         intro: [
+          { m: "idle", t: "No, no te levantes. Ya me siento yo." },
+          { m: "idle", t: "Elisa. He venido en autobús, así que perdona el pelo." },
           { m: "idle", t: "¿Tú eres {player}?" },
-          { m: "idle", t: "Vale. Soy Elisa. Me han hablado de ti. No voy a decirte que eres una estrella porque todavía no lo eres." },
-          { m: "happy", t: "Pero tienes algo que me interesa." },
-          { m: "idle", t: "Y antes de que preguntes: sí, eso es una buena noticia." },
-          { m: "idle", t: "Estás en Tercera Federación. Aquí nadie te va a regalar nada." },
-          { m: "decidida", t: "Y tampoco quiero que llegues aquí pensando que yo voy a hacer todo el trabajo por ti." },
-          { m: "idle", t: "Yo puedo conseguirte oportunidades, ayudarte a tomar decisiones y decirte cuándo creo que estás equivocándote." },
-          { m: "decidida", t: "Pero el entrenamiento lo haces tú. Comer bien lo haces tú. Descansar lo haces tú. Y cuando llegue el partido, también eres tú quien tiene que responder." },
-          { m: "happy", t: "De hecho, eso es precisamente lo que me gusta de esto." },
-          { m: "idle", t: "No necesito que seas perfecto. Necesito saber si eres capaz de trabajar cuando todavía no hay nadie mirando." },
-          { m: "decidida", t: "Si aceptas que me haga cargo de tu carrera, vamos a empezar por algo muy poco espectacular." },
-          { m: "idle", t: "Quiero ver cómo te organizas durante un día entero." },
-          { m: "happy", t: "Entrenas, comes, descansas y mañana me cuentas qué tal." },
+          { m: "happy", t: "Ya. Lo sé. Te lo pregunto igual porque me gusta oír cómo lo dice la gente." },
+          { m: "happy", t: "Y tú lo has dicho como si no estuvieras seguro del todo." },
+          { m: "idle", t: "Llevo tres semanas viniendo a verte. Cuatro partidos. Dos bajo la lluvia, que es cuando de verdad se ve quién quiere el balón." },
+          { m: "idle", t: "No he venido a decirte que eres especial. No lo eres. Todavía." },
+          { m: "decidida", t: "He venido porque en el minuto sesenta y ocho del partido del sábado ibais perdiendo por dos y tú seguías pidiendo la pelota." },
+          { m: "idle", t: "Eso no lo entrena nadie. Todo lo demás sí." },
+          { m: "idle", t: "Estás en Tercera Federación, {player}. Aquí no hay nutricionista, no hay fisio, y no hay nadie que te llame para saber si has dormido." },
+          { m: "happy", t: "A partir de hoy hay una persona que te va a llamar." },
+          { m: "idle", t: "Soy insoportable con los horarios y peor con las excusas. Es justo que lo sepas antes y no después." },
+          { m: "decidida", t: "Yo consigo puertas. Tú tienes que llegar entero para cruzarlas. Ese es el reparto y no se negocia." },
+          { m: "idle", t: "Mira esto un momento." },
+          { m: "idle", t: "Esta carpeta es todo lo que un club de arriba sabe hoy de ti." },
+          { m: "sorprendida", t: "…Sí. Está casi vacía. Dos páginas y media, y media es la portada." },
+          { m: "decidida", t: "Mi trabajo durante el próximo año es que esa carpeta pese." },
+          { m: "idle", t: "Y para eso vas a necesitar esto. Toma." },
+          { m: "idle", t: "Es una libreta. Está usada, tiene las esquinas dobladas y no es bonita." },
+          { m: "idle", t: "A partir de hoy apuntas ahí lo que haces. Lo que comes, lo que duermes, lo que te duele y lo que no te atreves a decirme en voz alta." },
+          { m: "decidida", t: "Yo no puedo fiarme de tu memoria. Puedo fiarme de tu letra." },
+          { m: "idle", t: "Y ahora escúchame, porque no vamos a empezar por un fichaje. Vamos a empezar por mañana." },
+          { m: "idle", t: "Quiero un día. Uno. Entero." },
+          { m: "idle", t: "Te levantas, entrenas de verdad, comes lo que tienes que comer y duermes las horas que tienes que dormir." },
+          { m: "happy", t: "Un día no demuestra nada. Ya lo sé. Por eso empiezo por ahí." },
+          { m: "decidida", t: "Porque si no eres capaz de hacerlo una vez, no tiene sentido que hablemos de hacerlo doscientas." },
+          { m: "idle", t: "Cuando lo cierres, me lo apuntas en la libreta y vienes a la oficina. Calle Nueve, portal azul, segunda planta." },
+          { m: "decidida", t: "Ocho en punto. No ocho y cinco." },
+        ],
+        replies: [
+          { t: "Faltan las primeras páginas.", m: "idle",
+            r: [{ m: "sorprendida", t: "…" }, { m: "idle", t: "Sí. Faltan siete." },
+              { m: "decidida", t: "Era mía. Ahora es tuya. Es lo único que necesitas saber hoy." }] },
+          { t: "Aquí dentro hay un nombre tachado.", m: "idle",
+            r: [{ m: "sorprendida", t: "…Vaya. Sí que miras bien." },
+              { m: "preocupada", t: "Ese nombre es una conversación larga y hoy no tenemos tiempo." },
+              { m: "idle", t: "Te prometo que algún día te la cuento. Y cumplo las promesas, aunque tarde." }] },
+          { t: "Gracias.", m: "happy",
+            r: [{ m: "happy", t: "No me des las gracias por una libreta de tres euros." },
+              { m: "idle", t: "Dámelas dentro de un año, si es que llegamos." }] },
         ],
         setFlags: ["elisaMet"],
+        grantItem: "elisa_libreta", reveal: "elisa_libreta",
         snap: () => ({ since: todayStr() }),
         subs: [
-          (g, snap) => Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.closed && l.gym),
-          (g, snap) => Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.closed && (l.prot || 0) >= g.player.goals.protein),
-          (g, snap) => Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.closed && l.sleep != null && l.sleep >= g.player.goals.sleepGoal),
+          (g, s) => daysGoalsCompletedSince(g, s.since) >= 1,
+          (g, s) => Object.entries(g.logs || {}).some(([d, l]) => d >= s.since && l.closed && l.gym),
         ],
-        check: (g, snap) => Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.closed &&
-          l.gym && (l.prot || 0) >= g.player.goals.protein && l.sleep != null && l.sleep >= g.player.goals.sleepGoal) },
-      /* CAPÍTULO 1 — Desde abajo */
-      { title: "Desde abajo", zone: "oficina",
-        objective: "Completa 3 días de objetivos diarios y consigue una victoria.",
+        check: (g, s) => daysGoalsCompletedSince(g, s.since) >= 1 &&
+          Object.entries(g.logs || {}).some(([d, l]) => d >= s.since && l.closed && l.gym) },
+      /* CAPÍTULO 1 — Ocho en punto */
+      { title: "Ocho en punto", zone: "oficina",
+        objective: "Cierra 3 días de objetivos y consigue una victoria.",
         intro: [
-          { m: "decidida", t: "Bien." },
-          { m: "happy", t: "Has hecho lo que te pedí." },
-          { m: "idle", t: "Parece una tontería, pero ahora sé algo que ayer no sabía." },
-          { m: "decidida", t: "Que al menos estás dispuesto a empezar." },
-          { m: "happy", t: "Así que a partir de ahora la rutina cambia un poco." },
-          { m: "idle", t: "Todos los días que importen de verdad van a empezar igual: ocho en punto, en esta oficina." },
-          { m: "idle", t: "Como hoy." },
-          { m: "happy", t: "Primera prueba superada: has llegado a la hora sin que nadie tuviera que recordártelo." },
-          { m: "idle", t: "¿Sabes qué esperaba encontrar cuando acepté llevar tu carrera?" },
-          { m: "happy", t: "Un jugador con ganas de demostrar cosas. Eso lo tiene cualquiera." },
-          { m: "idle", t: "Lo que me interesa es saber si eres capaz de hacer lo aburrido cuando nadie te obliga." },
-          { m: "idle", t: "Porque los goles son el resultado. Antes están el entrenamiento, la comida, el descanso y la cabeza." },
-          { m: "happy", t: "Sí. Ya sé que suena menos emocionante que hablar de un ascenso." },
-          { m: "decidida", t: "Pero si construimos bien esa parte, cuando llegue el momento de competir no dependerás de tener un buen día." },
-          { m: "idle", t: "Quiero que durante unos días dejemos de pensar en dónde vas a llegar." },
-          { m: "decidida", t: "Primero quiero que demuestres que puedes mantener una rutina." },
-          { m: "happy", t: "Y después vamos a buscar la primera victoria." },
+          { m: "idle", t: "Ocho en punto. Bien." },
+          { m: "idle", t: "He mirado tu día de ayer antes de que llegaras. Entrenaste, comiste lo que habíamos hablado y dormiste." },
+          { m: "happy", t: "Un día. Ya está. No te voy a aplaudir." },
+          { m: "idle", t: "Pero anteayer yo no sabía si eras capaz y hoy sí lo sé. Y eso, aunque no lo parezca, ya vale dinero." },
+          { m: "idle", t: "Esta es la oficina. Cabe una mesa, dos sillas, un archivador y poco más." },
+          { m: "idle", t: "Esa pared de ahí es la única decoración que me permito. Son contratos enmarcados. Todos firmados por gente que en algún momento estuvo sentada exactamente donde estás tú." },
+          { m: "happy", t: "No, el tuyo no está. Deja de mirarla." },
+          { m: "idle", t: "Hay un hueco, eso sí. Lo dejé hace tiempo y no lo he vuelto a llenar." },
+          { m: "idle", t: "Toma. Antes de que se me olvide." },
+          { m: "idle", t: "Es fea, tiene el borde saltado y sale mal en las fotos. Es tuya." },
+          { m: "decidida", t: "Y se queda aquí. No te la llevas." },
+          { m: "happy", t: "A partir de hoy, cuando vengas, hay una taza en esta oficina esperándote." },
+          { m: "suave", t: "Es lo más parecido a un contrato que te puedo ofrecer esta semana." },
+          { m: "idle", t: "Ahora la parte que no le gusta a nadie." },
+          { m: "decidida", t: "Un día bueno lo tiene cualquiera. Un día bueno es suerte con otro nombre." },
+          { m: "decidida", t: "Tres días seguidos ya no es suerte. Tres días seguidos es una decisión." },
+          { m: "idle", t: "Y los clubes no fichan decisiones sueltas. Fichan costumbres." },
+          { m: "idle", t: "El sábado tenéis partido. No te voy a pedir nada heroico." },
+          { m: "decidida", t: "Te voy a pedir que llegues a ese partido con tres días bien cerrados detrás. Y que lo ganéis." },
+          { m: "idle", t: "Si ganáis jugando mal, me vale. No soy romántica los primeros meses." },
+          { m: "happy", t: "Lo del fútbol bonito lo hablamos cuando tengas un fisio pagado." },
         ],
-        setFlags: ["elisaStoryStarted", "elisaOfficeUnlocked"],
+        replies: [
+          { t: "¿Y si perdemos el sábado?", m: "idle",
+            r: [{ m: "idle", t: "Entonces cerramos tres días más y lo volvemos a intentar." },
+              { m: "decidida", t: "No hay plan B. Hay plan A repetido hasta que funcione." }] },
+          { t: "¿Por qué yo?", m: "idle",
+            r: [{ m: "idle", t: "Porque tenía dos carpetas encima de la mesa y la tuya era la más fina." },
+              { m: "happy", t: "Me gustan los sitios donde todavía cabe algo." }] },
+          { t: "Ocho en punto entonces.", m: "happy",
+            r: [{ m: "happy", t: "Ocho en punto." }, { m: "idle", t: "Y trae la libreta. Siempre." }] },
+        ],
+        setFlags: ["elisaOficina"],
+        grantItem: "elisa_taza", reveal: "elisa_taza",
         snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
         subs: [
-          { count: (g, snap) => daysGoalsCompletedSince(g, snap.since), goal: 3 },
-          (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
+          { count: (g, s) => daysGoalsCompletedSince(g, s.since), goal: 3 },
+          (g, s) => (g.matchHistory || []).slice(s.matchCount).some((m) => m.res === "V"),
         ],
-        check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3 &&
-          (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") },
-      /* CAPÍTULO 2 — Ganarse el sitio */
+        check: (g, s) => daysGoalsCompletedSince(g, s.since) >= 3 &&
+          (g.matchHistory || []).slice(s.matchCount).some((m) => m.res === "V") },
+      /* CAPÍTULO 2 — Ganarse el sitio (zona: se mantiene "ciudad-dep", la zona actual, en
+         vez de "cantera" que propone el documento — decisión del usuario) */
       { title: "Ganarse el sitio", zone: "ciudad-dep",
-        objective: "Marca 1 gol, consigue una victoria y alcanza una racha de 3 días.",
+        objective: "Marca 1 gol, consigue una victoria y llega a una racha de 3 días.",
         intro: [
-          { m: "happy", t: "Has cumplido." },
-          { m: "orgullosa", t: "Y has conseguido tu primera victoria mientras mantenías la rutina." },
-          { m: "idle", t: "Ahora sí puedo decir que tenemos algo sobre lo que trabajar." },
-          { m: "decidida", t: "Lo siguiente será demostrarlo cuando haya gente mirando." },
-          { m: "idle", t: "Te voy a decir algo que no suele gustar escuchar." },
+          { m: "happy", t: "Tres días y una victoria." },
+          { m: "idle", t: "Los tres días me interesan más que la victoria, por cierto." },
+          { m: "idle", t: "Ya sé que eso suena a frase de mánager. No lo es." },
+          { m: "decidida", t: "La victoria la firmasteis once. Los tres días los firmaste tú solo, un martes, sin público y sin que nadie te lo agradeciera." },
+          { m: "idle", t: "¿Sabes por qué te he citado aquí a las siete y media y no en la oficina?" },
+          { m: "idle", t: "Porque quería que vieras este campo vacío." },
+          { m: "idle", t: "Sin gente. Sin ruido. Sin el entrenador mirando." },
+          { m: "decidida", t: "Este es el sitio donde de verdad se decide quién juega el domingo. El domingo solo se firma lo que ya está decidido aquí." },
+          { m: "idle", t: "Y ahora te voy a decir algo que no te va a gustar." },
           { m: "idle", t: "No tienes derecho a ser titular." },
-          { m: "angry", t: "Y no, no te estoy castigando. Si fueras mi sobrino también te diría lo mismo." },
-          { m: "idle", t: "La victoria anterior fue importante, pero no convierte una semana buena en una carrera hecha." },
-          { m: "decidida", t: "Lo que sí tienes es derecho a ganártelo." },
-          { m: "idle", t: "Si quieres que el entrenador te mire y piense que necesita ponerte, tienes que darle motivos." },
-          { m: "angry", t: "No basta con esperar una oportunidad y enfadarte cuando no llega." },
-          { m: "decidida", t: "Haz que no tenga una excusa para dejarte fuera." },
-          { m: "idle", t: "Marca. Gana. Mantén la rutina." },
-          { m: "happy", t: "Y cuando acabes, quiero que podamos hablar de lo que hiciste, no de lo que casi hiciste." },
+          { m: "angry", t: "Y no es una opinión sobre ti. Es una opinión sobre el fútbol." },
+          { m: "idle", t: "El martes hablé con tu entrenador. Cuarenta minutos. ¿Sabes qué me dijo de ti?" },
+          { m: "idle", t: "Nada. No me dijo nada." },
+          { m: "angry", t: "Tardó cuatro segundos en acordarse de tu nombre. Cuatro. Los conté." },
+          { m: "decidida", t: "Y ese, {player}, es exactamente el problema. No estás fuera porque no valgas." },
+          { m: "decidida", t: "Estás fuera porque todavía le resulta cómodo dejarte fuera." },
+          { m: "decidida", t: "Así que vamos a quitarle la comodidad." },
+          { m: "idle", t: "Marca. Aunque sea un gol feo, de rodilla, de rebote, con la cara. Me da exactamente igual." },
+          { m: "idle", t: "Gana. Y llega a ese partido con tres días encadenados detrás, no con uno bueno y dos improvisados." },
+          { m: "happy", t: "Porque cuando un entrenador tiene que explicar por qué no pone a alguien, ya ha perdido la discusión." },
+          { m: "decidida", t: "Y yo quiero que tenga que explicarlo." },
+        ],
+        replies: [
+          { t: "¿Y si no me sacan?", m: "idle",
+            r: [{ m: "angry", t: "Entonces sales a falta de diez minutos." },
+              { m: "decidida", t: "Y haces que esos diez minutos sean insoportables para el rival." },
+              { m: "idle", t: "Diez minutos insoportables se recuerdan más que setenta correctos." }] },
+          { t: "¿Le has hablado de mí?", m: "idle",
+            r: [{ m: "idle", t: "Le he hablado de ti a todo el mundo. El problema no es ese." },
+              { m: "idle", t: "El problema es que todavía no tengo mucho que contar." },
+              { m: "decidida", t: "Dame material." }] },
+          { t: "Entendido.", m: "decidida",
+            r: [{ m: "sorprendida", t: "…" }, { m: "happy", t: "Buena respuesta." },
+              { m: "idle", t: "Traía preparadas tres réplicas para tus quejas y me las voy a tener que quedar." }] },
         ],
         snap: (g) => ({ goals: careerGoals(g), matchCount: (g.matchHistory || []).length }),
         subs: [
-          (g, snap) => careerGoals(g) > snap.goals,
-          (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
+          (g, s) => careerGoals(g) > s.goals,
+          (g, s) => (g.matchHistory || []).slice(s.matchCount).some((m) => m.res === "V"),
           { count: (g) => g.player.streak || 0, goal: 3 },
         ],
-        check: (g, snap) => careerGoals(g) > snap.goals &&
-          (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") && (g.player.streak || 0) >= 3 },
+        check: (g, s) => careerGoals(g) > s.goals &&
+          (g.matchHistory || []).slice(s.matchCount).some((m) => m.res === "V") && (g.player.streak || 0) >= 3 },
       /* CAPÍTULO 3 — El precio del progreso */
       { title: "El precio del progreso", zone: "oficina",
-        objective: "Cumple alimentación 4 días y sueño 3 días; consigue una victoria.",
+        objective: "Cumple tu objetivo de proteína 4 días (3 de ellos también sueño) y consigue una victoria.",
         intro: [
-          { m: "happy", t: "Ahora sí." },
-          { m: "orgullosa", t: "Has respondido cuando había presión." },
-          { m: "idle", t: "Eso es lo que quería ver." },
-          { m: "decidida", t: "No significa que ya tengas el puesto asegurado. Significa que has empezado a demostrar que puedes pelear por él." },
-          { m: "happy", t: "Y créeme, eso cambia la conversación con un entrenador." },
-          { m: "idle", t: "A partir de ahora vamos a empezar a tratar tu carrera como algo más serio." },
-          { m: "agotada", t: "Dame un segundo..." },
-          { m: "agotada", t: "Llevo desde las seis con informes, llamadas y dos cafés que ya no deberían contar como café." },
-          { m: "sorprendida", t: "No pongas esa cara. Estoy bien." },
-          { m: "agotada", t: "Bueno. Estoy suficientemente bien." },
-          { m: "preocupada", t: "Pero precisamente por eso quería hablar contigo." },
-          { m: "idle", t: "Desde que empezaste a responder en el campo, todo se ha acelerado un poco." },
-          { m: "preocupada", t: "Y sé lo que pasa cuando alguien ve que las cosas empiezan a salir bien." },
-          { m: "idle", t: "Quiere correr más." },
-          { m: "idle", t: "Entrenar más. Jugar más. Dormir menos. Aprovechar cada oportunidad." },
-          { m: "preocupada", t: "Yo también he caído en eso." },
-          { m: "idle", t: "No quiero que tú lo hagas." },
-          { m: "preocupada", t: "No quiero que llegues arriba rápido. Quiero que llegues y puedas quedarte." },
-          { m: "decidida", t: "Así que ahora vamos a hacer algo que quizá no te parezca una misión de carrera." },
-          { m: "idle", t: "Vamos a demostrar que puedes cuidar de la parte que nadie ve." },
+          { m: "agotada", t: "Pasa. Y no me mires así." },
+          { m: "agotada", t: "Sí, he visto el gol. Lo he visto seis veces. Dos de ellas en un semáforo, lo cual es ilegal y no lo pienso repetir." },
+          { m: "happy", t: "Feo. Precioso. Exactamente lo que te pedí." },
+          { m: "idle", t: "Y la racha aguantó toda la semana. Eso es lo que me ha hecho coger el teléfono tres veces desde el lunes." },
+          { m: "agotada", t: "Llevo aquí desde las seis con informes. Dos cafés que ya no cuentan como café." },
+          { m: "sorprendida", t: "No. No estoy bien." },
+          { m: "agotada", t: "Estoy funcionando, que no es lo mismo, y lo sé perfectamente." },
+          { m: "preocupada", t: "Y precisamente por eso quiero hablar contigo hoy y no la semana que viene." },
+          { m: "idle", t: "Desde que empezaste a responder, todo va más rápido. Más llamadas. Más gente que te mira. Más gente que te para por la calle." },
+          { m: "preocupada", t: "Y sé exactamente lo que le pasa a un jugador cuando nota que las cosas empiezan a salir bien." },
+          { m: "idle", t: "Quiere más. Entrenar más. Jugar más. Dormir menos. Aprovecharlo todo por si acaso se acaba." },
+          { m: "preocupada", t: "Yo conozco muy bien esa película. Me la sé de memoria y me sé el final." },
+          { m: "idle", t: "…Otro día te la cuento." },
+          { m: "decidida", t: "Hoy lo único que necesito es que no la protagonices tú." },
+          { m: "decidida", t: "Así que esta vez la misión no va de fútbol." },
+          { m: "idle", t: "Va de la parte que nadie te va a agradecer nunca y que no sale en ningún resumen." },
+          { m: "idle", t: "Cuatro días comiendo lo que tienes que comer. Y en tres de esos cuatro, durmiendo lo que tienes que dormir." },
+          { m: "idle", t: "Y una victoria por el medio, para que no me acuses de estar convirtiéndote en un monje." },
+          { m: "preocupada", t: "No quiero que llegues arriba rápido, {player}." },
+          { m: "preocupada", t: "Quiero que llegues y te puedas quedar." },
+        ],
+        replies: [
+          { t: "¿Y tú? ¿Duermes?", m: "preocupada",
+            r: [{ m: "sorprendida", t: "…" }, { m: "agotada", t: "Eso ha sido un golpe bajo." },
+              { m: "suave", t: "Y tienes razón. No te acostumbres a tenerla." }] },
+          { t: "Puedo entrenar más.", m: "decidida",
+            r: [{ m: "angry", t: "Ya. Todos podéis." },
+              { m: "preocupada", t: "Y por eso hay tantos de vosotros con veintiséis años y una rodilla de cuarenta." },
+              { m: "decidida", t: "No. Hoy no." }] },
+          { t: "Vale. Lo que digas.", m: "idle",
+            r: [{ m: "sorprendida", t: "¿Sin discutir?" }, { m: "suave", t: "Qué descanso, de verdad." }] },
         ],
         snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
         subs: [
-          (g, snap) => Object.entries(g.logs || {}).filter(([d, l]) => d >= snap.since && l.closed && (l.prot || 0) >= g.player.goals.protein).length >= 4,
-          (g, snap) => Object.entries(g.logs || {}).filter(([d, l]) => d >= snap.since && l.closed && l.sleep != null && l.sleep >= g.player.goals.sleepGoal).length >= 3,
-          (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
+          (g, s) => proteinDaysSince(g, s.since) >= 4,
+          (g, s) => proteinSleepDaysSince(g, s.since) >= 3,
+          (g, s) => (g.matchHistory || []).slice(s.matchCount).some((m) => m.res === "V"),
         ],
-        check: (g, snap) => {
-          const days = Object.entries(g.logs || {}).filter(([d, l]) => d >= snap.since && l.closed);
-          const foodDays = days.filter(([, l]) => (l.prot || 0) >= g.player.goals.protein).length;
-          const sleepDays = days.filter(([, l]) => l.sleep != null && l.sleep >= g.player.goals.sleepGoal).length;
-          return foodDays >= 4 && sleepDays >= 3 && (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V");
-        } },
+        check: (g, s) => proteinDaysSince(g, s.since) >= 4 && proteinSleepDaysSince(g, s.since) >= 3 &&
+          (g.matchHistory || []).slice(s.matchCount).some((m) => m.res === "V") },
       /* CAPÍTULO 4 — Un sitio más grande */
-      { title: "Un sitio más grande", zone: "car",
-        objective: "Cumple 5 días de objetivos y mejora tu OVR respecto al inicio del capítulo.",
+      { title: "Un sitio más grande", zone: "ciudad-dep",
+        objective: "Cierra 5 días de objetivos y sube tu media (OVR) por encima de la que tenías al empezar.",
         intro: [
-          { m: "suave", t: "Bien." },
-          { m: "agotada", t: "Te has tomado en serio lo que te dije." },
-          { m: "orgullosa", t: "Y has conseguido ganar sin convertir la rutina en algo secundario." },
-          { m: "preocupada", t: "Supongo que yo también tengo que aprender a no intentar empujarte todo el tiempo." },
-          { m: "idle", t: "Pero no te acostumbres. Mañana volveré a exigirte cosas." },
-          { m: "idle", t: "Bienvenido a tu primera visita al centro." },
-          { m: "happy", t: "Mira bien. Hace unos meses ni siquiera sabías que existía este sitio." },
-          { m: "idle", t: "Ahora estás aquí porque has hecho algo que merece la pena." },
-          { m: "decidida", t: "Pero no confundas llegar a un lugar con pertenecer a él." },
-          { m: "idle", t: "Aquí entrenan jugadores que llevan años preparando exactamente el nivel que tú estás empezando a conocer." },
-          { m: "orgullosa", t: "Y eso no debería intimidarte." },
-          { m: "decidida", t: "Debería darte una referencia." },
-          { m: "idle", t: "Hasta ahora te pedía que mantuvieras una rutina y que respondieras en los partidos." },
-          { m: "decidida", t: "Ahora quiero ver qué ocurre cuando el estándar sube." },
-          { m: "happy", t: "No necesitas demostrarlo todo hoy." },
-          { m: "idle", t: "Solo necesito que empieces a demostrar que puedes mantener la mejora." },
+          { m: "happy", t: "Cuatro días de comida, tres de sueño y una victoria. Y sin discutir ni una vez." },
+          { m: "idle", t: "¿Sabes qué he hecho con esa hoja? La he escaneado y la he mandado." },
+          { m: "sorprendida", t: "Sí. Se manda. Los clubes de arriba hace años que no piden solo vídeos bonitos." },
+          { m: "happy", t: "Y por eso hoy estamos aquí y no en mi oficina de dos sillas." },
+          { m: "idle", t: "Mira alrededor sin disimular. Está permitido, todo el mundo lo hace el primer día." },
+          { m: "idle", t: "Esas máquinas cuestan más que el presupuesto anual entero de tu club." },
+          { m: "idle", t: "Y ese de allí, el que está haciendo el ejercicio más aburrido de toda la sala, juega en Primera." },
+          { m: "decidida", t: "Fíjate bien en que no está haciendo absolutamente nada espectacular." },
+          { m: "idle", t: "Llevas meses pensando que lo que te separa de esa gente es el talento." },
+          { m: "decidida", t: "No. Lo que te separa es que ellos llevan seis años haciendo lo aburrido con alguien supervisándolo." },
+          { m: "orgullosa", t: "Y tú llevas semanas haciéndolo tú solo, sin supervisión y sin cobrar por ello." },
+          { m: "idle", t: "Que conste en acta. No lo voy a repetir." },
+          { m: "idle", t: "Hasta ahora te he pedido que no te cayeras. A partir de hoy te voy a pedir que subas." },
+          { m: "decidida", t: "Cinco días. Cerrados. Y quiero ver el número." },
+          { m: "idle", t: "Tu media. La que sale arriba del todo en el informe." },
+          { m: "idle", t: "Hoy vale lo que vale. Dentro de unos días tiene que valer más." },
+          { m: "happy", t: "No mucho más. No necesito un milagro." },
+          { m: "decidida", t: "Necesito una flecha hacia arriba, porque una flecha hacia arriba es lo único que hace que alguien coja el teléfono a la primera." },
         ],
-        setFlags: ["elisaTrainingRoutine"],
+        replies: [
+          { t: "Aquí no encajo.", m: "idle",
+            r: [{ m: "idle", t: "Todavía no." }, { m: "orgullosa", t: "Encajar es lo último que pasa, nunca lo primero." },
+              { m: "decidida", t: "Primero se entra por la puerta molestando un poco." }] },
+          { t: "¿Ellos empezaron así?", m: "idle",
+            r: [{ m: "happy", t: "Peor. Ese de ahí empezó en un campo de tierra con dos porterías de tubo." },
+              { m: "idle", t: "Lo que pasa es que ya nadie se acuerda." },
+              { m: "suave", t: "Es lo bueno de subir: te reescriben el principio." }] },
+          { t: "¿Cuánto tengo que mejorar?", m: "idle",
+            r: [{ m: "idle", t: "Un punto. Uno." },
+              { m: "decidida", t: "Los milagros los vendemos más adelante, cuando ya no hagan falta." }] },
+        ],
         snap: (g) => ({ since: todayStr(), ovr: calcOVR(g.player.stats) }),
         subs: [
-          { count: (g, snap) => daysGoalsCompletedSince(g, snap.since), goal: 5 },
-          (g, snap) => calcOVR(g.player.stats) > snap.ovr,
+          { count: (g, s) => daysGoalsCompletedSince(g, s.since), goal: 5 },
+          (g, s) => calcOVR(g.player.stats) > s.ovr,
         ],
-        check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 5 && calcOVR(g.player.stats) > snap.ovr },
-      /* CAPÍTULO 5 — Tu nombre empieza a pesar */
+        check: (g, s) => daysGoalsCompletedSince(g, s.since) >= 5 && calcOVR(g.player.stats) > s.ovr },
+      /* CAPÍTULO 5 — Tu nombre empieza a pesar. check es un OR de tres vías (umbral de
+         categoría siguiente, cambio de tier ya confirmado, o cambio de club); subs solo
+         lleva la vía principal para que la barra de progreso no exija las tres a la vez,
+         tal y como pide el documento cuando el motor no admite condiciones alternativas. */
       { title: "Tu nombre empieza a pesar", zone: "patro",
-        objective: "Sube +2 tu media (OVR) o cambia de club.",
+        objective: "Alcanza la media mínima de la siguiente categoría (o completa un cambio de club).",
         intro: [
-          { m: "orgullosa", t: "Ahí lo tienes." },
-          { m: "happy", t: "No ha sido un salto enorme." },
-          { m: "decidida", t: "Pero es un salto real." },
-          { m: "idle", t: "Y eso es lo que me importa." },
-          { m: "orgullosa", t: "Ya no estás intentando llegar a este nivel. Estás empezando a formar parte de él." },
-          { m: "idle", t: "Antes de entrar, una cosa." },
-          { m: "idle", t: "Hasta ahora la gente que se acercaba a ti estaba interesada en el jugador." },
-          { m: "idle", t: "A partir de ahora habrá gente interesada en todo lo que viene alrededor del jugador." },
-          { m: "idle", t: "Tu cara, tu nombre, tu tiempo y, si pueden, una parte de todo lo que generes." },
-          { m: "decidida", t: "No voy a decidir por ti." },
-          { m: "idle", t: "Pero sí voy a asegurarme de que entiendas lo que estás firmando." },
-          { m: "happy", t: "Porque crecer tiene una parte divertida." },
-          { m: "idle", t: "Y otra bastante menos divertida." },
-          { m: "decidida", t: "Cuando empiezas a ser visible, cada decisión pesa un poco más." },
-          { m: "sorprendida", t: "Y sí, sé que esto es mucho para alguien que empezó jugando en Tercera." },
-          { m: "idle", t: "Precisamente por eso quiero que aprendas ahora a separar una buena oportunidad de una oportunidad que solo parece buena." },
-          { m: "decidida", t: "Primero vamos a conseguir que tu carrera llegue al nivel que hace que estas ofertas tengan sentido." },
+          { m: "happy", t: "Cinco días y la flecha hacia arriba." },
+          { m: "idle", t: "Te dije que un punto bastaba para que alguien cogiera el teléfono." },
+          { m: "sorprendida", t: "Lo han cogido tres." },
+          { m: "idle", t: "Y por eso hoy estás en un sitio con sofás caros, agua con gas y gente que sonríe demasiado rápido." },
+          { m: "idle", t: "Antes de entrar, dos cosas. Solo dos." },
+          { m: "idle", t: "Una: toda la gente que hay ahí dentro es encantadora. De verdad. No es una trampa y no son villanos." },
+          { m: "decidida", t: "Dos: ninguno de ellos trabaja para ti." },
+          { m: "idle", t: "Hasta hoy, lo que se compraba de ti era lo que hacías. A partir de hoy empiezan a comprar lo que eres." },
+          { m: "idle", t: "Tu cara. Tu nombre. Tu tiempo. Tres fines de semana al año que ya no vas a elegir tú." },
+          { m: "preocupada", t: "Y lo peor es que la primera vez no lo notas, porque la primera vez es emocionante y hay cámaras." },
+          { m: "decidida", t: "Yo no voy a firmar por ti. No es mi vida y no me corresponde." },
+          { m: "idle", t: "Pero voy a leerte cada cláusula en voz alta hasta que te aburras y me pidas que pare." },
+          { m: "decidida", t: "Ese es el trato y es innegociable." },
+          { m: "idle", t: "Y ahora la parte incómoda: hoy no vamos a firmar nada." },
+          { m: "sorprendida", t: "No pongas esa cara." },
+          { m: "decidida", t: "Una oferta que llega demasiado pronto no es una oportunidad. Es un descuento." },
+          { m: "idle", t: "Quiero que tu media alcance el umbral de la categoría siguiente antes de que nos sentemos a negociar nada." },
+          { m: "idle", t: "El mismo contrato, con ese número delante, vale el triple. Literalmente el triple." },
+          { m: "happy", t: "Así que hoy paseamos, sonreímos, damos la mano y nos vamos a casa." },
+          { m: "decidida", t: "Y volvemos cuando tu nombre pese lo que tiene que pesar." },
         ],
-        setFlags: ["elisaPatronUnlocked"],
-        snap: (g) => ({ tierId: g.tier.id, clubName: g.club.name, ovr: calcOVR(g.player.stats) }),
-        check: (g, snap) => calcOVR(g.player.stats) >= snap.ovr + 2 || g.tier.id !== snap.tierId || g.club.name !== snap.clubName },
-      /* CAPÍTULO 6 — La persona detrás del jugador */
+        replies: [
+          { t: "¿Cuánto ofrecen?", m: "idle",
+            r: [{ m: "happy", t: "Lo suficiente para que te parezca muchísimo." },
+              { m: "idle", t: "Y eso es exactamente el problema." },
+              { m: "decidida", t: "El primer contrato grande nunca es grande. Solo lo parece desde abajo." }] },
+          { t: "¿Y si no vuelven?", m: "idle",
+            r: [{ m: "decidida", t: "Volverán." },
+              { m: "idle", t: "Y si no vuelven estos, vendrán otros peores pagando más." },
+              { m: "idle", t: "Así funciona. No es justo, pero es predecible, que a veces es mejor." }] },
+          { t: "Confío en ti.", m: "happy",
+            r: [{ m: "sorprendida", t: "…" }, { m: "suave", t: "No lo digas tan rápido." },
+              { m: "suave", t: "Guárdatelo para cuando me equivoque. Ese día te va a hacer más falta." }] },
+        ],
+        setFlags: ["elisaPatroIntro"],
+        snap: (g) => ({ since: todayStr(), tierId: g.tier.id, clubName: g.club && g.club.name }),
+        subs: [
+          (g, s) => calcOVR(g.player.stats) >= ((TIERS[s.tierId + 1] || {}).minOvr ?? Infinity),
+        ],
+        check: (g, s) => calcOVR(g.player.stats) >= ((TIERS[s.tierId + 1] || {}).minOvr ?? Infinity) ||
+          g.tier.id > s.tierId || (g.club && g.club.name) !== s.clubName },
+      /* CAPÍTULO 6 — La persona detrás del jugador (respiro deliberado antes del derbi;
+         único capítulo con pose "casual") */
       { title: "La persona detrás del jugador", zone: "parque",
-        objective: "Completa entrenamiento + alimentación + sueño y gana el siguiente partido.",
+        objective: "Cierra un día completo de rutina y gana el siguiente partido.",
         intro: [
-          { m: "idle", t: "Bien." },
-          { m: "happy", t: "Ahora sí empiezas a tener algo que ofrecer." },
-          { m: "decidida", t: "Y vas a conocer a alguien que puede ayudarte con la parte comercial." },
-          { m: "idle", t: "Pero recuerda lo que hemos hablado. Tu carrera no puede convertirse solo en dinero." },
-          { m: "casual", t: "Hoy no vengo a hablar de fútbol." },
-          { m: "sorprendida", t: "Sí. Puedes mirarme así. Yo también tengo días en los que no quiero hablar de fútbol." },
-          { m: "casual", t: "Después de todo este tiempo, me he dado cuenta de que casi todas nuestras conversaciones empiezan con una cifra." },
-          { m: "casual", t: "OVR. Racha. Resultados. Objetivos." },
-          { m: "suave", t: "Y supongo que eso tiene sentido. Es mi trabajo." },
-          { m: "casual", t: "Pero a veces me pregunto si la gente se acuerda de que los jugadores son personas." },
-          { m: "suave", t: "Supongo que contigo estoy aprendiendo a acordarme de que los mánagers también." },
-          { m: "casual", t: "No te acostumbres. Mañana vuelvo a ser insoportable." },
-          { m: "suave", t: "Solo quería que tuvieras un día en el que no necesitáramos hablar de cuánto puedes mejorar." },
-          { m: "casual", t: "Aunque, por desgracia, mañana sí vamos a tener partido." },
+          { m: "happy", t: "Umbral alcanzado. Ya está." },
+          { m: "idle", t: "Ayer volví a la zona de patrocinadores con tu número nuevo. Misma gente, mismos sofás, misma agua con gas." },
+          { m: "happy", t: "Y una cifra distinta encima de la mesa." },
+          { m: "idle", t: "Tres semanas de espera y el contrato se ha multiplicado solo. Es la parte del trabajo que más me gusta y la que menos se ve." },
+          { m: "casual", t: "Pero hoy no he venido a hablar de eso." },
+          { m: "sorprendida", t: "Sí, voy en zapatillas. También tengo pies, resulta." },
+          { m: "casual", t: "He hecho una cuenta esta mañana mientras venía andando. No tenía nada mejor que hacer en veinte minutos de paseo." },
+          { m: "casual", t: "Llevamos meses hablando. Ciento y pico conversaciones, tirando por lo bajo." },
+          { m: "casual", t: "Y las he repasado todas mentalmente. Todas empiezan igual: con un número." },
+          { m: "casual", t: "Media. Racha. Proteína. Minutos. Ofertas. Umbral." },
+          { m: "suave", t: "Y me he dado cuenta de que no sabría contarle a nadie cómo eres tú." },
+          { m: "casual", t: "Sé a qué hora te acuestas. Sé lo que pesas. Sé lo que comes los martes." },
+          { m: "suave", t: "No sé qué haces los días que no te llamo." },
+          { m: "casual", t: "Así que hoy no hay informe, no hay libreta y no hay objetivos." },
+          { m: "casual", t: "Hoy paseamos y me lo cuentas tú. O no me lo cuentas y paseamos igual, que también es una respuesta." },
+          { m: "casual", t: "Mañana, por desgracia, vuelve el mundo." },
+          { m: "idle", t: "Vosotros tenéis partido y yo tengo dos reuniones que no me apetecen nada." },
+          { m: "suave", t: "Así que hazme un favor un poco raro." },
+          { m: "decidida", t: "Prepara ese partido como si no dependiera nada de él. Duerme, come, entrena. Y gánalo." },
+          { m: "suave", t: "No para demostrarme nada. Eso ya no hace falta." },
+          { m: "happy", t: "Simplemente porque hoy ha sido un buen día y me apetece que mañana también lo sea." },
         ],
+        replies: [
+          { t: "Nada especial. Veo partidos.", m: "idle",
+            r: [{ m: "happy", t: "Menuda sorpresa. Un futbolista que ve fútbol." },
+              { m: "suave", t: "Está bien. Al menos es tuyo y no te lo he puesto yo en una hoja." }] },
+          { t: "Echo de menos mi barrio.", m: "suave",
+            r: [{ m: "suave", t: "Ya." }, { m: "idle", t: "Eso no se arregla subiendo de categoría." },
+              { m: "casual", t: "De hecho empeora. Cuanto más arriba, más lejos queda todo lo que era normal." },
+              { m: "suave", t: "Vuelve de vez en cuando. En serio. Es la única receta que tengo." }] },
+          { t: "¿Y tú qué haces?", m: "idle",
+            r: [{ m: "sorprendida", t: "¿Yo?" }, { m: "casual", t: "Nada interesante. Leo contratos en la cama." },
+              { m: "suave", t: "…Vale, eso ha sonado bastante peor de lo que es." },
+              { m: "happy", t: "Y los domingos por la tarde no cojo el teléfono. Eso no lo sabe nadie, así que ya me estás guardando el secreto." }] },
+        ],
+        setFlags: ["elisaPersonal"],
         snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
         subs: [
-          (g, snap) => Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.closed &&
-            l.gym && (l.prot || 0) >= g.player.goals.protein && l.sleep != null && l.sleep >= g.player.goals.sleepGoal),
-          (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
+          (g, s) => daysGoalsCompletedSince(g, s.since) >= 1,
+          (g, s) => (g.matchHistory || []).slice(s.matchCount).some((m) => m.res === "V"),
         ],
-        check: (g, snap) => Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.closed &&
-          l.gym && (l.prot || 0) >= g.player.goals.protein && l.sleep != null && l.sleep >= g.player.goals.sleepGoal) &&
-          (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") },
-      /* CAPÍTULO 7 — El partido que importa */
+        check: (g, s) => daysGoalsCompletedSince(g, s.since) >= 1 &&
+          (g.matchHistory || []).slice(s.matchCount).some((m) => m.res === "V") },
+      /* CAPÍTULO 7 — El partido que importa (sin deadlineDays: decisión del usuario) */
       { title: "El partido que importa", zone: "estadio",
-        objective: "Gana el derbi, suma gol o asistencia y mantén una racha de 6 días.",
+        objective: "Gana el derbi con nota alta (7.5+), participa en un gol y llega con una racha de 6 días.",
         intro: [
-          { m: "suave", t: "Gracias." },
-          { m: "happy", t: "Por una vez no tengo una charla preparada." },
-          { m: "suave", t: "Solo quería comprobar que seguías siendo tú detrás de todo esto." },
-          { m: "idle", t: "Y lo eres." },
-          { m: "happy", t: "Bien. Ahora sí. Mañana volvemos al trabajo." },
+          { m: "happy", t: "Ganado. Y con el día cerrado el día antes, que es la parte que de verdad me interesa." },
+          { m: "idle", t: "¿Te has fijado en una cosa? Ya no te pregunto si has dormido." },
+          { m: "idle", t: "Doy por hecho que sí. Simplemente doy por hecho que sí." },
+          { m: "suave", t: "Eso ha tardado meses en pasar. Y no ha pasado de golpe." },
           { m: "preocupada", t: "¿Nervioso?" },
-          { m: "idle", t: "No me digas que no. Te conozco demasiado bien ya." },
-          { m: "preocupada", t: "Es normal. El derbi pesa." },
-          { m: "idle", t: "Y después de todo lo que has hecho para llegar hasta aquí, sería fácil pensar que tienes que demostrar que perteneces a este escenario." },
-          { m: "decidida", t: "Pero no quiero que juegues para demostrarme nada." },
-          { m: "orgullosa", t: "Juega porque has trabajado para estar aquí." },
-          { m: "preocupada", t: "Cuando empezamos, hablábamos de conseguir una victoria." },
-          { m: "happy", t: "Ahora estamos hablando de un estadio lleno." },
-          { m: "decidida", t: "Eso no ha ocurrido de golpe." },
-          { m: "orgullosa", t: "Ha ocurrido porque has repetido las cosas pequeñas suficientes veces." },
-          { m: "decidida", t: "Así que no intentes convertir este partido en algo distinto a lo que ya sabes hacer." },
+          { m: "idle", t: "No contestes. Llevas doce minutos mirando el mismo trozo de césped." },
+          { m: "preocupada", t: "Es normal. Un derbi no se juega. Un derbi se sobrevive." },
+          { m: "idle", t: "Mañana esto va a estar lleno de gente que lleva toda la semana hablando de este partido en el trabajo." },
+          { m: "idle", t: "Y ninguna de esas personas te conoce." },
+          { m: "decidida", t: "Lo que van a ver de ti son noventa minutos. Nada más." },
+          { m: "idle", t: "No van a ver los tres días encadenados. Ni la libreta. Ni las seis y media de la mañana de febrero." },
+          { m: "preocupada", t: "Y por eso este es exactamente el partido en el que más gente se rompe." },
+          { m: "preocupada", t: "No por el rival. Por intentar meter un año entero dentro de noventa minutos." },
+          { m: "preocupada", t: "Toma. Antes de que se me olvide y me lo lleve a casa otra vez." },
+          { m: "idle", t: "Es una moneda. No vale nada, ni siquiera es de curso legal ya." },
+          { m: "sorprendida", t: "Y no, no creo en la suerte. Que quede clarísimo, no quiero malentendidos." },
+          { m: "suave", t: "La llevo encima desde mi primera firma. Cada vez que he tenido un día imposible me la he pasado entre los dedos hasta que se me pasaba." },
+          { m: "idle", t: "No hace nada. No te va a ayudar a marcar y no va a parar un balón." },
+          { m: "suave", t: "Solo sirve para darle algo que hacer a las manos mientras la cabeza se calma. Que es bastante más de lo que parece." },
+          { m: "decidida", t: "Y ahora escúchame bien, porque esto sí importa." },
+          { m: "decidida", t: "No intentes jugar el partido de tu vida. Los partidos de tu vida no se juegan: se descubren después, cuando alguien te los recuerda." },
+          { m: "idle", t: "Juega el partido que ya sabes jugar. El mismo que llevas meses jugando cuando no había nadie mirando." },
+          { m: "preocupada", t: "Quiero que lo ganéis, y quiero que aparezcas en el resumen. Con un gol o con una asistencia, me da exactamente igual cuál de las dos." },
+          { m: "decidida", t: "Y quiero que llegues a mañana con seis días seguidos cuidándote." },
+          { m: "preocupada", t: "Porque un cuerpo cansado toma decisiones cobardes. Y tú mañana no te puedes permitir ni una." },
         ],
-        setFlags: ["elisaTrustUp"],
-        snap: (g) => ({ matchCount: (g.matchHistory || []).length }),
-        subs: [
-          (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.derbi && m.res === "V"),
-          (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => (m.myGoals || 0) > 0 || (m.myAssists || 0) > 0),
-          { count: (g) => g.player.streak || 0, goal: 6 },
+        replies: [
+          { t: "¿Y si fallo?", m: "preocupada",
+            r: [{ m: "preocupada", t: "Fallarás. Varias veces. Y delante de mucha gente." },
+              { m: "decidida", t: "Lo único que me importa es qué haces con el balón siguiente." },
+              { m: "idle", t: "El resumen del lunes se monta con lo que hiciste después de fallar. Siempre." }] },
+          { t: "¿Vas a estar ahí?", m: "idle",
+            r: [{ m: "suave", t: "Fila alta, lado izquierdo. Siempre en el mismo sitio." },
+              { m: "happy", t: "No mires. Me pone nerviosa que mires." }] },
+          { t: "Gracias por la moneda.", m: "happy",
+            r: [{ m: "sorprendida", t: "No me des las gracias por un trozo de metal sin valor." },
+              { m: "suave", t: "…De nada." }] },
         ],
-        check: (g, snap) => {
-          const ms = (g.matchHistory || []).slice(snap.matchCount);
-          return ms.some((m) => m.derbi && m.res === "V") && ms.some((m) => (m.myGoals || 0) > 0 || (m.myAssists || 0) > 0) &&
-            (g.player.streak || 0) >= 6;
-        } },
-      /* CAPÍTULO 8 — Ya no eres el mismo */
-      { title: "Ya no eres el mismo", zone: "oficina", alsoUnlock: ["prensa"],
-        objective: "Sube de categoría o cambia de club, y juega un partido después.",
-        intro: [
-          { m: "orgullosa", t: "Lo has hecho." },
-          { m: "happy", t: "Mira alrededor." },
-          { m: "orgullosa", t: "Hace un tiempo esto habría parecido imposible." },
-          { m: "suave", t: "Y ahora estás aquí." },
-          { m: "idle", t: "Tengo tres llamadas esperándome." },
-          { m: "happy", t: "Enhorabuena. Eso significa que empiezas a ser importante." },
-          { m: "idle", t: "También significa que van a empezar a opinar sobre ti personas que jamás han hablado contigo." },
-          { m: "decidida", t: "Y eso es algo que no puedo solucionar por ti." },
-          { m: "idle", t: "Puedo filtrar ofertas. Puedo aconsejarte. Puedo intentar protegerte de algunas cosas." },
-          { m: "suave", t: "Pero no puedo vivir tu carrera por ti." },
-          { m: "decidida", t: "Y quizá esa sea la parte más difícil de aceptar." },
-          { m: "idle", t: "Cuando empezamos, podía decirte exactamente qué necesitabas hacer." },
-          { m: "suave", t: "Ahora tienes suficiente experiencia para empezar a decidir algunas cosas tú." },
-          { m: "happy", t: "No te preocupes. Todavía voy a darte mi opinión aunque no me la pidas." },
-          { m: "decidida", t: "Solo quiero que aprendas a distinguir mi consejo de tus propias decisiones." },
-        ],
-        snap: (g) => ({ tierId: g.tier.id, matchCount: (g.matchHistory || []).length }),
-        subs: [
-          (g, snap) => g.tier.id !== snap.tierId,
-          (g, snap) => (g.matchHistory || []).length > snap.matchCount,
-        ],
-        check: (g, snap) => g.tier.id !== snap.tierId && (g.matchHistory || []).length > snap.matchCount },
-      /* CAPÍTULO 9 — La caída */
-      { title: "La caída", zone: "enfermeria",
-        objective: "Recupera forma 'buen' o 'alza', gana un partido y completa 3 días de objetivos.",
-        intro: [
-          { m: "suave", t: "Bien." },
-          { m: "orgullosa", t: "Ya no puedo tratarte como al chico que conocí en Tercera." },
-          { m: "idle", t: "Y eso es probablemente una de las mejores cosas que podía pasar." },
-          { m: "angry", t: "No estoy enfadada." },
-          { m: "angry", t: "Estoy decepcionada. Y creo que sabes perfectamente por qué." },
-          { m: "preocupada", t: "Pero no voy a convertir un mal momento en una sentencia." },
-          { m: "idle", t: "Hemos pasado meses hablando de disciplina, de rutina y de aprender a responder cuando las cosas no salen bien." },
-          { m: "preocupada", t: "Y ahora nos toca hacer exactamente eso." },
-          { m: "angry", t: "No voy a fingir que no ha pasado nada." },
-          { m: "preocupada", t: "Pero tampoco voy a dejar que un mal periodo decida quién eres como jugador." },
-          { m: "idle", t: "Si estás cansado, dímelo." },
-          { m: "preocupada", t: "Si tienes miedo, dímelo." },
-          { m: "preocupada", t: "Si no sabes qué hacer, también." },
-          { m: "suave", t: "Lo único que no quiero es que intentes cargar con todo tú solo." },
-          { m: "idle", t: "Yo también he cometido errores." },
-          { m: "preocupada", t: "Te he presionado demasiado algunas veces porque estaba tan concentrada en llevarte hacia arriba que olvidé preguntarte cómo estabas llegando." },
-          { m: "decidida", t: "Esta vez lo vamos a arreglar juntos." },
-        ],
-        setFlags: ["elisaCrisis"],
+        grantItem: "elisa_amuleto", reveal: "elisa_amuleto",
         snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
         subs: [
-          (g) => g.player.form === "buen" || g.player.form === "alza",
-          (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
-          { count: (g, snap) => daysGoalsCompletedSince(g, snap.since), goal: 3 },
-        ],
-        check: (g, snap) => (g.player.form === "buen" || g.player.form === "alza") &&
-          (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") && daysGoalsCompletedSince(g, snap.since) >= 3 },
-      /* CAPÍTULO 10 — Una noche distinta */
-      { title: "Una noche distinta", zone: "casino",
-        objective: "Completa un hito de carrera y mantén una racha de 5 días.",
-        intro: [
-          { m: "suave", t: "Bien." },
-          { m: "preocupada", t: "No voy a decirte que ya está todo solucionado." },
-          { m: "decidida", t: "Pero hemos salido del agujero." },
-          { m: "suave", t: "Y esta vez los dos hemos aprendido algo." },
-          { m: "idle", t: "Yo tengo que saber cuándo empujarte." },
-          { m: "suave", t: "Y cuándo simplemente tengo que estar ahí." },
-          { m: "gala", t: "No te acostumbres a verme así." },
-          { m: "gala", t: "Esta noche no soy tu entrenadora." },
-          { m: "gala", t: "Bueno... técnicamente sigo siéndolo." },
-          { m: "gala", t: "Pero durante unas horas podemos fingir que ninguno de los dos tiene una temporada que sacar adelante." },
-          { m: "happy", t: "Después de todo lo que hemos pasado, creo que nos hemos ganado una noche sin hablar de OVR." },
-          { m: "gala", t: "Aunque seguro que alguien terminará preguntándome por tu carrera antes de que termine la noche." },
-          { m: "happy", t: "Y no, no pienso dejar que apuestes tu carrera en una mesa." },
-          { m: "gala", t: "Una cosa es relajarse y otra muy distinta es perder la cabeza." },
-          { m: "suave", t: "Además, me gusta verte así." },
-          { m: "happy", t: "Sin estar intentando demostrar nada." },
-        ],
-        setFlags: ["elisaCrisisResolved"],
-        snap: (g) => ({ tierId: g.tier.id, seasonNum: g.season.num }),
-        subs: [
-          (g, snap) => g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum,
-          { count: (g) => g.player.streak || 0, goal: 5 },
-        ],
-        check: (g, snap) => (g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum) && (g.player.streak || 0) >= 5 },
-      /* CAPÍTULO 11 — Lo que elegimos */
-      { title: "Lo que elegimos", zone: "oficina", alsoUnlock: ["playa"],
-        objective: "Completa un hito de carrera mientras decides tu camino, y mantén una racha de 5 días.",
-        intro: [
-          { m: "happy", t: "Ha estado bien." },
-          { m: "suave", t: "No la noche. Bueno, la noche también." },
-          { m: "gala", t: "Me refiero a recordar que seguimos siendo personas incluso cuando la carrera se pone seria." },
-          { m: "happy", t: "Mañana volveremos al trabajo." },
-          { m: "idle", t: "He pasado meses diciéndote lo que creo que deberías hacer." },
-          { m: "idle", t: "Qué entrenar. Cuándo apretar. Qué oportunidades mirar. Qué cosas evitar." },
-          { m: "decidida", t: "Hoy voy a hacer algo distinto." },
-          { m: "preocupada", t: "Voy a preguntarte qué quieres tú." },
-          { m: "idle", t: "Porque puede que mi idea de tu mejor carrera no sea exactamente la misma que la tuya." },
-          { m: "suave", t: "Y si he aprendido algo contigo, es que acompañar a alguien no significa caminar delante." },
-          { m: "decidida", t: "Al principio necesitabas que te señalara el camino." },
-          { m: "suave", t: "Ahora necesitas poder elegirlo." },
-          { m: "preocupada", t: "Puede que no esté de acuerdo con todo lo que decidas." },
-          { m: "happy", t: "Probablemente no lo esté." },
-          { m: "suave", t: "Pero voy a respetarlo." },
-          { m: "decidida", t: "Porque esta carrera es tuya." },
-        ],
-        snap: (g) => ({ tierId: g.tier.id, seasonNum: g.season.num }),
-        subs: [
-          (g, snap) => g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum,
-          { count: (g) => g.player.streak || 0, goal: 5 },
-        ],
-        check: (g, snap) => (g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum) && (g.player.streak || 0) >= 5 },
-      /* CAPÍTULO 12 — Hasta arriba */
-      { title: "Hasta arriba", zone: "atico",
-        objective: "Alcanza el nivel de élite, gana un partido, racha de 6 días y supera tu mejor OVR o nota.",
-        intro: [
-          { m: "suave", t: "Entonces ya está decidido." },
-          { m: "orgullosa", t: "Y estoy contigo." },
-          { m: "happy", t: "Supongo que después de todo este tiempo era cuestión de aprender a confiar en que puedes elegir por ti mismo." },
-          { m: "idle", t: "¿Te acuerdas de la primera vez que te vi?" },
-          { m: "happy", t: "No tenías nada de esto." },
-          { m: "idle", t: "Ni este club. Ni este estadio. Ni todas estas llamadas." },
-          { m: "happy", t: "Ni siquiera tenías claro cuánto trabajo iba a costarte llegar hasta aquí." },
-          { m: "orgullosa", t: "Y, sinceramente, sigo viendo al mismo jugador." },
-          { m: "suave", t: "Solo que ahora sabes de lo que eres capaz." },
-          { m: "idle", t: "Hemos pasado de hablar de conseguir una primera victoria a hablar de mantenerte en la élite." },
-          { m: "happy", t: "Y eso es una diferencia bastante grande." },
-          { m: "orgullosa", t: "Pero no quiero que olvides algo." },
-          { m: "suave", t: "Todo lo que tienes aquí empezó con aquella primera rutina." },
-          { m: "idle", t: "Entrenar. Comer. Dormir. Volver a intentarlo." },
-          { m: "orgullosa", t: "Lo demás vino después." },
-          { m: "decidida", t: "Ahora falta una cosa." },
-          { m: "happy", t: "Demostrar que no has llegado hasta aquí por casualidad." },
-        ],
-        setFlags: ["elisaDecisionMade"],
-        snap: (g) => ({ matchCount: (g.matchHistory || []).length, ovr: calcOVR(g.player.stats), bestRating: g.bestRating || 0 }),
-        subs: [
-          (g) => g.tier.id >= TIERS[TIERS.length - 1].id,
-          (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
+          (g, s) => (g.matchHistory || []).slice(s.matchCount).some((m) => m.res === "V" && (m.rating || 0) >= 7.5),
+          (g, s) => (g.matchHistory || []).slice(s.matchCount).reduce((a, m) => a + (m.myGoals || 0) + (m.myAssists || 0), 0) >= 1,
           { count: (g) => g.player.streak || 0, goal: 6 },
-          (g, snap) => calcOVR(g.player.stats) > snap.ovr || (g.bestRating || 0) > snap.bestRating,
         ],
-        check: (g, snap) => {
-          const eliteId = TIERS[TIERS.length - 1].id;
-          return g.tier.id >= eliteId && (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") &&
-            (g.player.streak || 0) >= 6 && (calcOVR(g.player.stats) > snap.ovr || (g.bestRating || 0) > snap.bestRating);
-        } },
-      /* FINAL — El jugador que conocí */
+        check: (g, s) => (g.matchHistory || []).slice(s.matchCount).some((m) => m.res === "V" && (m.rating || 0) >= 7.5) &&
+          (g.matchHistory || []).slice(s.matchCount).reduce((a, m) => a + (m.myGoals || 0) + (m.myAssists || 0), 0) >= 1 &&
+          (g.player.streak || 0) >= 6 },
+      /* CAPÍTULO 8 — Ya no eres el mismo. Simplificación consciente (ver nota del
+         documento): matchHistory no guarda el tier de cada partido, así que la condición
+         pide ascenso/cambio de club + al menos un partido jugado dentro del capítulo. */
+      { title: "Ya no eres el mismo", zone: "prensa",
+        objective: "Sube de categoría (o cambia de club) y juega al menos un partido ya con tu nuevo estado.",
+        intro: [
+          { m: "orgullosa", t: "Ganado. Con participación tuya en el gol y con una nota de las que se recortan y se guardan." },
+          { m: "happy", t: "He tenido que quitarle el sonido al móvil. Cuarenta y un mensajes desde el pitido final." },
+          { m: "idle", t: "Y ninguno de ellos me pregunta cómo estás." },
+          { m: "idle", t: "Todos preguntan cuánto vales." },
+          { m: "idle", t: "Ven. ¿Ves esa sala? Mesa larga, micrófonos, un foco que calienta más de lo que alumbra." },
+          { m: "idle", t: "A partir de ahora vas a pasar por ahí cada dos semanas." },
+          { m: "decidida", t: "Y esa es la primera habitación de tu carrera en la que yo no puedo entrar contigo." },
+          { m: "idle", t: "Puedo filtrar ofertas. Puedo discutir con un director deportivo hasta que se rinda. Puedo apagarte el teléfono." },
+          { m: "suave", t: "No puedo contestar por ti cuando alguien te pregunte por qué fallaste ese pase en el minuto ochenta." },
+          { m: "idle", t: "Cuando empezamos, yo te decía exactamente qué hacer y funcionaba, porque no sabías nada y te venía bien que alguien decidiera." },
+          { m: "suave", t: "Ahora ya sabes." },
+          { m: "decidida", t: "Y si te sigo diciendo qué hacer, dejo de ser tu mánager y me convierto en tu excusa." },
+          { m: "decidida", t: "Y eso no te lo voy a hacer. A ti no." },
+          { m: "idle", t: "Así que este capítulo lo vas a llevar tú." },
+          { m: "decidida", t: "Quiero verte en la categoría siguiente. Subiendo de nivel o cambiando de club, me da igual el camino que elijas." },
+          { m: "idle", t: "Y después quiero verte jugar siendo ya ese jugador. No el que acaba de llegar y va con cuidado." },
+          { m: "idle", t: "El que está." },
+          { m: "happy", t: "Tranquilo, voy a seguir dándote mi opinión aunque no me la pidas. Eso no ha cambiado ni va a cambiar." },
+          { m: "decidida", t: "Pero a partir de hoy vas a tener que aprender a distinguir mi opinión de tu decisión." },
+        ],
+        replies: [
+          { t: "¿Y si me equivoco?", m: "idle",
+            r: [{ m: "suave", t: "Te equivocarás." },
+              { m: "decidida", t: "Prefiero un error tuyo que un acierto mío." },
+              { m: "idle", t: "El segundo no te enseña absolutamente nada y encima te acostumbra." }] },
+          { t: "¿Qué digo ahí dentro?", m: "idle",
+            r: [{ m: "idle", t: "La verdad, y corta." },
+              { m: "happy", t: "Y si no sabes qué decir, di que el equipo ha competido muy bien." },
+              { m: "happy", t: "Nadie ha perdido nunca una carrera por decir que el equipo ha competido muy bien." }] },
+          { t: "Prefiero que decidas tú.", m: "idle",
+            r: [{ m: "angry", t: "No." }, { m: "preocupada", t: "Ya cometí ese error una vez y todavía lo estoy pagando." },
+              { m: "idle", t: "…Sigamos." }] },
+        ],
+        setFlags: ["elisaPrensa"],
+        snap: (g) => ({ since: todayStr(), tierId: g.tier.id, clubName: g.club && g.club.name, matchCount: (g.matchHistory || []).length }),
+        subs: [
+          (g, s) => g.tier.id > s.tierId || (g.club && g.club.name) !== s.clubName,
+          (g, s) => (g.matchHistory || []).slice(s.matchCount).length >= 1,
+        ],
+        check: (g, s) => (g.tier.id > s.tierId || (g.club && g.club.name) !== s.clubName) &&
+          (g.matchHistory || []).slice(s.matchCount).length >= 1 },
+      /* CAPÍTULO 9 — La caída. Decisión de diseño (ver nota del documento): la "caída" es
+         de Elisa, no del jugador — el detonante es una revisión menor en la enfermería
+         (evento de escena, no una estadística), nunca se narra un fallo del jugador como
+         hecho. Sin deadlineDays: decisión del usuario. */
+      { title: "La caída", zone: "enfermeria",
+        objective: "Recupera una forma de 'buen' o 'alza', cierra 3 días de objetivos y consigue una victoria.",
+        intro: [
+          { m: "preocupada", t: "Categoría nueva. Partido jugado. Exactamente todo lo que te pedí, y encima rápido." },
+          { m: "preocupada", t: "Y llego aquí a felicitarte y te encuentro en una camilla." },
+          { m: "angry", t: "No. No me digas que no es nada." },
+          { m: "angry", t: "Ya me lo ha dicho el fisio, ya me lo ha dicho dos veces, y ahora mismo me da exactamente igual lo que diga el fisio." },
+          { m: "angry", t: "¿Sabes cuánto tardas tú en decirme que algo te duele? Nunca. Esa es la respuesta exacta. Nunca." },
+          { m: "angry", t: "Llevo tres semanas viéndote entrenar por encima de lo que te pedí y no he dicho nada." },
+          { m: "angry", t: "Y eso también es culpa mía, así que no pongas esa cara de reproche." },
+          { m: "preocupada", t: "Perdona. Perdóname. No es contigo." },
+          { m: "preocupada", t: "Siéntate. Anda, siéntate." },
+          { m: "preocupada", t: "Voy a contarte de una vez la película que te dije que te contaría otro día." },
+          { m: "idle", t: "Se llamaba Nico. Fue el primer jugador que llevé. Tenía diecinueve años y jugaba en Tercera. Como tú." },
+          { m: "idle", t: "En dieciocho meses lo subí dos categorías. Fue, sin discusión, el mejor año de mi vida profesional." },
+          { m: "preocupada", t: "Cada vez que él me decía «puedo más», yo le decía «pues más». Cada vez. Sin excepción." },
+          { m: "preocupada", t: "Llegó a Primera con veintitrés años. Lo consiguió. Consiguió absolutamente todo lo que yo había planificado, punto por punto." },
+          { m: "suave", t: "Y a los veintiséis lo dejó." },
+          { m: "suave", t: "Sin lesión. Sin escándalo. Se levantó un martes y dijo que no quería volver a entrar en un vestuario nunca más." },
+          { m: "preocupada", t: "¿Y sabes de qué me di cuenta ese día?" },
+          { m: "preocupada", t: "De que en cinco años no le había preguntado ni una sola vez si aquello le gustaba." },
+          { m: "preocupada", t: "Yo no lo rompí empujándolo, {player}. Lo rompí llevándolo a un sitio que él nunca eligió." },
+          { m: "suave", t: "Esto lo llevo en el bolso desde el primer día que fui a verte jugar bajo la lluvia." },
+          { m: "idle", t: "Vendas, hielo instantáneo y dos cosas más. Nunca lo he abierto." },
+          { m: "preocupada", t: "Lo llevaba encima «por si acaso», que es la forma educada de decir «por miedo»." },
+          { m: "decidida", t: "Ahora es tuyo." },
+          { m: "suave", t: "Prefiero que lo tengas tú y me llames antes de que haga falta, y no al revés." },
+          { m: "decidida", t: "Y ahora vamos a hacer exactamente lo que llevo un año predicando y no siempre cumpliendo." },
+          { m: "idle", t: "No vamos a apretar. Vamos a reconstruir, que es más lento y menos vistoso." },
+          { m: "idle", t: "Tres días cerrados. Bien cerrados, sin trampas y sin días a medias." },
+          { m: "idle", t: "Y quiero verte otra vez en una forma decente antes de que hablemos de nada más." },
+          { m: "preocupada", t: "Y una victoria, sí. Porque el fútbol no espera a que estemos emocionalmente disponibles." },
+          { m: "suave", t: "Pero esta vez no la quiero para el informe." },
+          { m: "suave", t: "La quiero para que los dos nos quedemos tranquilos." },
+        ],
+        replies: [
+          { t: "¿Dónde está Nico ahora?", m: "idle",
+            r: [{ m: "suave", t: "Bien. Está bien, de verdad." }, { m: "idle", t: "Tiene una tienda de bicicletas y dos críos." },
+              { m: "suave", t: "Nos escribimos por su cumpleaños. Es la persona más tranquila que conozco." },
+              { m: "preocupada", t: "A veces me da rabia. Y casi siempre me da envidia." }] },
+          { t: "No soy él.", m: "decidida",
+            r: [{ m: "sorprendida", t: "…" }, { m: "preocupada", t: "Ya lo sé. Lo sé perfectamente." },
+              { m: "suave", t: "El problema es que yo sigo siendo yo." }] },
+          { t: "Perdona por no habértelo dicho.", m: "idle",
+            r: [{ m: "preocupada", t: "No. Perdóname tú a mí." },
+              { m: "decidida", t: "Yo te enseñé a no quejarte nunca." },
+              { m: "idle", t: "Y luego me sorprendo de que no te quejes. Es de un ridículo impresionante." }] },
+        ],
+        setFlags: ["elisaNicoRevelado"],
+        grantItem: "elisa_botiquin", reveal: "elisa_botiquin",
+        snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
+        subs: [
+          (g, s) => Object.entries(g.logs || {}).some(([d, l]) => d >= s.since && l.closed && (l.form === "buen" || l.form === "alza")),
+          { count: (g, s) => daysGoalsCompletedSince(g, s.since), goal: 3 },
+          (g, s) => (g.matchHistory || []).slice(s.matchCount).some((m) => m.res === "V"),
+        ],
+        check: (g, s) => Object.entries(g.logs || {}).some(([d, l]) => d >= s.since && l.closed && (l.form === "buen" || l.form === "alza")) &&
+          daysGoalsCompletedSince(g, s.since) >= 3 && (g.matchHistory || []).slice(s.matchCount).some((m) => m.res === "V") },
+      /* CAPÍTULO 10 — Una noche distinta. Único capítulo con pose "gala". bestRating se
+         fotografía en el snap para no comparar contra un valor que cambia en cuanto se
+         supera. */
+      { title: "Una noche distinta", zone: "casino",
+        objective: "Supera tu mejor nota de carrera en un partido y mantén una racha de 5 días.",
+        intro: [
+          { m: "happy", t: "Recuperado. Forma decente, tres días limpios y un partido ganado sin forzar absolutamente nada." },
+          { m: "idle", t: "Y lo hiciste llamándome dos veces por el camino, que es la parte que me he apuntado yo en mi libreta." },
+          { m: "gala", t: "Y por eso esta noche estamos aquí y no en una camilla." },
+          { m: "gala", t: "No te acostumbres a verme así. Este vestido tiene ocho años y sale una vez cada dos temporadas." },
+          { m: "gala", t: "Esta noche no soy tu mánager." },
+          { m: "gala", t: "Bueno… técnicamente lo soy, y de hecho hay cuatro personas en esta sala que van a intentar hablar conmigo de ti antes del postre. Las tengo localizadas." },
+          { m: "happy", t: "Pero durante un par de horas vamos a fingir que ninguno de los dos tiene una temporada que sacar adelante." },
+          { m: "gala", t: "Reglas de la noche. Tres. Como siempre." },
+          { m: "gala", t: "Una: si alguien te pregunta por tu media, cambias de tema. Sonríe y habla del catering." },
+          { m: "gala", t: "Dos: no apuestas. Ni por diversión. He visto cómo empieza eso y siempre empieza por diversión." },
+          { m: "suave", t: "Tres: si en algún momento te agobias, me lo dices y nos vamos. Sin explicaciones y sin quedar mal con nadie." },
+          { m: "happy", t: "Esa tercera es nueva. Antes no la tenía." },
+          { m: "suave", t: "Digamos que últimamente estoy revisando el manual entero." },
+          { m: "gala", t: "Ah, y una última cosa, que soy incapaz de no ser yo ni una noche." },
+          { m: "happy", t: "Mañana sigue habiendo temporada." },
+          { m: "decidida", t: "Y quiero tu mejor partido. No un buen partido: el mejor que hayas hecho nunca en tu vida." },
+          { m: "idle", t: "Tienes una nota máxima en tu historial. Quiero que la borres." },
+          { m: "decidida", t: "Y quiero que llegues ahí con cinco días seguidos detrás, no con una semana de fiesta y un día de arrepentimiento." },
+          { m: "gala", t: "Y ahora deja de mirarme con esa cara y ve a saludar al señor de la corbata horrible, que es el dueño de media liga." },
+        ],
+        replies: [
+          { t: "Estás guapa.", m: "happy",
+            r: [{ m: "sorprendida", t: "…" }, { m: "gala", t: "Y tú te estás saltando la regla número uno por un camino que no había previsto." },
+              { m: "happy", t: "Gracias." }] },
+          { t: "¿Quién es toda esta gente?", m: "idle",
+            r: [{ m: "gala", t: "Dinero. Todo esto es dinero con zapatos caros." },
+              { m: "idle", t: "Apréndete las caras, no los nombres. Los nombres cambian." },
+              { m: "decidida", t: "Algún día te van a hacer falta y no vas a tener tiempo de preguntar." }] },
+          { t: "¿Nos podemos ir ya?", m: "idle",
+            r: [{ m: "suave", t: "Sí." }, { m: "happy", t: "Has aguantado cuarenta minutos. Yo la primera vez aguanté veinte y me escondí en un baño." }] },
+        ],
+        snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length, bestRating: g.bestRating || 0 }),
+        subs: [
+          (g, s) => (g.matchHistory || []).slice(s.matchCount).some((m) => (m.rating || 0) > s.bestRating),
+          { count: (g) => g.player.streak || 0, goal: 5 },
+        ],
+        check: (g, s) => (g.matchHistory || []).slice(s.matchCount).some((m) => (m.rating || 0) > s.bestRating) &&
+          (g.player.streak || 0) >= 5 },
+      /* CAPÍTULO 11 — Lo que elegimos. Decisión mayor: marca flag permanente
+         (elisaPath_cima / elisaPath_equilibrio / elisaPath_abierto) que cambia una línea
+         en C12, FINAL y EPÍLOGO (ver introBuild de esas etapas más abajo). Es también el
+         pago de las siete páginas arrancadas de la libreta sembradas en el prólogo. */
+      { title: "Lo que elegimos", zone: "playa",
+        objective: "Alcanza la categoría Europa manteniendo 5 días de objetivos.",
+        intro: [
+          { m: "orgullosa", t: "Tu mejor nota. La mejor de toda tu carrera. Y con la racha entera." },
+          { m: "idle", t: "Lo he mirado tres veces por si el sistema se había equivocado." },
+          { m: "suave", t: "No se había equivocado." },
+          { m: "idle", t: "Te he traído aquí porque en la oficina no me salía decirte esto. Lo he intentado dos veces esta semana." },
+          { m: "idle", t: "Llevo un año diciéndote lo que tienes que hacer. Qué entrenar. Cuándo apretar. Qué firmar y qué no." },
+          { m: "idle", t: "Y he acertado bastante, la verdad. Eso hace que sea todavía más difícil lo que voy a hacer ahora." },
+          { m: "decidida", t: "Voy a callarme y preguntarte a ti." },
+          { m: "preocupada", t: "Y no le hago esta pregunta a nadie desde hace cinco años, así que ten paciencia si me sale mal." },
+          { m: "idle", t: "Se puede llegar arriba de muchas formas, {player}. Y no todas terminan en el mismo sitio." },
+          { m: "idle", t: "Puedo llevarte al máximo posible. Sé cómo se hace, lo he hecho antes y funciona. Cuesta caro, y no siempre en dinero." },
+          { m: "idle", t: "O puedo llevarte lo más alto que se pueda llegar sin que dejes de reconocerte cuando te mires." },
+          { m: "suave", t: "Y no pienso decirte cuál elegiría yo. Ya elegí una vez por otra persona." },
+          { m: "idle", t: "¿Te acuerdas de las siete páginas que faltan al principio de la libreta?" },
+          { m: "suave", t: "Las arranqué yo. Eran el plan de otro." },
+          { m: "decidida", t: "Llevo un año esperando a que tuvieras algo tuyo que poner ahí." },
+          { m: "decidida", t: "Sea lo que sea lo que has puesto en esa página, se demuestra igual." },
+          { m: "idle", t: "Quiero verte en Europa. En la categoría en la que se juega entre semana y la gente se sabe tu nombre en otro idioma." },
+          { m: "decidida", t: "Y quiero que llegues con la rutina intacta. No a base de un mes espectacular y tres semanas escondiéndote." },
+          { m: "suave", t: "Porque a estas alturas ya no me importa tanto el sitio al que llegues." },
+          { m: "suave", t: "Me importa cómo llegues." },
+        ],
+        replies: [
+          { t: "Quiero llegar lo más alto posible. Todo.", m: "decidida", setFlag: "elisaPath_cima",
+            r: [{ m: "sorprendida", t: "…" }, { m: "decidida", t: "Vale. Entonces lo vamos a hacer bien, que no es lo mismo que hacerlo rápido." },
+              { m: "idle", t: "Te voy a exigir más que a nadie y te vas a hartar de mí." },
+              { m: "suave", t: "Y si algún día quieres bajarte, me lo dices y frenamos. Eso también lo escribo, en la misma página y con la misma letra." }] },
+          { t: "Quiero llegar alto sin dejar de ser yo.", m: "idle", setFlag: "elisaPath_equilibrio",
+            r: [{ m: "suave", t: "…" }, { m: "happy", t: "Esa es la respuesta difícil, ¿sabes?" },
+              { m: "idle", t: "Todo el mundo se cree que la ambiciosa es la otra." },
+              { m: "decidida", t: "Anotado. Y te aviso: te la voy a recordar los días que se te olvide." }] },
+          { t: "Todavía no lo sé.", m: "idle", setFlag: "elisaPath_abierto",
+            r: [{ m: "sorprendida", t: "…" }, { m: "suave", t: "¿Sabes qué? Es la primera respuesta honesta que me han dado nunca a esta pregunta." },
+              { m: "idle", t: "Dejamos la página en blanco. No pasa nada, hay tiempo." },
+              { m: "decidida", t: "Pero la libreta la llevas tú. Eso no es negociable." }] },
+        ],
+        setFlags: ["elisaEleccion"],
+        snap: (g) => ({ since: todayStr() }),
+        subs: [
+          (g) => g.tier.id >= 5,
+          { count: (g, s) => daysGoalsCompletedSince(g, s.since), goal: 5 },
+        ],
+        check: (g, s) => g.tier.id >= 5 && daysGoalsCompletedSince(g, s.since) >= 5 },
+      /* CAPÍTULO 12 — Hasta arriba. La línea "Hay gente que dice…" cambia según el camino
+         elegido en el capítulo 11 (introBuild, ver elisaPathOf arriba). */
+      { title: "Hasta arriba", zone: "atico",
+        objective: "Alcanza la categoría Champions, gana un partido, mantén una racha de 6 días y supera tu mejor media.",
+        intro: ELISA_C12_INTRO,
+        introBuild: (g) => {
+          const path = elisaPathOf(g);
+          if (!path) return null;
+          return ELISA_C12_INTRO.map((b) => b === ELISA_C12_PATH_LINE ? ELISA_C12_PATH_LINES[path] : b);
+        },
+        replies: [
+          { t: "Todavía no me lo creo.", m: "happy",
+            r: [{ m: "happy", t: "Normal. Yo tampoco." },
+              { m: "idle", t: "Tardarás como un año en creértelo. A mí me pasó igual con mi primera oficina." },
+              { m: "suave", t: "Y cuando te lo creas, echarás de menos no creértelo. Avisado quedas." }] },
+          { t: "Deberías llevarte una comisión mayor.", m: "idle",
+            r: [{ m: "sorprendida", t: "Ya me la he llevado." }, { m: "happy", t: "¿Con quién crees que estás hablando exactamente?" }] },
+          { t: "¿Y si aquel día no te hubiera hecho caso?", m: "idle",
+            r: [{ m: "idle", t: "Nada. Habría cogido otro autobús al domingo siguiente." },
+              { m: "suave", t: "Y ahora estaría en una oficina de dos sillas preguntándome qué habrías hecho tú." }] },
+        ],
+        snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length, ovr: calcOVR(g.player.stats) }),
+        subs: [
+          (g) => g.tier.id >= 6,
+          (g, s) => (g.matchHistory || []).slice(s.matchCount).some((m) => m.res === "V"),
+          { count: (g) => g.player.streak || 0, goal: 6 },
+          (g, s) => calcOVR(g.player.stats) > s.ovr,
+        ],
+        check: (g, s) => g.tier.id >= 6 && (g.matchHistory || []).slice(s.matchCount).some((m) => m.res === "V") &&
+          (g.player.streak || 0) >= 6 && calcOVR(g.player.stats) > s.ovr },
+      /* FINAL — El jugador que conocí. La última línea del bloque B cambia según el
+         camino elegido en el capítulo 11 (introBuild). NO lleva final:true: la última
+         etapa del capítulo es el EPÍLOGO. */
       { title: "El jugador que conocí", zone: "estadio",
-        objective: "Alcanza el umbral final de élite.",
-        intro: [
-          { m: "orgullosa", t: "Lo has conseguido." },
-          { m: "suave", t: "Y por una vez no tengo una lista de cosas que quiero que hagas mañana." },
-          { m: "happy", t: "Creo que eso significa que algo hemos hecho bien." },
-          { m: "orgullosa", t: "Cuando te conocí, estabas en Tercera Federación y estabas convencido de que tenías que demostrar algo en cada minuto." },
-          { m: "idle", t: "Yo solo quería darte una oportunidad." },
-          { m: "orgullosa", t: "Luego me obligaste a darte otra. Y otra." },
-          { m: "happy", t: "Hubo días en los que pensé que estabas intentando hacerme trabajar más de lo que cobraba." },
-          { m: "suave", t: "Y probablemente tenía razón." },
-          { m: "idle", t: "Pero en algún momento pasó algo que no esperaba." },
-          { m: "suave", t: "Dejé de pensar solamente en dónde podías llegar." },
-          { m: "orgullosa", t: "Empecé a disfrutar de estar ahí para verlo." },
-          { m: "idle", t: "He visto tus primeras victorias, tus días malos, tus dudas y todas las veces que has vuelto a intentarlo." },
-          { m: "suave", t: "Y supongo que eso es lo que significa acompañar una carrera." },
-          { m: "orgullosa", t: "Has llegado muy lejos, {player}." },
-          { m: "suave", t: "Y sí. Estoy orgullosa de ti." },
+        objective: "Alcanza el último escalón de tu carrera: la categoría Leyenda.",
+        intro: ELISA_FINAL_INTRO,
+        introBuild: (g) => {
+          const path = elisaPathOf(g);
+          if (!path || path === "equilibrio") return null;
+          return ELISA_FINAL_INTRO.map((b) => b === ELISA_FINAL_PATH_LINE ? ELISA_FINAL_PATH_LINES[path] : b);
+        },
+        replies: [
+          { t: "No lo habría hecho sin ti.", m: "happy",
+            r: [{ m: "sorprendida", t: "…" }, { m: "decidida", t: "Sí. Sí lo habrías hecho." },
+              { m: "suave", t: "Más tarde, peor y más solo. Pero lo habrías hecho." },
+              { m: "happy", t: "Aun así, gracias por decirlo." }] },
+          { t: "¿Y ahora qué?", m: "idle",
+            r: [{ m: "idle", t: "Ahora falta el último escalón y luego empieza otra cosa." },
+              { m: "suave", t: "No te preocupes por eso hoy." }] },
+          { t: "Fila alta, lado izquierdo.", m: "happy",
+            r: [{ m: "sorprendida", t: "…" }, { m: "suave", t: "Te has fijado." }, { m: "happy", t: "Sigo sin querer que mires." }] },
         ],
-        snap: () => ({}),
-        check: (g) => g.tier.id >= TIERS[TIERS.length - 1].id },
-      /* EPÍLOGO — Ocho en punto (última etapa: final:true, sin objetivo propio,
-         entrega el pin y el +1 MEN al entrar aquí, ver reward) */
-      { title: "Ocho en punto", zone: "oficina", final: true,
-        intro: [
-          { m: "suave", t: "No te voy a decir que esto es el final." },
-          { m: "happy", t: "Solo es el final de la parte que empezamos juntos aquel día." },
-          { m: "orgullosa", t: "Ahora ve y disfruta de lo que has construido." },
-          { m: "idle", t: "Ocho en punto." },
-          { m: "suave", t: "Sigues llegando a la hora." },
-          { m: "happy", t: "Menos mal. Ya empezaba a pensar que había hecho un mal trabajo." },
-          { m: "suave", t: "¿Sabes qué es lo raro?" },
-          { m: "idle", t: "Que durante meses pensé que cuando llegaras a la élite dejaríamos de tener motivos para quedar aquí." },
-          { m: "happy", t: "Y resulta que no." },
-          { m: "suave", t: "La carrera sigue." },
-          { m: "idle", t: "Solo que ahora ya no tengo que enseñarte a empezar." },
-          { m: "suave", t: "Solo tengo que seguir ahí para ver qué haces después." },
-          { m: "happy", t: "Bueno... supongo que eso es todo." },
-          { m: "suave", t: "No la carrera. Eso no se acaba aquí." },
-          { m: "suave", t: "Solo esta parte." },
-        ],
-        setFlags: ["elisaStoryComplete", "elisaPinEarned"],
-        grantItem: "elisa_pin", reveal: "elisa_pin",
+        snap: () => ({ since: todayStr() }),
+        subs: [(g) => g.tier.id >= 7],
+        check: (g) => g.tier.id >= 7,
         reward: (g) => {
           const stats = { ...g.player.stats };
           stats.MEN = Math.min(99, stats.MEN + 1);
           return { ...g, player: { ...g.player, stats } };
         } },
+      /* EPÍLOGO — Ocho en punto (última etapa: final:true, sin objetivo propio; entrega
+         el pin al leer la escena). Una línea extra se añade justo antes del cierre según
+         el camino elegido en el capítulo 11 (introBuild). */
+      { title: "Ocho en punto", zone: "oficina", final: true,
+        intro: ELISA_EPILOGO_INTRO.filter((b) => b !== ELISA_EPILOGO_PATH_MARKER),
+        introBuild: (g) => {
+          const path = elisaPathOf(g);
+          if (!path) return null;
+          return ELISA_EPILOGO_INTRO.map((b) => b === ELISA_EPILOGO_PATH_MARKER ? ELISA_EPILOGO_PATH_LINES[path] : b);
+        },
+        replies: [
+          { t: "Ocho en punto mañana.", m: "happy",
+            r: [{ m: "happy", t: "Ocho en punto." }, { m: "suave", t: "Y trae la libreta. Todavía quedan páginas." }] },
+          { t: "Gracias, Elisa.", m: "happy",
+            r: [{ m: "sorprendida", t: "…" }, { m: "suave", t: "De nada." },
+              { m: "happy", t: "Vete ya, anda, que me estás poniendo sentimental y tengo tres llamadas." }] },
+        ],
+        setFlags: ["elisaStoryComplete", "elisaPinEarned"],
+        objective: null,
+        check: () => true,
+        grantItem: "elisa_pin", reveal: "elisa_pin" },
     ],
   }],
 };
@@ -6891,6 +7218,21 @@ const ITEMS = {
     desc: "Carta coleccionable de Alexia. Vendible a Coco por 15 monedas." },
   milo_pin: { name: "Carta de Milo", icon: "🎴", img: "/images/cartas/milo_pin.webp", kind: "card", sellMin: 15, sellMax: 15,
     desc: "La carta que Milo te dio el día que dejó de necesitar esconderse. Coleccionable, vendible a Coco por 15 monedas." },
+  /* Objetos de ELISA_STORY (rework 3.0): kind:"keepsake" — recuerdos de campaña no
+     consumibles, sin sellMin/sellMax a propósito (el guion los describe como "sin valor",
+     no se venden a Coco). Distintos de sus tocayos genéricos que ya vende Coco
+     (libreta_tactica/amuleto_suerte/botiquin, kind:"consumable" con +50 XP): mismo aspecto
+     visual reutilizado, pero conceptualmente son objetos de historia de Elisa, no
+     consumibles al azar de tienda — por eso llevan id propio en vez de reutilizar esos.
+     KEEPSAKE_NPC (ver CuadroReveal) hace que su pantalla de revelado use el color de Elisa. */
+  elisa_libreta: { name: "Libreta táctica de Elisa", icon: "📓", img: "/images/objects/libreta_tactica.webp", kind: "keepsake",
+    desc: "Usada, con las esquinas dobladas. Faltan las siete primeras páginas." },
+  elisa_taza: { name: "Taza de la oficina", icon: "☕", img: "/images/objects/tazadecafe.webp", kind: "keepsake",
+    desc: "Fea, con el borde saltado. Se queda en la oficina de Elisa." },
+  elisa_amuleto: { name: "Moneda de Elisa", icon: "🍀", img: "/images/objects/amuleto_suerte.webp", kind: "keepsake",
+    desc: "Sin curso legal. La lleva encima desde su primera firma." },
+  elisa_botiquin: { name: "Botiquín de Elisa", icon: "🩹", img: "/images/objects/botiquin.webp", kind: "keepsake",
+    desc: "Lo llevaba en el bolso desde el primer día. Nunca lo había abierto." },
   /* Cuadros de Vera (ver VERA_STORY): kind:"painting", no consumible ni regalable (igual
      que los pines, sin botón de acción en InventoryPanel), pero sí vendibles a Coco —
      ITEMS[id].sellMin/sellMax es lo único que gatilla el botón VENDER en CocoShop (ver
@@ -7894,13 +8236,16 @@ function FishingSequence({ entry, onConfirm }) {
 /* subtítulo genérico según el tipo de objeto — "painting" (cuadros de Vera), "cassette"
    (mezclas de Alexia) y cualquier otro kind futuro caen a un "Nuevo objeto conseguido"
    neutro en vez de dar por hecho que todo lo que pasa por esta pantalla es un cuadro. */
-const REWARD_KIND_LABEL = { painting: "Nuevo cuadro conseguido", cassette: "Nuevo cassette conseguido", card: "Nueva carta conseguida" };
+const REWARD_KIND_LABEL = { painting: "Nuevo cuadro conseguido", cassette: "Nuevo cassette conseguido", card: "Nueva carta conseguida", keepsake: "Objeto conseguido" };
 /* de qué personaje es cada carta (ver ITEMS kind:"card"), solo para elegir el color del
    resplandor en CuadroReveal — su id no siempre coincide con la clave de NPCS (karla_pin
    es de "lisa", no de "karla"), así que no se puede derivar quitando el sufijo "_pin". */
 const CARD_NPC = { elisa_pin: "elisa", milly_pin: "milly", yuna_pin: "yuna", lopez_pin: "lopez",
   igor_pin: "igor", karla_pin: "lisa", beka_pin: "beka", nina_pin: "nina", coco_pin: "coco", vera_pin: "vera",
   alexia_pin: "alexia", milo_pin: "milo" };
+/* mismo propósito que CARD_NPC pero para los objetos kind:"keepsake" (recuerdos no
+   vendibles que entrega una historia, distintos de las cartas coleccionables). */
+const KEEPSAKE_NPC = { elisa_libreta: "elisa", elisa_taza: "elisa", elisa_amuleto: "elisa", elisa_botiquin: "elisa" };
 function CuadroReveal({ itemId, onClose }) {
   const isCompletion = itemId === "vera_completion";
   const item = !isCompletion ? ITEMS[itemId] : null;
@@ -7911,6 +8256,7 @@ function CuadroReveal({ itemId, onClose }) {
   const glow = isCompletion ? NPCS.vera.color
     : item && item.kind === "cassette" ? NPCS.alexia.color
     : item && item.kind === "card" && CARD_NPC[itemId] ? NPCS[CARD_NPC[itemId]].color
+    : item && item.kind === "keepsake" && KEEPSAKE_NPC[itemId] ? NPCS[KEEPSAKE_NPC[itemId]].color
     : NPCS.vera.color;
   useEffect(() => { rewardShimmer(); }, [itemId]);
   return (
@@ -10138,7 +10484,7 @@ export default function App() {
         const s0 = chapter.stages[0];
         const state = { chapter: chapterIdx, stage: 0, snap: s0.snap ? s0.snap(out) : {}, startDay: todayStr() };
         out = enterStage(out, s0);
-        out = queueStageScene(out, def, key, s0, state);
+        out = queueStageScene(out, def, key, s0, state, s0.introBuild ? s0.introBuild(out) : null);
         pending[key] = true;
         return;
       }
@@ -10157,7 +10503,7 @@ export default function App() {
       const state = hasNextChapter
         ? { chapter: chapterIdx + 1, stage: -1, snap: {}, startDay: todayStr() } /* -1: aún no ha empezado su primera etapa */
         : { chapter: chapterIdx, stage: nextIdx, snap: next.snap ? next.snap(out) : {}, startDay: todayStr(), done: chapterDone, failed };
-      const beats = failed && next.introFail ? next.introFail : next.intro;
+      const beats = failed && next.introFail ? next.introFail : (next.introBuild ? next.introBuild(out) : next.intro);
       out = enterStage(out, next);
       out = queueStageScene(out, def, key, next, state, beats);
       pending[key] = true;
@@ -10208,10 +10554,18 @@ export default function App() {
        frase — si no, se perdía en cuanto el jugador elegía una opción, porque la entrada
        original se descarta a continuación y la respuesta nueva no lleva applyOnRead. */
     let out = applyOnRead(g, e.applyOnRead);
-    /* la réplica del personaje entra al frente de la cola: responde al momento,
-       con su propia expresión (por defecto "happy" si la opción no especifica otra) */
-    const resp = { id: Date.now() + Math.random(), npc: e.npc, mood: opt.m || "happy", text: pick(opt.r) };
-    out = { ...out, npcQueue: [resp, ...q.filter((x) => x.id !== id)] };
+    /* la réplica del personaje entra al frente de la cola, con su propia expresión.
+       "r" admite dos formatos: array de strings (una sola frase, se elige una al azar con
+       pick() — formato clásico de Yuna/Karla, útil para variar el texto) o array de beats
+       {m,t} (varias frases seguidas, cada una con su propio mood — lo que necesita
+       ELISA_STORY 3.0, donde una respuesta del jugador puede llevar 2-3 frases con cambios
+       de expresión, igual que cualquier otra escena). Sin tocar nada, el formato antiguo
+       sigue funcionando exactamente igual. */
+    const lines = typeof opt.r[0] === "string"
+      ? [{ m: opt.m || "happy", t: pick(opt.r) }]
+      : opt.r.map((b) => ({ m: b.m || opt.m || "happy", t: b.t }));
+    const resp = lines.map((b) => ({ id: Date.now() + Math.random(), npc: e.npc, mood: b.m, text: b.t }));
+    out = { ...out, npcQueue: [...resp, ...q.filter((x) => x.id !== id)] };
     /* algunas respuestas dejan una marca que otro personaje puede recordar más adelante
        (p.ej. le cuentas un secreto a Milly y luego Yuna "se entera" por su cuenta) */
     if (opt.setFlag) out[opt.setFlag] = true;

@@ -1079,6 +1079,14 @@ const NPCS = {
      que se ha hecho con Coco/Vera para moods sin imagen propia. */
   alexia: { name: "Alexia", color: "#F2542D", voice: "/audio/vozchica01.mp3", icon: "/images/alexia/alexia_icon.webp",
     arts: { idle: "/images/alexia/alexia_idle.webp", music: "/images/alexia/alexia_music.webp" }, def: "idle" },
+  /* Milo: criatura que se esconde tras una roca en el Parque (ver MILO_STORY). Su campaña
+     narra el arco visual completo del documento (escondido -> shy -> idle -> happy) con
+     los 4 assets ya listos, uno por etapa de confianza. def:"idle" (no "escondido") porque
+     es el mood más neutro para cualquier beat futuro sin mood explícito, no el punto de
+     partida de la historia — cada etapa ya especifica su propio mood real. */
+  milo: { name: "Milo", color: "#4E8B57", voice: "/audio/vozchico01.mp3", icon: "/images/milo/milo_icon.webp",
+    arts: { escondido: "/images/milo/milo_escondido.webp", shy: "/images/milo/milo_shy.webp",
+      idle: "/images/milo/milo_idle.webp", happy: "/images/milo/milo_happy.webp" }, def: "idle" },
 };
 /* el sender siempre es el nombre real del personaje ahora (la zona ya no crea una
    identidad de sender distinta: es contexto de la escena, ver campo "zone" en addMsg/addScene) */
@@ -1094,6 +1102,7 @@ const senderToNpc = (from) => {
   if (from === "Coco") return "coco";
   if (from === "Vera") return "vera";
   if (from === "Alexia") return "alexia";
+  if (from === "Milo") return "milo";
   return null; /* prensa/afición/redes/club -> periódico */
 };
 const paperSec = (from) =>
@@ -1417,7 +1426,7 @@ const ZONES = [
   { id: "oficina", kind: "npc", npc: "elisa", label: "Oficina", icon: "🏢", x: 26.11, y: 6.63,
     pts: "52.25 87.74 55.66 137.44 204.76 129.61 204.76 76.16 52.25 87.74",
     unlocked: (g) => isZoneUnlocked(g, "oficina") },
-  { id: "ciudad-dep", kind: "npc", npc: ["lopez", "elisa", "milly", "beka"], label: "Ciudad Deportiva", icon: "🏟️", x: 68.40, y: 31.75,
+  { id: "ciudad-dep", kind: "npc", npc: ["lopez", "elisa", "milly", "beka", "milo"], label: "Ciudad Deportiva", icon: "🏟️", x: 68.40, y: 31.75,
     pts: "226.89 245.01 214.21 284.33 257.1 333.35 437.36 333.35 437.36 247.57 226.89 245.01",
     unlocked: (g) => isZoneUnlocked(g, "ciudad-dep") },
   { id: "kiosco", kind: "paper", npc: "milly", label: "Kiosco", icon: "📰", x: 71.79, y: 44.20,
@@ -1456,7 +1465,7 @@ const ZONES = [
   { id: "estadio", kind: "npc", npc: ["lopez", "yuna", "elisa", "milly", "igor", "beka"], label: "Gran Estadio", icon: "🏆", x: 74.47, y: 89.16,
     pts: "384.07 634.12 295.02 657.52 262.89 677.69 290.06 764.25 384.07 764.25 431.07 715.53 384.07 634.12",
     unlocked: (g) => isZoneUnlocked(g, "estadio"), big: true },
-  { id: "parque", kind: "npc", npc: ["elisa", "lisa", "milly", "yuna", "lopez", "beka", "vera"], label: "Parque", icon: "🌳", x: 47.99, y: 42.84,
+  { id: "parque", kind: "npc", npc: ["elisa", "lisa", "milly", "yuna", "lopez", "beka", "vera", "milo"], label: "Parque", icon: "🌳", x: 47.99, y: 42.84,
     pts: "204.76 310.38 181.53 393.1 289.27 402.29 204.76 310.38",
     unlocked: (g) => isZoneUnlocked(g, "parque") },
   { id: "casino", kind: "npc", npc: ["elisa", "lisa"], label: "Casino", icon: "🎰", x: 63.79, y: 72.25,
@@ -1488,7 +1497,7 @@ const ZONES = [
 /* home zone de cada personaje: dónde "vive" por defecto si una escena no especifica zona
    explícita (varios personajes están asignados a más de una zona ahora que la zona es
    contexto de escena y no una identidad de npc distinta, ver NPCS más arriba) */
-const HOME_ZONE = { elisa: "oficina", lopez: "ciudad-dep", milly: "kiosco", yuna: "barrio", lisa: "patro", igor: "restaurante", beka: "barrio", nina: "playa", vera: "parque", coco: "tienda", alexia: "atico" };
+const HOME_ZONE = { elisa: "oficina", lopez: "ciudad-dep", milly: "kiosco", yuna: "barrio", lisa: "patro", igor: "restaurante", beka: "barrio", nina: "playa", vera: "parque", coco: "tienda", alexia: "atico", milo: "parque" };
 /* una zona puede tener uno o varios personajes asignados (p.ej. El Barrio) */
 const zoneNpcList = (z) => (Array.isArray(z.npc) ? z.npc : z.npc ? [z.npc] : []);
 /* una entrada de npcQueue cuenta para una zona si su "zone" explícito coincide, o si no
@@ -6379,9 +6388,451 @@ const ALEXIA_GREETING = [
   { m: "idle", t: "Toma, prueba esta." },
 ];
 
+/* ============================================================
+   MILO · criatura escondida tras una roca del Parque (ver
+   FUTABITA_Milo_Rework_Narrativo_v4_Jugador_Vera_Milo.docx). Estructura
+   de tres: el jugador está presente en cada escena pero nunca tiene
+   líneas propias (el documento lo pide explícitamente); Vera hace de
+   intérprete y puente, Milo se dirige cada vez más directamente al
+   jugador a medida que gana confianza.
+
+   Novedad de motor: hasta ahora una escena entera pertenecía a UN solo
+   personaje (addScene recibía un "from" único para todos sus beats).
+   Aquí Vera y Milo hablan dentro de la MISMA escena, así que cada beat
+   puede llevar su propio "from" que pisa el de la escena solo para esa
+   línea (ver addScene/queueStageScene) — sin overrides, cualquier otra
+   historia se comporta exactamente igual que antes.
+
+   Arco visual (ver NPCS.milo.arts): escondido (prólogo-cap1) -> shy
+   (cap2-cap4, primera revelación) -> idle (cap5-cap9, ya confía) ->
+   happy (cap10-epílogo, busca al jugador por iniciativa propia). Los
+   cambios de mood ocurren DENTRO de la propia etapa cuando el documento
+   marca un cambio de pose a media escena (p.ej. cap2: Milo sale del
+   escondite a mitad de conversación), no entre etapas.
+
+   Recompensa: solo UNA, la Carta de Milo, entregada al cerrar el
+   capítulo 10 (no al final de la historia entera, a diferencia de
+   Elisa/Milly/etc.) — así que en vez de partir cada capítulo en
+   SETUP+ENTREGA (patrón de Vera/Alexia, innecesario aquí porque solo
+   hay un premio), toda la historia vive en un único capítulo largo
+   (patrón de Elisa/Milly) y grantItem/reveal se colocan directamente en
+   una pequeña etapa de entrega entre el capítulo 10 y el FINAL — no
+   necesita final:true porque grantItem/reveal se disparan por
+   applyOnRead al leer la escena, no por cerrar capítulo.
+
+   Checks: "actividad de fútbol" -> día con gym; "actividad de ciudad" ->
+   día cualquiera cerrado; "actividad social" (cap4, cameo de Nina) ->
+   visita a la Zona Deportiva, mismo mecanismo zoneVisitedSince que ya
+   usa Beka para la Discoteca; "hito global" (cap9) -> mismo criterio que
+   Beka cap9 (cambio de tier o mejora de OVR). */
+const MILO_STORY = {
+  npc: "milo",
+  chapters: [{
+    id: "cap1",
+    title: "La historia de Milo",
+    trigger: () => true,
+    stages: [
+      /* PRÓLOGO — Dos ojos detrás de la roca */
+      { title: "Dos ojos detrás de la roca", zone: "parque",
+        objective: "Vuelve a visitar el parque.",
+        intro: [
+          { m: "pintora_pensando", t: "Espera. ¿Has visto eso?", from: "Vera" },
+          { m: "seria", t: "Llevo un rato pensando que eran reflejos... pero esos ojos llevan demasiado tiempo mirándonos.", from: "Vera" },
+          { m: "escondido", t: "..." },
+          { m: "seria", t: "Hola.", from: "Vera" },
+          { m: "escondido", t: "Hola." },
+          { m: "happy", t: "Vale. Eso ha sido inesperadamente educado.", from: "Vera" },
+          { m: "escondido", t: "No os acerquéis." },
+          { m: "seria", t: "No vamos a acercarnos.", from: "Vera" },
+          { m: "escondido", t: "¿Él tampoco?" },
+          { m: "seria", t: "Tampoco.", from: "Vera" },
+          { m: "escondido", t: "Bien." },
+          { m: "pintora_pensando", t: "¿Cómo te llamas?", from: "Vera" },
+          { m: "escondido", t: "Milo." },
+          { m: "happy", t: "Milo. Encantada.", from: "Vera" },
+          { m: "escondido", t: "¿Él también?" },
+          { m: "happy", t: "Sí. Aunque no creo que necesites que hable por él.", from: "Vera" },
+          { m: "escondido", t: "Vale." },
+          { m: "seria", t: "No vamos a hacerte nada. Solo queríamos saber quién estaba ahí.", from: "Vera" },
+          { m: "escondido", t: "Ya lo sabéis." },
+          { m: "happy", t: "Sí. Y ahora tenemos un segundo problema.", from: "Vera" },
+          { m: "escondido", t: "¿Cuál?" },
+          { m: "happy", t: "Que ahora queremos saber por qué te escondes.", from: "Vera" },
+          { m: "escondido", t: "No." },
+          { m: "happy", t: "Respuesta rápida.", from: "Vera" },
+        ],
+        setFlags: ["miloMet"],
+        snap: () => ({}), check: () => true },
+      /* CAPÍTULO 1 — No hace falta salir */
+      { title: "No hace falta salir", zone: "parque",
+        objective: "Completa una actividad de ciudad y vuelve al parque.",
+        intro: [
+          { m: "idle", t: "Ha vuelto a aparecer.", from: "Vera" },
+          { m: "escondido", t: "Sí." },
+          { m: "happy", t: "Y esta vez sabía que veníamos.", from: "Vera" },
+          { m: "escondido", t: "Sí." },
+          { m: "seria", t: "¿Te molesta que venga él?", from: "Vera" },
+          { m: "escondido", t: "No." },
+          { m: "seria", t: "¿Te molesta que venga yo?", from: "Vera" },
+          { m: "escondido", t: "Un poco." },
+          { m: "happy", t: "Perfecto. Me siento muy querida.", from: "Vera" },
+          { m: "escondido", t: "No era eso." },
+          { m: "happy", t: "Ya lo sé.", from: "Vera" },
+          { m: "seria", t: "¿Quieres que nos vayamos?", from: "Vera" },
+          { m: "escondido", t: "No." },
+          { m: "seria", t: "Entonces nos quedamos aquí.", from: "Vera" },
+          { m: "escondido", t: "¿Aunque él se quede?" },
+          { m: "seria", t: "Aunque él se quede.", from: "Vera" },
+          { m: "escondido", t: "Vale." },
+          { m: "pintora_pensando", t: "Creo que eso es lo más cerca que vas a estar de una invitación.", from: "Vera" },
+          { m: "escondido", t: "No es una invitación." },
+          { m: "happy", t: "Claro que no.", from: "Vera" },
+        ],
+        snap: (g) => ({ since: todayStr() }),
+        check: (g, snap) => Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.closed) },
+      /* CAPÍTULO 2 — Un poco de luz (primera revelación: escondido -> shy A MEDIA ESCENA) */
+      { title: "Un poco de luz", zone: "parque",
+        objective: "Completa una actividad de fútbol y vuelve al parque.",
+        intro: [
+          { m: "happy", t: "Te dije que volveríamos.", from: "Vera" },
+          { m: "escondido", t: "Sí." },
+          { m: "seria", t: "¿Y sigues escondido?", from: "Vera" },
+          { m: "escondido", t: "Sí." },
+          { m: "happy", t: "Bueno. Al menos eres constante.", from: "Vera" },
+          { m: "escondido", t: "Estoy pensando." },
+          { m: "seria", t: "¿En qué?", from: "Vera" },
+          { m: "escondido", t: "En él." },
+          { m: "seria", t: "¿En él?", from: "Vera" },
+          { m: "escondido", t: "No sé si puedo estar delante de alguien y no tener que irme." },
+          { m: "seria", t: "No tienes que demostrar nada.", from: "Vera" },
+          { m: "escondido", t: "¿Y si salgo?" },
+          { m: "seria", t: "Entonces sales.", from: "Vera" },
+          { m: "escondido", t: "¿Y si me arrepiento?" },
+          { m: "seria", t: "Vuelves a esconderte.", from: "Vera" },
+          { m: "shy", t: "Así está bien." },
+          { m: "happy", t: "Sí.", from: "Vera" },
+          { m: "shy", t: "No me miréis tanto." },
+          { m: "happy", t: "Eso va a ser difícil.", from: "Vera" },
+          { m: "shy", t: "Vera." },
+          { m: "happy", t: "Vale, vale.", from: "Vera" },
+          { m: "shy", t: "Él puede mirar." },
+          { m: "happy", t: "¿Solo él?", from: "Vera" },
+          { m: "shy", t: "Sí." },
+        ],
+        setFlags: ["miloFirstReveal"],
+        snap: (g) => ({ since: todayStr() }),
+        check: (g, snap) => Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.closed && l.gym) },
+      /* CAPÍTULO 3 — El balón */
+      { title: "El balón", zone: "parque",
+        objective: "Completa una actividad de fútbol y consigue una victoria.",
+        intro: [
+          { m: "shy", t: "Has vuelto." },
+          { m: "happy", t: "Mira quién habla primero.", from: "Vera" },
+          { m: "shy", t: "No me gusta cuando haces eso." },
+          { m: "happy", t: "¿Qué cosa?", from: "Vera" },
+          { m: "shy", t: "Hacer que parezca importante." },
+          { m: "seria", t: "Vale.", from: "Vera" },
+          { m: "shy", t: "Él también ha vuelto." },
+          { m: "happy", t: "Sí.", from: "Vera" },
+          { m: "shy", t: "Pensaba que quizá no volvería." },
+          { m: "seria", t: "¿Y te habría molestado?", from: "Vera" },
+          { m: "shy", t: "Sí." },
+          { m: "happy", t: "Puedes decírselo a él.", from: "Vera" },
+          { m: "shy", t: "Me alegra que hayas vuelto." },
+          { m: "seria", t: "Mucho mejor.", from: "Vera" },
+          { m: "shy", t: "¿Quieres jugar?" },
+          { m: "happy", t: "Eso tendrás que preguntárselo a él.", from: "Vera" },
+          { m: "shy", t: "Ah." },
+          { m: "shy", t: "¿Juegas conmigo?" },
+          { m: "happy", t: "Creo que acabas de conseguir una invitación.", from: "Vera" },
+          { m: "shy", t: "No era una invitación." },
+          { m: "happy", t: "Claro.", from: "Vera" },
+        ],
+        snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
+        subs: [
+          (g, snap) => Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.closed && l.gym),
+          (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
+        ],
+        check: (g, snap) => Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.closed && l.gym) &&
+          (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") },
+      /* CAPÍTULO 4 — Una persona más (cameo de Nina, no requiere su campaña) */
+      { title: "Una persona más", zone: "ciudad-dep",
+        objective: "Completa una actividad social y mantén una racha de 2 días.",
+        intro: [
+          { m: "happy", t: "Te presento a alguien.", from: "Vera" },
+          { m: "shy", t: "¿Por qué?" },
+          { m: "happy", t: "Porque dijiste que querías jugar.", from: "Vera" },
+          { m: "shy", t: "Contigo." },
+          { m: "happy", t: "Y con él.", from: "Vera" },
+          { m: "shy", t: "Ah." },
+          { m: "happy", t: "¿Este es Milo?", from: "Nina" },
+          { m: "happy", t: "Sí.", from: "Vera" },
+          { m: "shy", t: "Hola." },
+          { m: "happy", t: "Hola. ¿Juegas de verdad o solo dices que juegas?", from: "Nina" },
+          { m: "shy", t: "Juego." },
+          { m: "happy", t: "Perfecto.", from: "Nina" },
+          { m: "shy", t: "¿Tú eres buena?" },
+          { m: "happy", t: "Bastante.", from: "Nina" },
+          { m: "happy", t: "Mucho.", from: "Vera" },
+          { m: "happy", t: "Gracias por la ayuda.", from: "Nina" },
+          { m: "shy", t: "¿Él juega bien?" },
+          { m: "happy", t: "Eso lo tienes que descubrir tú.", from: "Nina" },
+          { m: "shy", t: "Vale." },
+          { m: "shy", t: "No ha sido tan malo." },
+          { m: "happy", t: "No.", from: "Vera" },
+          { m: "shy", t: "Podemos hacerlo otra vez." },
+        ],
+        setFlags: ["miloSocial"],
+        snap: (g) => ({ since: todayStr() }),
+        subs: [
+          (g, snap) => zoneVisitedSince(g, "ciudad-dep", snap.since),
+          { count: (g) => g.player.streak || 0, goal: 2 },
+        ],
+        check: (g, snap) => zoneVisitedSince(g, "ciudad-dep", snap.since) && (g.player.streak || 0) >= 2 },
+      /* CAPÍTULO 5 — Lo que guarda (Milo ya no se esconde: mood pasa a idle) */
+      { title: "Lo que guarda", zone: "parque",
+        objective: "Completa objetivos de alimentación y descanso durante 2 días.",
+        intro: [
+          { m: "idle", t: "Hoy te veo menos nervioso.", from: "Vera" },
+          { m: "idle", t: "Estoy acostumbrándome." },
+          { m: "happy", t: "¿A nosotros?", from: "Vera" },
+          { m: "idle", t: "A él." },
+          { m: "happy", t: "Ah.", from: "Vera" },
+          { m: "idle", t: "Tú hablas mucho." },
+          { m: "happy", t: "Eso también es cierto.", from: "Vera" },
+          { m: "idle", t: "Él no." },
+          { m: "happy", t: "Tampoco sabes si es porque no quiere.", from: "Vera" },
+          { m: "idle", t: "No importa." },
+          { m: "seria", t: "¿Qué llevas en la bolsa?", from: "Vera" },
+          { m: "idle", t: "Cosas." },
+          { m: "happy", t: "Ya hemos tenido esta conversación.", from: "Vera" },
+          { m: "idle", t: "Son mías." },
+          { m: "seria", t: "Vale.", from: "Vera" },
+          { m: "idle", t: "Había una pelota pequeña." },
+          { m: "seria", t: "¿Antes?", from: "Vera" },
+          { m: "idle", t: "Antes." },
+          { m: "seria", t: "¿De alguien?", from: "Vera" },
+          { m: "idle", t: "Sí." },
+          { m: "happy", t: "No tienes que enseñárnosla.", from: "Vera" },
+          { m: "idle", t: "No." },
+          { m: "idle", t: "Pero a él sí." },
+        ],
+        setFlags: ["miloPastObject"],
+        snap: () => ({ since: todayStr() }),
+        progressCount: (g, snap) => proteinSleepDaysSince(g, snap.since), progressGoal: 2,
+        check: (g, snap) => proteinSleepDaysSince(g, snap.since) >= 2 },
+      /* CAPÍTULO 6 — No es que no me guste la gente */
+      { title: "No es que no me guste la gente", zone: "parque",
+        objective: "Mantén una racha de 3 días y completa una actividad de fútbol.",
+        intro: [
+          { m: "idle", t: "¿Puedo preguntarte algo?", from: "Vera" },
+          { m: "idle", t: "Sí." },
+          { m: "seria", t: "Cuando alguien se acerca, quieres esconderte.", from: "Vera" },
+          { m: "idle", t: "Sí." },
+          { m: "seria", t: "Pero cuando él no viene, lo preguntas.", from: "Vera" },
+          { m: "idle", t: "Sí." },
+          { m: "seria", t: "Entonces no es que no te guste la gente.", from: "Vera" },
+          { m: "idle", t: "No." },
+          { m: "seria", t: "¿Qué pasa entonces?", from: "Vera" },
+          { m: "idle", t: "La gente se va." },
+          { m: "seria", t: "¿Alguien se fue?", from: "Vera" },
+          { m: "idle", t: "Sí." },
+          { m: "seria", t: "¿Y esperaste?", from: "Vera" },
+          { m: "idle", t: "Mucho." },
+          { m: "seria", t: "¿Te dijo que volvería?", from: "Vera" },
+          { m: "idle", t: "No." },
+          { m: "seria", t: "Entonces, ¿por qué esperaste?", from: "Vera" },
+          { m: "idle", t: "Porque no sabía qué más hacer." },
+          { m: "seria", t: "Lo siento.", from: "Vera" },
+          { m: "idle", t: "No fue culpa tuya." },
+          { m: "seria", t: "No estaba hablando de mí.", from: "Vera" },
+          { m: "idle", t: "Ya." },
+          { m: "idle", t: "Él no se ha ido." },
+          { m: "seria", t: "No.", from: "Vera" },
+          { m: "idle", t: "Eso está bien." },
+        ],
+        setFlags: ["miloPastRevealed"],
+        snap: () => ({ since: todayStr() }),
+        subs: [
+          { count: (g) => g.player.streak || 0, goal: 3 },
+          (g, snap) => Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.closed && l.gym),
+        ],
+        check: (g, snap) => (g.player.streak || 0) >= 3 &&
+          Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.closed && l.gym) },
+      /* CAPÍTULO 7 — Puedes decidir mañana (Milo ya se dirige directamente al jugador) */
+      { title: "Puedes decidir mañana", zone: "parque",
+        objective: "Completa objetivos diarios durante 3 días.",
+        intro: [
+          { m: "idle", t: "He pensado en lo que me contaste.", from: "Vera" },
+          { m: "idle", t: "No quiero hablar de eso." },
+          { m: "seria", t: "No tenemos que hacerlo.", from: "Vera" },
+          { m: "idle", t: "Bien." },
+          { m: "seria", t: "Solo quería decirte algo.", from: "Vera" },
+          { m: "idle", t: "¿Qué?" },
+          { m: "seria", t: "No tienes que decidir hoy si confías en nosotros.", from: "Vera" },
+          { m: "idle", t: "¿No?" },
+          { m: "seria", t: "No. Puedes decidir mañana.", from: "Vera" },
+          { m: "idle", t: "¿Y pasado?" },
+          { m: "seria", t: "También.", from: "Vera" },
+          { m: "idle", t: "Eso es mucho tiempo." },
+          { m: "happy", t: "Exactamente.", from: "Vera" },
+          { m: "idle", t: "Entonces me quedo hoy." },
+          { m: "happy", t: "Me parece un buen comienzo.", from: "Vera" },
+          { m: "idle", t: "Él también puede quedarse." },
+          { m: "happy", t: "Eso tendrás que decírselo tú.", from: "Vera" },
+          { m: "idle", t: "Vale." },
+          { m: "idle", t: "Quédate." },
+        ],
+        snap: () => ({ since: todayStr() }),
+        progressCount: (g, snap) => daysGoalsCompletedSince(g, snap.since), progressGoal: 3,
+        check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3 },
+      /* CAPÍTULO 8 — Sin esconderse */
+      { title: "Sin esconderse", zone: "ciudad-dep",
+        objective: "Consigue una victoria y mantén una racha de 4 días.",
+        intro: [
+          { m: "idle", t: "Hay bastante gente hoy.", from: "Vera" },
+          { m: "idle", t: "Lo sé." },
+          { m: "seria", t: "Si quieres volver a la roca, nadie te va a seguir.", from: "Vera" },
+          { m: "idle", t: "No quiero." },
+          { m: "happy", t: "¿Seguro?", from: "Vera" },
+          { m: "idle", t: "Sí." },
+          { m: "idle", t: "Quiero jugar con él." },
+          { m: "happy", t: "Entonces ve.", from: "Vera" },
+          { m: "idle", t: "¿Vienes?" },
+          { m: "happy", t: "Voy a mirar.", from: "Vera" },
+          { m: "idle", t: "No. Tú también." },
+          { m: "happy", t: "Vale.", from: "Vera" },
+        ],
+        setFlags: ["miloConfident"],
+        snap: (g) => ({ matchCount: (g.matchHistory || []).length }),
+        subs: [
+          (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
+          { count: (g) => g.player.streak || 0, goal: 4 },
+        ],
+        check: (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") &&
+          (g.player.streak || 0) >= 4 },
+      /* CAPÍTULO 9 — Puedo volver */
+      { title: "Puedo volver", zone: "parque",
+        objective: "Completa un hito global y mantén una racha de 5 días.",
+        intro: [
+          { m: "happy", t: "¿Has venido solo?", from: "Vera" },
+          { m: "idle", t: "Sí." },
+          { m: "happy", t: "¿Y no te has escondido?", from: "Vera" },
+          { m: "idle", t: "No." },
+          { m: "happy", t: "¿Por qué?", from: "Vera" },
+          { m: "idle", t: "Porque sabía que podía salir." },
+          { m: "happy", t: "Eso es nuevo.", from: "Vera" },
+          { m: "idle", t: "Y si me pongo nervioso, puedo volver." },
+          { m: "happy", t: "A la roca.", from: "Vera" },
+          { m: "idle", t: "Sí." },
+          { m: "happy", t: "Pero ya no la necesitas.", from: "Vera" },
+          { m: "idle", t: "A veces sí." },
+          { m: "happy", t: "Mejor respuesta.", from: "Vera" },
+          { m: "idle", t: "¿Él viene?" },
+          { m: "happy", t: "Creo que sí.", from: "Vera" },
+          { m: "idle", t: "Bien." },
+          { m: "idle", t: "Quiero enseñarle algo." },
+        ],
+        snap: (g) => ({ tierId: g.tier.id, ovr: calcOVR(g.player.stats) }),
+        subs: [
+          (g, snap) => g.tier.id !== snap.tierId || calcOVR(g.player.stats) > snap.ovr,
+          { count: (g) => g.player.streak || 0, goal: 5 },
+        ],
+        check: (g, snap) => (g.tier.id !== snap.tierId || calcOVR(g.player.stats) > snap.ovr) && (g.player.streak || 0) >= 5 },
+      /* CAPÍTULO 10 — Aquí estás (Milo aparece por iniciativa propia: mood pasa a happy) */
+      { title: "Aquí estás", zone: "ciudad-dep",
+        objective: "Consigue una victoria y mantén una racha de 5 días.",
+        intro: [
+          { m: "happy", t: "¡Has venido!" },
+          { m: "happy", t: "Creo que alguien estaba esperando.", from: "Vera" },
+          { m: "happy", t: "Sí." },
+          { m: "happy", t: "¿Desde cuándo?", from: "Vera" },
+          { m: "happy", t: "Desde antes." },
+          { m: "happy", t: "Eso explica por qué llevas diez minutos mirando la entrada.", from: "Vera" },
+          { m: "happy", t: "No estaba mirando." },
+          { m: "happy", t: "Claro.", from: "Vera" },
+          { m: "happy", t: "¿Jugamos?" },
+          { m: "happy", t: "Hoy no quiero esconderme." },
+          { m: "happy", t: "Ya me había dado cuenta.", from: "Vera" },
+          { m: "happy", t: "La roca sigue ahí." },
+          { m: "happy", t: "Sí.", from: "Vera" },
+          { m: "happy", t: "Puedo volver cuando quiera." },
+          { m: "happy", t: "Y también puedes quedarte.", from: "Vera" },
+          { m: "happy", t: "Me quedo." },
+          { m: "happy", t: "Contigo." },
+          { m: "happy", t: "Vamos." },
+        ],
+        setFlags: ["miloReady"],
+        snap: (g) => ({ matchCount: (g.matchHistory || []).length }),
+        subs: [
+          (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
+          { count: (g) => g.player.streak || 0, goal: 5 },
+        ],
+        check: (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") &&
+          (g.player.streak || 0) >= 5 },
+      /* ENTREGA — Carta de Milo (no final:true: grantItem/reveal solo necesitan que se lea
+         la escena, no cerrar capítulo — ver nota de cabecera. El documento no escribe
+         diálogo propio para este momento, solo "RECOMPENSA: Carta de Milo x1", así que la
+         reacción es una escena corta nueva en el mismo tono corto y directo de Milo). */
+      { title: "Aquí estás", zone: "ciudad-dep",
+        objective: "Sin objetivo adicional.",
+        intro: [
+          { m: "happy", t: "Espera." },
+          { m: "happy", t: "Toma esto." },
+          { m: "happy", t: "¿Se lo estás dando tú?", from: "Vera" },
+          { m: "happy", t: "Sí." },
+          { m: "happy", t: "Eso sí que es nuevo.", from: "Vera" },
+          { m: "happy", t: "Es para que no se le olvide." },
+        ],
+        setFlags: ["miloPinEarned"],
+        grantItem: "milo_pin", reveal: "milo_pin",
+        snap: () => ({}), check: () => true },
+      /* FINAL — El dibujo */
+      { title: "El dibujo", zone: "parque",
+        objective: "Sin objetivo adicional.",
+        intro: [
+          { m: "seria", t: "He terminado.", from: "Vera" },
+          { m: "happy", t: "¿El dibujo?" },
+          { m: "happy", t: "Sí.", from: "Vera" },
+          { m: "happy", t: "¿Estoy escondido?" },
+          { m: "happy", t: "No.", from: "Vera" },
+          { m: "happy", t: "Enséñamelo." },
+          { m: "happy", t: "Me gusta." },
+          { m: "happy", t: "¿De verdad?", from: "Vera" },
+          { m: "happy", t: "Sí." },
+          { m: "happy", t: "Pensaba que querrías esconderte también en el dibujo.", from: "Vera" },
+          { m: "happy", t: "No." },
+          { m: "happy", t: "¿Por qué?", from: "Vera" },
+          { m: "happy", t: "Porque él está ahí." },
+          { m: "happy", t: "Ah.", from: "Vera" },
+          { m: "happy", t: "Y tú también." },
+          { m: "happy", t: "Entonces supongo que está bien.", from: "Vera" },
+          { m: "happy", t: "Está muy bien." },
+        ],
+        snap: () => ({}), check: () => true },
+      /* EPÍLOGO — La roca (sin misión: cierra el símbolo visual de la campaña) */
+      { title: "La roca", zone: "parque", final: true,
+        intro: [
+          { m: "happy", t: "¿Qué haces aquí?", from: "Vera" },
+          { m: "happy", t: "Me gusta este sitio." },
+          { m: "happy", t: "Pensaba que lo odiabas.", from: "Vera" },
+          { m: "happy", t: "Antes." },
+          { m: "happy", t: "¿Y ahora?", from: "Vera" },
+          { m: "happy", t: "Ahora puedo estar aquí sin esconderme." },
+          { m: "happy", t: "Eso cambia bastante las cosas.", from: "Vera" },
+          { m: "happy", t: "Sí." },
+          { m: "happy", t: "¿Nos vamos?" },
+          { m: "happy", t: "¿A dónde?", from: "Vera" },
+          { m: "happy", t: "A buscarle." },
+        ],
+        setFlags: ["miloStoryComplete"] },
+    ],
+  }],
+};
+
 /* registro único: desde la fusión de La Metrópolis dentro de La Ciudad ya no hace
    falta separar por mapa (todas las zonas conviven en el mismo SVG). */
-const STORIES = { ...toStories(QUESTS), elisa: ELISA_STORY, milly: MILLY_STORY, yuna: YUNA_STORY, lopez: LOPEZ_STORY, igor: IGOR_STORY, lisa: KARLA_STORY, beka: BEKA_STORY, nina: NINA_STORY, coco: COCO_STORY, vera: VERA_STORY, alexia: ALEXIA_STORY };
+const STORIES = { ...toStories(QUESTS), elisa: ELISA_STORY, milly: MILLY_STORY, yuna: YUNA_STORY, lopez: LOPEZ_STORY, igor: IGOR_STORY, lisa: KARLA_STORY, beka: BEKA_STORY, nina: NINA_STORY, coco: COCO_STORY, vera: VERA_STORY, alexia: ALEXIA_STORY, milo: MILO_STORY };
 
 /* ============================================================
    OBJETOS COLECCIONABLES · dos tipos: "consumable" (los usas, dan
@@ -6413,9 +6864,12 @@ const ITEMS = {
      (ahora en /images/cartas, ver CARD_POOL/SobreReveal más abajo) y se vuelven vendibles
      a precio fijo. kind:"card": sin botón de acción en InventoryPanel (igual que antes con
      "keepsake"), pero con sellMin/sellMax que ya es lo único que activa el botón VENDER en
-     CocoShop. nina_pin/coco_pin/vera_pin son cartas nuevas: esos tres personajes nunca
-     tuvieron pin de historia, pero si sus reworks lo añaden en el futuro pueden reutilizar
-     este mismo id sin tener que crear nada — por ahora solo existen en el pool del sobre. */
+     CocoShop. nina_pin/coco_pin/vera_pin/alexia_pin son cartas sin pin de historia propio:
+     si algún día tienen su propia entrega narrativa pueden reutilizar este mismo id sin
+     tener que crear nada — por ahora solo existen en el pool del sobre. milo_pin es la
+     única excepción de este grupo: MILO_STORY sí la entrega al cerrar su campaña (capítulo
+     10, ver grantItem/reveal), así que además de vivir en el pool del sobre también tiene
+     su propia entrada en CARD_STORY_FLAG más abajo. */
   elisa_pin: { name: "Carta de Elisa", icon: "🎴", img: "/images/cartas/elisa_pin.webp", kind: "card", sellMin: 15, sellMax: 15,
     desc: "La carta que te dio Elisa al cierre de vuestra historia. Coleccionable, vendible a Coco por 15 monedas." },
   milly_pin: { name: "Carta de Milly", icon: "🎴", img: "/images/cartas/milly_pin.webp", kind: "card", sellMin: 15, sellMax: 15,
@@ -6436,6 +6890,10 @@ const ITEMS = {
     desc: "Carta coleccionable de Coco. Vendible a Coco por 15 monedas." },
   vera_pin: { name: "Carta de Vera", icon: "🎴", img: "/images/cartas/vera_pin.webp", kind: "card", sellMin: 15, sellMax: 15,
     desc: "Carta coleccionable de Vera. Vendible a Coco por 15 monedas." },
+  alexia_pin: { name: "Carta de Alexia", icon: "🎴", img: "/images/cartas/alexia_pin.webp", kind: "card", sellMin: 15, sellMax: 15,
+    desc: "Carta coleccionable de Alexia. Vendible a Coco por 15 monedas." },
+  milo_pin: { name: "Carta de Milo", icon: "🎴", img: "/images/cartas/milo_pin.webp", kind: "card", sellMin: 15, sellMax: 15,
+    desc: "La carta que Milo te dio el día que dejó de necesitar esconderse. Coleccionable, vendible a Coco por 15 monedas." },
   /* Cuadros de Vera (ver VERA_STORY): kind:"painting", no consumible ni regalable (igual
      que los pines, sin botón de acción en InventoryPanel), pero sí vendibles a Coco —
      ITEMS[id].sellMin/sellMax es lo único que gatilla el botón VENDER en CocoShop (ver
@@ -6514,11 +6972,12 @@ const ALEXIA_CASSETTE_POOL = Object.keys(ITEMS).filter((id) => ITEMS[id].kind ==
    desincronizarse de qué cartas existen de verdad. */
 const CARD_POOL = Object.keys(ITEMS).filter((id) => ITEMS[id].kind === "card");
 /* una carta puede haberse "descubierto" por historia (el flag XPinEarned que ya ponen las
-   7 campañas con pin/carta de cierre) o por sobre (game.cardsDiscovered, ver openSobre) —
-   se comprueban ambas fuentes sin tener que tocar ninguna de las 7 historias existentes. */
+   campañas con pin/carta de cierre) o por sobre (game.cardsDiscovered, ver openSobre) —
+   se comprueban ambas fuentes sin tener que tocar ninguna historia existente. */
 const CARD_STORY_FLAG = {
   elisa_pin: "elisaPinEarned", milly_pin: "millyPinEarned", yuna_pin: "yunaPinEarned",
   lopez_pin: "lopezPinEarned", igor_pin: "igorPinEarned", karla_pin: "karlaPinEarned", beka_pin: "bekaPinEarned",
+  milo_pin: "miloPinEarned",
 };
 const isCardDiscovered = (g, cardId) =>
   !!(CARD_STORY_FLAG[cardId] && g[CARD_STORY_FLAG[cardId]]) || !!(g.cardsDiscovered && g.cardsDiscovered[cardId]);
@@ -6576,6 +7035,8 @@ const CARDS = [
     bio: "Artista observadora, algo despistada. Busca inspiración en tu rutina y termina pintando momentos que merece la pena recordar." },
   { npc: "alexia", unlocked: (g) => !!g.alexiaMet,
     bio: "Relajada, segura y muy ligada a la música. Convierte distintos estados mentales en cassettes que dan un empujón temporal a tu entrenamiento." },
+  { npc: "milo", unlocked: (g) => !!g.miloMet,
+    bio: "Una criatura que vive escondida tras una roca del Parque. Le cuesta confiar, pero poco a poco deja de necesitar esconderse." },
 ];
 
 /* --- EL PERIÓDICO · plantillas con titular y cuerpo, por secciones.
@@ -7441,7 +7902,8 @@ const REWARD_KIND_LABEL = { painting: "Nuevo cuadro conseguido", cassette: "Nuev
    resplandor en CuadroReveal — su id no siempre coincide con la clave de NPCS (karla_pin
    es de "lisa", no de "karla"), así que no se puede derivar quitando el sufijo "_pin". */
 const CARD_NPC = { elisa_pin: "elisa", milly_pin: "milly", yuna_pin: "yuna", lopez_pin: "lopez",
-  igor_pin: "igor", karla_pin: "lisa", beka_pin: "beka", nina_pin: "nina", coco_pin: "coco", vera_pin: "vera" };
+  igor_pin: "igor", karla_pin: "lisa", beka_pin: "beka", nina_pin: "nina", coco_pin: "coco", vera_pin: "vera",
+  alexia_pin: "alexia", milo_pin: "milo" };
 function CuadroReveal({ itemId, onClose }) {
   const isCompletion = itemId === "vera_completion";
   const item = !isCompletion ? ITEMS[itemId] : null;
@@ -7855,20 +8317,24 @@ function PaperModal({ game, onRead, onClose }) {
    "subs" (las sub-condiciones que componen su objetivo, ver stage.subs en STORIES),
    la barra es cuánto se ha cumplido de cada una ahora mismo — así "gana dos partidos"
    sube al 50% tras el primero y al 100% tras el segundo. Cada sub puede ser:
-     - una función (g, snap) => boolean: cuenta como 0 o 1 (un solo hito, todo o nada);
-     - un objeto { count: (g, snap) => número, goal: número }: cuenta como count/goal
-       (hasta 1), para que una sub-condición que en realidad es "N de M" (3 días de
-       objetivos, una racha de 5...) reparta su propio peso proporcionalmente en vez de
-       quedarse a 0% hasta el último día y disparar entera de golpe.
-   Las etapas sin "subs" (objetivo de una sola condición, o un "o" donde cualquiera vale
-   el 100% de golpe) caen al binario de siempre: 0% hasta que stage.check() se cumple. */
+     - una función (g, snap) => boolean: cuenta como un único objetivo (0 o 1 unidad);
+     - un objeto { count: (g, snap) => número, goal: número }: cuenta como "goal"
+       unidades en total, de las cuales count(g,snap) están cumplidas — así "3 días de
+       objetivos" pesa 3 unidades dentro de la misión, no una sola "sub" equivalente a
+       cualquier otro objetivo booleano. El progreso final es unidades cumplidas / unidades
+       totales de TODOS los subs juntos: cada objetivo individual (cada día, cada condición
+       booleana) pesa lo mismo, nunca se agrupan varios objetivos en un único "pack" que
+       valga igual que uno solo (p.ej. "3 días + 1 victoria" son 4 objetivos de 25% cada
+       uno, no "días" al 50% y "victoria" al 50%). */
 function stageProgress(game, stageDef, snap) {
   if (stageDef.subs && stageDef.subs.length) {
-    const sum = stageDef.subs.reduce((acc, sub) => {
-      if (typeof sub === "function") return acc + (sub(game, snap) ? 1 : 0);
-      return acc + Math.min(sub.count(game, snap) / sub.goal, 1);
-    }, 0);
-    return sum / stageDef.subs.length;
+    let done = 0, total = 0;
+    stageDef.subs.forEach((sub) => {
+      if (typeof sub === "function") { total += 1; done += sub(game, snap) ? 1 : 0; return; }
+      total += sub.goal;
+      done += Math.min(sub.count(game, snap), sub.goal);
+    });
+    return total > 0 ? done / total : 0;
   }
   /* etapas de un único objetivo "acumula N de algo" (días cumplidos, racha...) sin subs:
      progressCount/progressGoal dan la cuenta real en vez de dejar la barra a 0% hasta
@@ -9489,8 +9955,13 @@ export default function App() {
     /* preReserved: quien llama ya ha reservado sitio para un bloque mayor que estos beats
        (ver la rama de pesca de queueStageScene, que encola frases + captura como una unidad) */
     let out = extra.preReserved ? g : reserveQueueRoom(g, beats.length);
+    /* b.from (ver MILO_STORY): una escena normalmente es "varias frases seguidas del MISMO
+       personaje" y usa el "from" de la llamada para todas — pero la campaña de Milo necesita
+       que Vera y Milo hablen dentro de la MISMA escena (Vera de intérprete, Milo respondiendo
+       directamente). Cada beat puede llevar su propio "from" que pisa el de la escena solo
+       para esa línea; sin overrides, el comportamiento de siempre no cambia en nada. */
     beats.forEach((b, i) => {
-      out = addMsg(out, from, b.t, i === beats.length - 1
+      out = addMsg(out, b.from || from, b.t, i === beats.length - 1
         ? { mood: b.m, ...extra, sceneId, skipEvict: true } : { mood: b.m, zone: extra.zone, sceneId, skipEvict: true });
     });
     return out;
@@ -9633,7 +10104,7 @@ export default function App() {
           grantItem: stageObj.grantItem, reveal: stageObj.reveal } });
       return out;
     }
-    const beats = (beatsOverride || stageObj.intro).map((b) => ({ m: b.m, t: fillTpl(b.t, flavorCtx(out)) }));
+    const beats = (beatsOverride || stageObj.intro).map((b) => ({ m: b.m, t: fillTpl(b.t, flavorCtx(out)), from: b.from }));
     /* grantItem/reveal (ver VERA_STORY): a diferencia de reward(), que checkStories dispara
        en el momento en que se CUMPLE el objetivo (antes de que el jugador haya leído nada),
        esto viaja dentro de applyOnRead y por tanto solo se aplica cuando el jugador de
@@ -10513,9 +10984,16 @@ export default function App() {
           onBack={() => setVisitedZone(null)} onOpenPaper={() => setShowPaper(true)} onOpenSobre={openSobre} onFish={freeFish}
           onBuyCoco={buyFromCoco} onSellCoco={sellToCoco} />)}
       {/* diálogo de personaje: overlay a nivel de App (fuera de .tab-in), aparece encima
-          del fondo de la zona en cuanto hay alguien esperando ahí (visitedActiveNpc) */}
+          del fondo de la zona en cuanto hay alguien esperando ahí (visitedActiveNpc).
+          Agrupar por sceneId (no por npc): una escena normal es de un solo personaje y esto
+          no cambia nada, pero MILO_STORY necesita que Vera y Milo hablen dentro de la MISMA
+          escena (ver addScene/b.from) — filtrar por "npc === visitedActiveNpc" partía esa
+          escena en dos bloques (todas las líneas de Vera primero, luego todas las de Milo),
+          perdiendo el ida y vuelta real de la conversación. Agrupando por sceneId se respeta
+          el orden de inserción real sea cual sea el número de personajes que participan. */}
       {tab === "chat" && visitedActiveNpc && (() => {
-        const q = (game.npcQueue || []).filter((e) => e.npc === visitedActiveNpc);
+        const zq = (game.npcQueue || []).filter((e) => entryMatchesZone(e, visitedZoneObj.id));
+        const q = zq.length && zq[0].sceneId ? zq.filter((e) => e.sceneId === zq[0].sceneId) : zq.slice(0, 1);
         if (!q.length) return null;
         /* secuencia de pesca de Nina: mismo hueco en la cola que un mensaje normal (kind
            "fishing", ver queueStageScene/addMsg), pero se renderiza con su propio

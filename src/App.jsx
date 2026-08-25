@@ -6488,23 +6488,21 @@ const ITEMS = {
      documento es explícito: "no son recuerdos vendibles, son objetos funcionales" — por
      eso no llevan sellMin/sellMax). boostStat/boostMult/boostDays son los datos que lee
      activateCassette() para montar game.activeBoost; "ALL" en boostStat activa los seis
-     stats a la vez (solo ALL IN). Todavía no hay ilustración propia de la mayoría de
-     cassettes (el documento lo dice explícitamente): sin "img", caen al icono de emoji 📼
-     hasta que lleguen los assets reales — mismo criterio que ya se usó con
-     bebida_energetica/zapatillas antes de tener imagen. FULL SPEED ya tiene arte propio. */
+     stats a la vez (solo ALL IN). Los 7 ya tienen ilustración propia (optimizada a webp
+     800×800, mismo criterio que el resto de objetos). */
   cassette_full_speed: { name: "Cassette: FULL SPEED", icon: "📼", img: "/images/objects/cassette_full_speed.webp", kind: "cassette", boostStat: "FIS", boostMult: 1.5, boostDays: 4,
     desc: "Para cuando necesitas dejar de darle vueltas y empezar a moverte. +50% XP FIS durante 4 días." },
-  cassette_power_beat: { name: "Cassette: POWER BEAT", icon: "📼", kind: "cassette", boostStat: "FUE", boostMult: 1.5, boostDays: 4,
+  cassette_power_beat: { name: "Cassette: POWER BEAT", icon: "📼", img: "/images/objects/cassette_power_beat.webp", kind: "cassette", boostStat: "FUE", boostMult: 1.5, boostDays: 4,
     desc: "Base pesada, de las que hacen que hasta preparar la mochila parezca importante. +50% XP FUE durante 4 días." },
-  cassette_lock_in: { name: "Cassette: LOCK IN", icon: "📼", kind: "cassette", boostStat: "RES", boostMult: 1.5, boostDays: 4,
+  cassette_lock_in: { name: "Cassette: LOCK IN", icon: "📼", img: "/images/objects/cassette_lock_in.webp", kind: "cassette", boostStat: "RES", boostMult: 1.5, boostDays: 4,
     desc: "Menos ruido, menos distracciones. +50% XP RES durante 4 días." },
-  cassette_good_energy: { name: "Cassette: GOOD ENERGY", icon: "📼", kind: "cassette", boostStat: "NUT", boostMult: 1.5, boostDays: 4,
+  cassette_good_energy: { name: "Cassette: GOOD ENERGY", icon: "📼", img: "/images/objects/cassette_good_energy.webp", kind: "cassette", boostStat: "NUT", boostMult: 1.5, boostDays: 4,
     desc: "Para los días en los que quieres sentirte con energía de verdad. +50% XP NUT durante 4 días." },
-  cassette_slow_down: { name: "Cassette: SLOW DOWN", icon: "📼", kind: "cassette", boostStat: "REC", boostMult: 1.5, boostDays: 4,
+  cassette_slow_down: { name: "Cassette: SLOW DOWN", icon: "📼", img: "/images/objects/cassette_slow_down.webp", kind: "cassette", boostStat: "REC", boostMult: 1.5, boostDays: 4,
     desc: "No todo tiene que servir para acelerar. +50% XP REC durante 4 días." },
-  cassette_clear_mind: { name: "Cassette: CLEAR MIND", icon: "📼", kind: "cassette", boostStat: "MEN", boostMult: 1.5, boostDays: 4,
+  cassette_clear_mind: { name: "Cassette: CLEAR MIND", icon: "📼", img: "/images/objects/cassette_clear_mind.webp", kind: "cassette", boostStat: "MEN", boostMult: 1.5, boostDays: 4,
     desc: "No intenta hacerte feliz a la fuerza. Solo limpia un poco el ruido. +50% XP MEN durante 4 días." },
-  cassette_all_in: { name: "Cassette: ALL IN", icon: "📼", kind: "cassette", boostStat: "ALL", boostMult: 1.5, boostDays: 4,
+  cassette_all_in: { name: "Cassette: ALL IN", icon: "📼", img: "/images/objects/cassette_all_in.webp", kind: "cassette", boostStat: "ALL", boostMult: 1.5, boostDays: 4,
     desc: "No es más rápido, ni más fuerte, ni más relajado. Es todo a la vez. +50% XP a todos los stats durante 4 días. Recompensa única de historia: nunca vuelve a aparecer en el modo infinito." },
 };
 /* pool del modo infinito de Alexia (ver refreshAlexiaVisit): los 6 cassettes de stat,

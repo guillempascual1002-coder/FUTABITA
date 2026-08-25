@@ -1769,7 +1769,7 @@ const ELISA_STORY = {
         check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 5 && calcOVR(g.player.stats) > snap.ovr },
       /* CAPÍTULO 5 — Tu nombre empieza a pesar */
       { title: "Tu nombre empieza a pesar", zone: "patro",
-        objective: "Alcanza el siguiente nivel de OVR o cambia de club.",
+        objective: "Sube +2 tu media (OVR) o cambia de club.",
         intro: [
           { m: "orgullosa", t: "Ahí lo tienes." },
           { m: "happy", t: "No ha sido un salto enorme." },
@@ -1790,11 +1790,8 @@ const ELISA_STORY = {
           { m: "decidida", t: "Primero vamos a conseguir que tu carrera llegue al nivel que hace que estas ofertas tengan sentido." },
         ],
         setFlags: ["elisaPatronUnlocked"],
-        snap: (g) => ({ tierId: g.tier.id, clubName: g.club.name }),
-        check: (g, snap) => {
-          const next = TIERS.find((t) => t.id === snap.tierId + 1);
-          return (next && calcOVR(g.player.stats) >= next.minOvr) || g.tier.id !== snap.tierId || g.club.name !== snap.clubName;
-        } },
+        snap: (g) => ({ tierId: g.tier.id, clubName: g.club.name, ovr: calcOVR(g.player.stats) }),
+        check: (g, snap) => calcOVR(g.player.stats) >= snap.ovr + 2 || g.tier.id !== snap.tierId || g.club.name !== snap.clubName },
       /* CAPÍTULO 6 — La persona detrás del jugador */
       { title: "La persona detrás del jugador", zone: "parque",
         objective: "Completa entrenamiento + alimentación + sueño y gana el siguiente partido.",
@@ -3325,7 +3322,7 @@ const LOPEZ_STORY = {
           (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") },
       /* CAPÍTULO 10 — Cuando cambia el vestuario */
       { title: "Cuando cambia el vestuario", zone: "ciudad-dep",
-        objective: "Alcanza el siguiente nivel de OVR o completa la temporada.",
+        objective: "Sube +2 tu media (OVR) o completa la temporada.",
         intro: [
           { m: "playa", t: "¿Ves?" },
           { m: "playa", t: "Un día sin hablar de fútbol y seguimos vivos." },
@@ -3344,11 +3341,8 @@ const LOPEZ_STORY = {
           { m: "happy", t: "Quiero comprobar si las taquillas son mejores que las nuestras." },
           { m: "serio", t: "Pero antes de pensar en irte, asegúrate de que realmente estás preparado." },
         ],
-        snap: (g) => ({ tierId: g.tier.id, seasonNum: g.season.num }),
-        check: (g, snap) => {
-          const next = TIERS.find((t) => t.id === snap.tierId + 1);
-          return (next && calcOVR(g.player.stats) >= next.minOvr) || g.season.num !== snap.seasonNum;
-        } },
+        snap: (g) => ({ seasonNum: g.season.num, ovr: calcOVR(g.player.stats) }),
+        check: (g, snap) => calcOVR(g.player.stats) >= snap.ovr + 2 || g.season.num !== snap.seasonNum },
       /* CAPÍTULO 11 — La despedida (sin deadlineDays a propósito: espera a un cambio de
          club real, aunque tarde meses o no llegue nunca — ver nota al inicio del bloque) */
       { title: "La despedida", zone: "ciudad-dep",
@@ -4110,7 +4104,7 @@ const KARLA_STORY = {
         check: (g, snap) => (g.matchHistory || []).length > snap.matchCount || calcOVR(g.player.stats) > snap.ovr },
       /* CAPÍTULO 1 — El precio de tu nombre */
       { title: "El precio de tu nombre", zone: "patro",
-        objective: "Alcanza el siguiente hito de OVR o una mejora relevante.",
+        objective: "Sube +2 tu media (OVR) o cambia de categoría.",
         intro: [
           { m: "orgullosa", t: "Bien." },
           { m: "negociadora", t: "Ya tienes algo que enseñar." },
@@ -4129,10 +4123,7 @@ const KARLA_STORY = {
         ],
         setFlags: ["karlaSponsor"],
         snap: (g) => ({ tierId: g.tier.id, ovr: calcOVR(g.player.stats) }),
-        check: (g, snap) => {
-          const next = TIERS.find((t) => t.id === snap.tierId + 1);
-          return (next && calcOVR(g.player.stats) >= next.minOvr) || g.tier.id !== snap.tierId;
-        } },
+        check: (g, snap) => calcOVR(g.player.stats) >= snap.ovr + 2 || g.tier.id !== snap.tierId },
       /* CAPÍTULO 2 — Primera sesión */
       { title: "Primera sesión", zone: "prensa",
         objective: "Completa un partido con buena valoración.",
@@ -4751,7 +4742,7 @@ const BEKA_STORY = {
         check: (g, snap) => calcOVR(g.player.stats) > snap.ovr && daysGoalsCompletedSince(g, snap.since) >= 4 },
       /* CAPÍTULO 7 — La gente empieza a mirar */
       { title: "La gente empieza a mirar", zone: "prensa",
-        objective: "Alcanza el siguiente umbral de OVR/tier disponible y juega un partido con ese nuevo estado.",
+        objective: "Sube +2 tu media (OVR) o cambia de categoría, y juega un partido después.",
         intro: [
           { m: "celebracion", t: "Ahora sí." },
           { m: "angry", t: "Vuelve a hacerlo." },
@@ -4771,14 +4762,11 @@ const BEKA_STORY = {
         ],
         snap: (g) => ({ tierId: g.tier.id, ovr: calcOVR(g.player.stats), matchCount: (g.matchHistory || []).length }),
         subs: [
-          (g, snap) => { const next = TIERS.find((t) => t.id === snap.tierId + 1); return (next && calcOVR(g.player.stats) >= next.minOvr) || g.tier.id !== snap.tierId; },
+          (g, snap) => calcOVR(g.player.stats) >= snap.ovr + 2 || g.tier.id !== snap.tierId,
           (g, snap) => (g.matchHistory || []).length > snap.matchCount,
         ],
-        check: (g, snap) => {
-          const next = TIERS.find((t) => t.id === snap.tierId + 1);
-          const reached = (next && calcOVR(g.player.stats) >= next.minOvr) || g.tier.id !== snap.tierId;
-          return reached && (g.matchHistory || []).length > snap.matchCount;
-        } },
+        check: (g, snap) => (calcOVR(g.player.stats) >= snap.ovr + 2 || g.tier.id !== snap.tierId) &&
+          (g.matchHistory || []).length > snap.matchCount },
       /* CAPÍTULO 8 — Ya no es solo una rivalidad */
       { title: "Ya no es solo una rivalidad", zone: "discoteca",
         objective: "Visita la Discoteca y completa 2 días de objetivos diarios desde el inicio del capítulo.",
@@ -8664,6 +8652,7 @@ function CalendarView({ game, photo, onClose, onAddNote, onDelNote, onEditDay })
     const l = game.logs[ds];
     if (!l) return "transparent";
     if (!l.closed) return ds <= today ? "rgba(205,245,70,.6)" : "transparent";
+    if (isEmptyDayLog(l)) return "transparent"; /* cerrado sin ningún registro: no cuenta como mal día */
     return l.form === "alza" || l.form === "buen" ? "rgba(46,158,68,.35)"
       : l.form === "est" ? "rgba(176,137,0,.3)" : "rgba(217,72,59,.35)";
   };
@@ -8723,7 +8712,7 @@ function CalendarView({ game, photo, onClose, onAddNote, onDelNote, onEditDay })
             })}
           </div>
           <div style={{ fontSize: 10.5, color: "#6F7563", marginTop: 8, lineHeight: 1.6 }}>
-            🟢 Buen día · 🟡 Estancado · 🔴 En caída · Toca cualquier día para ver o anotar
+            🟢 Buen día · 🟡 Estancado · 🔴 En caída · ⬜ Sin uso · Toca cualquier día para ver o anotar
           </div>
         </div>
 
@@ -8767,10 +8756,12 @@ function CalendarView({ game, photo, onClose, onAddNote, onDelNote, onEditDay })
               <div className="empty" style={{ padding: 16 }}>Sin registro de este día.</div>
             ) : (
               <>
-                {log.closed
-                  ? <Fila k="Resultado" v={<FormBadge form={log.form} size={12} />} />
-                  : <div style={{ fontSize: 11.5, color: "#5C7010", fontWeight: 600, paddingBottom: 4 }}>Día aún sin cerrar</div>}
-                {log.closed && <Fila k="Cumplimiento" v={log.pct + "%"} />}
+                {!log.closed
+                  ? <div style={{ fontSize: 11.5, color: "#5C7010", fontWeight: 600, paddingBottom: 4 }}>Día aún sin cerrar</div>
+                  : isEmptyDayLog(log)
+                  ? <div style={{ fontSize: 11.5, color: "#9a9e8e", fontWeight: 600, paddingBottom: 4 }}>No se usó la app este día</div>
+                  : <Fila k="Resultado" v={<FormBadge form={log.form} size={12} />} />}
+                {log.closed && !isEmptyDayLog(log) && <Fila k="Cumplimiento" v={log.pct + "%"} />}
                 <Fila k="Calorías" v={`${Math.round(log.kcal || 0)} / ${g.kcal}`} />
                 <Fila k="Proteína" v={`${Math.round(log.prot || 0)} / ${g.protein} g`} />
                 <Fila k="Sueño" v={log.sleep != null ? log.sleep + " h" : "—"} />
@@ -9824,6 +9815,13 @@ function ProfileTab({ game, photo, onWeight, onPhoto, onRemovePhoto, crest, onCr
 
 /* ============================================================ APP */
 const EMPTY_LOG = () => ({ meals: [], kcal: 0, prot: 0, gym: false, gymProgress: false, sleep: null, habitsDone: [] });
+/* un día "sin uso": se cerró (por la ventana de gracia o manualmente) sin que el jugador
+   registrara absolutamente nada — ni comida, ni sueño, ni gym, ni hábitos. No es que el día
+   saliera mal, es que la app no se abrió. Se usa para que el calendario (ver CalendarView)
+   lo pinte en blanco en vez de rojo/EN CAÍDA, tanto para días nuevos que se cierren así de
+   ahora en adelante como para los que ya quedaron guardados así en partidas existentes. */
+const isEmptyDayLog = (l) => !!l && (l.kcal || 0) === 0 && (l.prot || 0) === 0 && !l.gym &&
+  l.sleep == null && (l.habitsDone || []).length === 0 && (l.meals || []).length === 0;
 
 export default function App() {
   const [game, setGame] = useState(null);

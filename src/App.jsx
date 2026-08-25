@@ -1072,13 +1072,13 @@ const NPCS = {
       pintora: "/images/vera/vera_pintora.webp", pintora_pensando: "/images/vera/vera_pintora_pensando.webp",
       playa: "/images/vera/vera_playa.webp", playa_regalo: "/images/vera/vera_playa_regalo.webp" }, def: "idle" },
   /* Alexia: introduce los cassettes (ver ALEXIA_STORY/ITEMS kind:"cassette"). El documento
-     todavía no trae todos sus assets — solo idle e icon están listos por ahora; el resto de
-     moods que usa su guion (happy, blush, music, y seria — este último ni siquiera está en
-     la lista de assets del documento) caen al fallback ya existente del motor
+     todavía no trae todos sus assets — solo idle, icon y music están listos por ahora; el
+     resto de moods que usa su guion (happy, blush, y seria — este último ni siquiera está
+     en la lista de assets del documento) caen al fallback ya existente del motor
      (npc.arts[mood] || npc.arts[npc.def]) hasta que lleguen las ilustraciones reales, igual
      que se ha hecho con Coco/Vera para moods sin imagen propia. */
   alexia: { name: "Alexia", color: "#F2542D", voice: "/audio/vozchica01.mp3", icon: "/images/alexia/alexia_icon.webp",
-    arts: { idle: "/images/alexia/alexia_idle.webp" }, def: "idle" },
+    arts: { idle: "/images/alexia/alexia_idle.webp", music: "/images/alexia/alexia_music.webp" }, def: "idle" },
 };
 /* el sender siempre es el nombre real del personaje ahora (la zona ya no crea una
    identidad de sender distinta: es contexto de la escena, ver campo "zone" en addMsg/addScene) */

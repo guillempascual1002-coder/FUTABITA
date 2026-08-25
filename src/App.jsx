@@ -1644,10 +1644,10 @@ const ELISA_STORY = {
           { m: "happy", t: "Has hecho lo que te pedí." },
           { m: "idle", t: "Parece una tontería, pero ahora sé algo que ayer no sabía." },
           { m: "decidida", t: "Que al menos estás dispuesto a empezar." },
-          { m: "happy", t: "Mañana, ocho en punto. Oficina." },
-          { m: "idle", t: "Y ahí sí empezamos de verdad." },
-          { m: "idle", t: "Ocho en punto." },
-          { m: "happy", t: "Bien. Primera prueba superada." },
+          { m: "happy", t: "Así que a partir de ahora la rutina cambia un poco." },
+          { m: "idle", t: "Todos los días que importen de verdad van a empezar igual: ocho en punto, en esta oficina." },
+          { m: "idle", t: "Como hoy." },
+          { m: "happy", t: "Primera prueba superada: has llegado a la hora sin que nadie tuviera que recordártelo." },
           { m: "idle", t: "¿Sabes qué esperaba encontrar cuando acepté llevar tu carrera?" },
           { m: "happy", t: "Un jugador con ganas de demostrar cosas. Eso lo tiene cualquiera." },
           { m: "idle", t: "Lo que me interesa es saber si eres capaz de hacer lo aburrido cuando nadie te obliga." },
@@ -2037,12 +2037,11 @@ const ELISA_STORY = {
           { m: "suave", t: "Solo esta parte." },
         ],
         setFlags: ["elisaStoryComplete", "elisaPinEarned"],
+        grantItem: "elisa_pin", reveal: "elisa_pin",
         reward: (g) => {
           const stats = { ...g.player.stats };
           stats.MEN = Math.min(99, stats.MEN + 1);
-          const inv = { ...(g.inventory || {}) };
-          inv.elisa_pin = (inv.elisa_pin || 0) + 1;
-          return { ...g, player: { ...g.player, stats }, inventory: inv };
+          return { ...g, player: { ...g.player, stats } };
         } },
     ],
   }],
@@ -2440,9 +2439,6 @@ const MILLY_STORY = {
         objective: "Alcanza el nivel de élite.",
         intro: [
           { m: "orgullosa", t: "Tengo todo lo que necesito." },
-          { m: "happy", t: "Bueno... menos el final." },
-          { m: "curiosa", t: "Ese lo escribiremos después del partido." },
-          { m: "decidida", t: "Y por una vez, no quiero adelantarme a la historia." },
           { m: "orgullosa", t: "Ya está." },
           { m: "happy", t: "He tardado tres noches." },
           { m: "curiosa", t: "He cambiado el titular siete veces." },
@@ -2501,11 +2497,7 @@ const MILLY_STORY = {
           { m: "happy", t: "O podría ser una noticia muy, muy mal interpretada." },
         ],
         setFlags: ["millyStoryComplete", "millyPinEarned"],
-        reward: (g) => {
-          const inv = { ...(g.inventory || {}) };
-          inv.milly_pin = (inv.milly_pin || 0) + 1;
-          return { ...g, inventory: inv };
-        } },
+        grantItem: "milly_pin", reveal: "milly_pin" },
     ],
   }],
 };
@@ -2618,11 +2610,10 @@ const YUNA_STORY = {
           { m: "blush", t: "Toma." },
           { m: "angry", t: "No hagas preguntas." },
           { m: "idle", t: "Simplemente... vi esto y pensé que podía gustarte." },
+          { m: "blush", t: "Es una bufanda." },
+          { m: "idle", t: "Ya sé que no es de tu equipo. Cogí la que había." },
           { m: "angry", t: "Y no significa nada." },
           { m: "blush", t: "Absolutamente nada." },
-          { m: "idle", t: "Toma." },
-          { m: "blush", t: "Es una bufanda." },
-          { m: "angry", t: "Y no significa nada." },
           { m: "idle", t: "Había una de más." },
           { m: "blush", t: "Y pensé que... bueno, que te vendría bien." },
           { m: "angry", t: "¡No la hice pensando en ti ni nada parecido!" },
@@ -2867,9 +2858,6 @@ const YUNA_STORY = {
       { title: "La discusión", zone: "barrio",
         objective: "Completa 3 días de objetivos y gana el siguiente partido.",
         intro: [
-          { m: "blush", t: "Esta vez no hay ninguna excusa." },
-          { m: "enamorada", t: "La he elegido para ti." },
-          { m: "angry", t: "Y si te burlas, me la llevo." },
           { m: "angry", t: "Últimamente no tienes tiempo para nada." },
           { m: "preocupada", t: "Ya sé que tu carrera es importante." },
           { m: "idle", t: "Sé cuánto has trabajado para llegar hasta donde estás." },
@@ -3021,12 +3009,11 @@ const YUNA_STORY = {
           { m: "happy", t: "Es nuestro primer recuerdo." },
         ],
         setFlags: ["yunaStoryComplete", "yunaPinEarned"],
+        grantItem: "yuna_pin", reveal: "yuna_pin",
         reward: (g) => {
           const stats = { ...g.player.stats };
           stats.MEN = Math.min(99, stats.MEN + 1);
-          const inv = { ...(g.inventory || {}) };
-          inv.yuna_pin = (inv.yuna_pin || 0) + 1;
-          return { ...g, player: { ...g.player, stats }, inventory: inv };
+          return { ...g, player: { ...g.player, stats } };
         } },
     ],
   }],
@@ -3520,12 +3507,11 @@ const LOPEZ_STORY = {
           { m: "orgulloso", t: "Esa foto es parte de tu carrera tanto como cualquier partido." },
         ],
         setFlags: ["lopezPinEarned", "lopezStoryComplete"],
+        grantItem: "lopez_pin", reveal: "lopez_pin",
         reward: (g) => {
           const stats = { ...g.player.stats };
           stats.FIS = Math.min(99, stats.FIS + 1);
-          const inv = { ...(g.inventory || {}) };
-          inv.lopez_pin = (inv.lopez_pin || 0) + 1;
-          return { ...g, player: { ...g.player, stats }, inventory: inv };
+          return { ...g, player: { ...g.player, stats } };
         } },
     ],
   }],
@@ -3609,8 +3595,6 @@ const IGOR_STORY = {
           { m: "happy", t: "Perfecto." },
           { m: "idle", t: "Ahora ya sé que no fue una casualidad." },
           { m: "chef", t: "Toma." },
-          { m: "happy", t: "Te he preparado una receta para que no tengas que improvisar cada vez que tengas hambre." },
-          { m: "serio", t: "No es una dieta. Es una herramienta." },
           { m: "happy", t: "Te he traído algo." },
           { m: "idle", t: "No es una dieta." },
           { m: "happy", t: "Es una receta." },
@@ -4045,12 +4029,11 @@ const IGOR_STORY = {
           { m: "idle", t: "Y acabó convirtiéndose en un amigo." },
         ],
         setFlags: ["igorPinEarned", "igorStoryComplete"],
+        grantItem: "igor_pin", reveal: "igor_pin",
         reward: (g) => {
           const stats = { ...g.player.stats };
           stats.NUT = Math.min(99, stats.NUT + 1);
-          const inv = { ...(g.inventory || {}) };
-          inv.igor_pin = (inv.igor_pin || 0) + 1;
-          return { ...g, player: { ...g.player, stats }, inventory: inv };
+          return { ...g, player: { ...g.player, stats } };
         } },
     ],
   }],
@@ -4532,12 +4515,11 @@ const KARLA_STORY = {
           { m: "personal_orgullosa", t: "Supongo que eso significa que hemos hecho bien las cosas." },
         ],
         setFlags: ["karlaPinEarned", "karlaStoryComplete"],
+        grantItem: "karla_pin", reveal: "karla_pin",
         reward: (g) => {
           const stats = { ...g.player.stats };
           stats.MEN = Math.min(99, stats.MEN + 1);
-          const inv = { ...(g.inventory || {}) };
-          inv.karla_pin = (inv.karla_pin || 0) + 1;
-          return { ...g, player: { ...g.player, stats }, inventory: inv };
+          return { ...g, player: { ...g.player, stats } };
         } },
     ],
   }],
@@ -5061,12 +5043,11 @@ const BEKA_STORY = {
           { m: "disco_seria", t: "Nos vemos." },
         ],
         setFlags: ["bekaStoryComplete", "bekaPinEarned"],
+        grantItem: "beka_pin", reveal: "beka_pin",
         reward: (g) => {
           const stats = { ...g.player.stats };
           stats.FUE = Math.min(99, stats.FUE + 1);
-          const inv = { ...(g.inventory || {}) };
-          inv.beka_pin = (inv.beka_pin || 0) + 1;
-          return { ...g, player: { ...g.player, stats }, inventory: inv };
+          return { ...g, player: { ...g.player, stats } };
         } },
     ],
   }],
@@ -7457,7 +7438,12 @@ function FishingSequence({ entry, onConfirm }) {
 /* subtítulo genérico según el tipo de objeto — "painting" (cuadros de Vera), "cassette"
    (mezclas de Alexia) y cualquier otro kind futuro caen a un "Nuevo objeto conseguido"
    neutro en vez de dar por hecho que todo lo que pasa por esta pantalla es un cuadro. */
-const REWARD_KIND_LABEL = { painting: "Nuevo cuadro conseguido", cassette: "Nuevo cassette conseguido" };
+const REWARD_KIND_LABEL = { painting: "Nuevo cuadro conseguido", cassette: "Nuevo cassette conseguido", card: "Nueva carta conseguida" };
+/* de qué personaje es cada carta (ver ITEMS kind:"card"), solo para elegir el color del
+   resplandor en CuadroReveal — su id no siempre coincide con la clave de NPCS (karla_pin
+   es de "lisa", no de "karla"), así que no se puede derivar quitando el sufijo "_pin". */
+const CARD_NPC = { elisa_pin: "elisa", milly_pin: "milly", yuna_pin: "yuna", lopez_pin: "lopez",
+  igor_pin: "igor", karla_pin: "lisa", beka_pin: "beka", nina_pin: "nina", coco_pin: "coco", vera_pin: "vera" };
 function CuadroReveal({ itemId, onClose }) {
   const isCompletion = itemId === "vera_completion";
   const item = !isCompletion ? ITEMS[itemId] : null;
@@ -7465,7 +7451,10 @@ function CuadroReveal({ itemId, onClose }) {
   const title = isCompletion ? "La historia de Vera" : item && item.name;
   const subtitle = isCompletion ? "Campaña completada · Inspiración libre desbloqueada"
     : REWARD_KIND_LABEL[item && item.kind] || "Nuevo objeto conseguido";
-  const glow = isCompletion ? NPCS.vera.color : item && item.kind === "cassette" ? NPCS.alexia.color : NPCS.vera.color;
+  const glow = isCompletion ? NPCS.vera.color
+    : item && item.kind === "cassette" ? NPCS.alexia.color
+    : item && item.kind === "card" && CARD_NPC[itemId] ? NPCS[CARD_NPC[itemId]].color
+    : NPCS.vera.color;
   useEffect(() => { rewardShimmer(); }, [itemId]);
   return (
     <div className="cuadro-reveal-ov" onClick={onClose}>

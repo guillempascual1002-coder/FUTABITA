@@ -1465,7 +1465,13 @@ const ZONES = [
   { id: "estadio", kind: "npc", npc: ["lopez", "yuna", "elisa", "milly", "igor", "beka"], label: "Gran Estadio", icon: "🏆", x: 74.47, y: 89.16,
     pts: "384.07 634.12 295.02 657.52 262.89 677.69 290.06 764.25 384.07 764.25 431.07 715.53 384.07 634.12",
     unlocked: (g) => isZoneUnlocked(g, "estadio"), big: true },
-  { id: "parque", kind: "npc", npc: ["elisa", "lisa", "milly", "yuna", "lopez", "beka", "vera", "milo"], label: "Parque", icon: "🌳", x: 47.99, y: 42.84,
+  /* "milo" va ANTES que "vera" en esta lista a propósito: zoneActiveNpc (ver más abajo)
+     muestra la burbuja del primer npc de la lista con algo pendiente, y como Vera tiene
+     líneas en TODAS las escenas de MILO_STORY (es la intérprete, ver addScene/b.from),
+     con el orden alfabético original la burbuja del Parque mostraba siempre a Vera durante
+     toda la campaña de Milo en vez de a él. No afecta a Vera cuando tiene una escena propia
+     sin Milo: milo solo "gana" cuando de verdad hay algo suyo pendiente. */
+  { id: "parque", kind: "npc", npc: ["elisa", "lisa", "milly", "yuna", "lopez", "beka", "milo", "vera"], label: "Parque", icon: "🌳", x: 47.99, y: 42.84,
     pts: "204.76 310.38 181.53 393.1 289.27 402.29 204.76 310.38",
     unlocked: (g) => isZoneUnlocked(g, "parque") },
   { id: "casino", kind: "npc", npc: ["elisa", "lisa"], label: "Casino", icon: "🎰", x: 63.79, y: 72.25,
@@ -1940,7 +1946,7 @@ const ELISA_STORY = {
         check: (g, snap) => (g.tier.id !== snap.tierId || g.season.num !== snap.seasonNum) && (g.player.streak || 0) >= 5 },
       /* CAPÍTULO 11 — Lo que elegimos */
       { title: "Lo que elegimos", zone: "oficina", alsoUnlock: ["playa"],
-        objective: "Completa un hito de carrera mientras decides tu camino.",
+        objective: "Completa un hito de carrera mientras decides tu camino, y mantén una racha de 5 días.",
         intro: [
           { m: "happy", t: "Ha estado bien." },
           { m: "suave", t: "No la noche. Bueno, la noche también." },
@@ -2155,7 +2161,10 @@ const MILLY_STORY = {
         ],
         check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3 &&
           (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") },
-      /* CAPÍTULO 3 — La cámara */
+      /* CAPÍTULO 3 — La cámara (antes copiaba el check de "La libreta" — víctima y racha de
+         3 días otra vez, cuando su objetivo real y mucho más ligero es solo "un
+         entrenamiento y una victoria"; corregido para que la barra de progreso no dé 25%
+         en vez de 50% con un solo requisito cumplido) */
       { title: "La cámara", zone: "barrio",
         objective: "Completa un entrenamiento y consigue una victoria.",
         intro: [
@@ -2176,10 +2185,10 @@ const MILLY_STORY = {
         ],
         snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
         subs: [
-          { count: (g, snap) => daysGoalsCompletedSince(g, snap.since), goal: 3 },
+          (g, snap) => Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.closed && l.gym),
           (g, snap) => (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V"),
         ],
-        check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3 &&
+        check: (g, snap) => Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.closed && l.gym) &&
           (g.matchHistory || []).slice(snap.matchCount).some((m) => m.res === "V") },
       /* CAPÍTULO 4 — La historia detrás del marcador */
       { title: "La historia detrás del marcador", zone: "prensa",

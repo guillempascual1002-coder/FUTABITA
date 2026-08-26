@@ -11348,9 +11348,16 @@ function stageProgress(game, stageDef, snap) {
    que el jugador hable con el personaje — la siguiente etapa no aparece ni la barra se
    reinicia hasta que lea esa conversación (game.storyPending[key]). */
 function QuestPanel({ game, onClose, storiesRegistry }) {
+  /* filtra también partidas cuyo game.stories[key] apunte a un chapter/stage que ya no
+     existe (p.ej. una historia reestructurada, como VERA_STORY al pasar de varios
+     capítulos a uno solo con 15 etapas): sin esta guarda, def.chapters[st.chapter] o
+     chapter.stages[st.stage] podían salir undefined y tirar toda la pantalla en blanco
+     con un guardado antiguo — nunca en una partida nueva, que es por lo que solo se veía
+     en el móvil con progreso real y no en local con una partida fresca. */
   const active = Object.entries(storiesRegistry)
     .map(([key, def]) => ({ key, def, st: (game.stories || {})[key] }))
-    .filter((x) => x.st && x.st.stage !== -1);
+    .filter((x) => x.st && x.st.stage !== -1
+      && x.def.chapters[x.st.chapter] && x.def.chapters[x.st.chapter].stages[x.st.stage]);
   /* replay de la cinemática de la etapa activa: SOLO lectura, ver comentario junto a
      startReplay/advanceReplay más abajo — no toca game ni llama a setGame en ningún punto. */
   const [replay, setReplay] = useState(null); // { npc, name, steps, idx } | null

@@ -373,6 +373,27 @@ function sanitizeGame(g) {
   if (out.questPending && !out.storyPending) { out.storyPending = out.questPending; delete out.questPending; }
   if (out.stories) { const rest = { ...out.stories }; REMOVED_NPCS.forEach((k) => delete rest[k]); out.stories = rest; }
   if (out.storyPending) { const rest = { ...out.storyPending }; REMOVED_NPCS.forEach((k) => delete rest[k]); out.storyPending = rest; }
+  /* cuando la historia de un personaje se reestructura a fondo (p.ej. VERA_STORY, que pasó
+     de varios capítulos a uno solo con 15 etapas), una partida con progreso guardado en el
+     formato antiguo se queda con un chapter/stage que ya no resuelve a ninguna etapa real
+     de STORIES[key]. Sin esto, checkStories la deja invisible y atascada para siempre (el
+     "!chapter" que asume "ya completó todo lo que existe por ahora" se cumple igual, así
+     que nunca vuelve a intentar avanzarla) y QuestPanel podía tirar toda la app en blanco
+     al leer chapter.stages de un chapter undefined. Se detecta y se reinicia esa historia
+     entera: volverá a arrancar desde su prólogo en cuanto se cumpla su trigger. */
+  if (out.stories) {
+    const rest = { ...out.stories };
+    Object.entries(rest).forEach(([key, st]) => {
+      if (!st || st.stage === -1) return;
+      const def = STORIES[key];
+      const chapter = def && def.chapters[st.chapter];
+      if (!chapter || !chapter.stages[st.stage]) {
+        delete rest[key];
+        if (out.storyPending) delete out.storyPending[key];
+      }
+    });
+    out.stories = rest;
+  }
   /* pendingAppearances de antes del rework guardaban el nombre de display de una variante
      ("López Playa") en vez de la clave de personaje ("lopez"): esas entradas ya no se
      pueden resolver (la variante no existe como pool aparte), así que se descartan sin más

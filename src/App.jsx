@@ -1454,7 +1454,7 @@ const ZONES = [
   { id: "oficina", kind: "npc", npc: "elisa", label: "Oficina", icon: "🏢", x: 26.11, y: 6.63,
     pts: "52.25 87.74 55.66 137.44 204.76 129.61 204.76 76.16 52.25 87.74",
     unlocked: (g) => isZoneUnlocked(g, "oficina") },
-  { id: "ciudad-dep", kind: "npc", npc: ["lopez", "elisa", "milly", "beka", "milo"], label: "Ciudad Deportiva", icon: "🏟️", x: 68.40, y: 31.75,
+  { id: "ciudad-dep", kind: "npc", npc: ["lopez", "elisa", "milly", "beka", "milo", "vera"], label: "Ciudad Deportiva", icon: "🏟️", x: 68.40, y: 31.75,
     pts: "226.89 245.01 214.21 284.33 257.1 333.35 437.36 333.35 437.36 247.57 226.89 245.01",
     unlocked: (g) => isZoneUnlocked(g, "ciudad-dep") },
   { id: "kiosco", kind: "paper", npc: "milly", label: "Kiosco", icon: "📰", x: 71.79, y: 44.20,
@@ -1464,12 +1464,12 @@ const ZONES = [
   /* npc: "yuna" — casa sigue siendo la pantalla de trofeos (HouseRoom) por defecto, pero
      ahora también admite una escena de personaje encima (ver ZoneScreen: isHome no excluye
      ya pendingNpc), para las escenas de intimidad emocional de su campaña en Casa del jugador */
-  { id: "casa", kind: "home", npc: ["yuna", "lopez", "igor", "lisa", "beka"], label: "Tu Casa", icon: "🏠", x: 24.20, y: 45.68,
+  { id: "casa", kind: "home", npc: ["yuna", "lopez", "igor", "lisa", "beka", "vera"], label: "Tu Casa", icon: "🏠", x: 24.20, y: 45.68,
     pts: "91.14 348.16 163.66 373.18 152.42 429.35 76.85 405.35 91.14 348.16",
     unlocked: (g) => isZoneUnlocked(g, "casa") },
   /* varios personajes comparten esta zona de calle: la burbuja muestra a quien tenga
      algo pendiente ahora mismo (ver EXTRA_NPCS y CityMap); en reposo, el puntito de siempre */
-  { id: "barrio", kind: "npc", npc: ["yuna", "elisa", "milly", "lopez", "igor", "beka"], label: "El Barrio", icon: "🌆", x: 57.78, y: 58.78,
+  { id: "barrio", kind: "npc", npc: ["yuna", "elisa", "milly", "lopez", "igor", "beka", "vera"], label: "El Barrio", icon: "🌆", x: 57.78, y: 58.78,
     pts: "217.78 461.01 217.78 507.48 318.38 500 318.38 465.1 217.78 461.01",
     unlocked: (g) => isZoneUnlocked(g, "barrio") },
   { id: "car", kind: "npc", npc: ["lopez", "lisa", "elisa", "igor", "beka"], label: "Centro de Alto Rendimiento", icon: "🏋️", x: 66.84, y: 18.18,
@@ -1481,16 +1481,16 @@ const ZONES = [
   /* la presentación de Karla ya no depende de metFlag/intro (eso duplicaba el prólogo real
      de KARLA_STORY en cuanto se desbloqueara la zona, igual que le pasaba a Igor/restaurante
      y le pasó de verdad a Milly antes de detectarlo): su propia historia ya se encarga */
-  { id: "patro", kind: "npc", npc: ["lisa", "elisa", "milly"], label: "Zona de Patrocinadores", icon: "🏙️", x: 36.27, y: 83.07,
+  { id: "patro", kind: "npc", npc: ["lisa", "elisa", "milly", "vera"], label: "Zona de Patrocinadores", icon: "🏙️", x: 36.27, y: 83.07,
     pts: "131.25 570.8 86.31 660.67 163.35 715.53 190.77 690.44 214.21 702.11 245.34 669.43 185.86 599.69 131.25 570.8",
     unlocked: (g) => isZoneUnlocked(g, "patro") },
   { id: "cantera", kind: "npc", npc: "lopez", label: "Cantera", icon: "🎓", x: 88.18, y: 46.28,
     pts: "377.1 345.61 437.36 343.57 426.63 442.12 363.83 442.12 377.1 345.61",
     unlocked: (g) => isZoneUnlocked(g, "cantera") },
-  { id: "tienda", kind: "npc", npc: ["coco", "yuna", "lopez"], label: "Centro Comercial", icon: "🛍️", x: 84.10, y: 65.63,
+  { id: "tienda", kind: "npc", npc: ["coco", "yuna", "lopez", "vera"], label: "Centro Comercial", icon: "🛍️", x: 84.10, y: 65.63,
     pts: "342.38 511.57 346.97 559.57 424.08 552.42 420 507.48 342.38 511.57",
     unlocked: (g) => isZoneUnlocked(g, "tienda") },
-  { id: "estadio", kind: "npc", npc: ["lopez", "yuna", "elisa", "milly", "igor", "beka"], label: "Gran Estadio", icon: "🏆", x: 74.47, y: 89.16,
+  { id: "estadio", kind: "npc", npc: ["lopez", "yuna", "elisa", "milly", "igor", "beka", "vera"], label: "Gran Estadio", icon: "🏆", x: 74.47, y: 89.16,
     pts: "384.07 634.12 295.02 657.52 262.89 677.69 290.06 764.25 384.07 764.25 431.07 715.53 384.07 634.12",
     unlocked: (g) => isZoneUnlocked(g, "estadio"), big: true },
   /* "milo" va ANTES que "vera" en esta lista a propósito: zoneActiveNpc (ver más abajo)
@@ -1502,7 +1502,7 @@ const ZONES = [
   { id: "parque", kind: "npc", npc: ["elisa", "lisa", "milly", "yuna", "lopez", "beka", "milo", "vera", "wendy"], label: "Parque", icon: "🌳", x: 47.99, y: 42.84,
     pts: "204.76 310.38 181.53 393.1 289.27 402.29 204.76 310.38",
     unlocked: (g) => isZoneUnlocked(g, "parque") },
-  { id: "casino", kind: "npc", npc: ["elisa", "lisa"], label: "Casino", icon: "🎰", x: 63.79, y: 72.25,
+  { id: "casino", kind: "npc", npc: ["elisa", "lisa", "vera"], label: "Casino", icon: "🎰", x: 63.79, y: 72.25,
     pts: "262.21 525.86 321.95 522.8 333.44 636.16 297.83 644.33 256.59 572.84 262.21 525.86",
     unlocked: (g) => isZoneUnlocked(g, "casino") },
   { id: "enfermeria", kind: "npc", npc: ["elisa", "milly", "beka"], label: "Enfermería", icon: "🏥", x: 70.56, y: 8.09,
@@ -7316,314 +7316,880 @@ const COCO_GREETING = [
 ];
 
 /* ============================================================
-   VERA · artista observadora, novena campaña y primera con recompensas
-   de campaña MÚLTIPLES (un cuadro por capítulo, no solo un pin al final).
+   VERA · pintora, campaña propia 3.0 (rework completo, ver
+   FUTABITA_Vera_Campana_3.0.docx). Prólogo + 12 capítulos + Final +
+   Epílogo = 15 etapas, una sola cadena (chapters[0].stages), igual que
+   ELISA_STORY/BEKA_STORY: el reward de EPÍLOGO (stat MEN+1) solo se
+   dispara al ENTRAR en una etapa final:true (ver checkStories), así que
+   vive en la última etapa, no en FINAL/Retrato (que el documento pide
+   expresamente SIN final:true).
 
-   Por eso su historia no cabe en un único capítulo largo como las demás:
-   el motor (checkStories) solo dispara stage.reward() al ENTRAR en una
-   etapa final:true, y entrar en una etapa final:true cierra el capítulo
-   entero e inmediatamente pasa al siguiente (su propio check/objective,
-   si los tuviera, nunca se evaluarían). Así que cada "CAPÍTULO N" del
-   documento se parte en dos etapas dentro de su propio capítulo:
-     1) la etapa de SETUP (con el objective/check real del capítulo),
-     2) una etapa de ENTREGA (final:true) que solo lleva la reacción al
-        objetivo que se acaba de cumplir + el reward() de ese cuadro.
-   El capítulo N+1 empieza limpio, sin repetir esa reacción (ya se ha
-   mostrado en la etapa de entrega), tal como pide el documento: "La
-   reacción a este objetivo NO va en esta intro; va al principio de la
-   siguiente etapa" — aquí "la siguiente etapa" es la de entrega.
+   Objetos: vera_retrato (FINAL, prioritario, sin asset dedicado: reusa
+   el cuadro genérico existente) y vera_pin (EPÍLOGO, ya existe como
+   carta kind:"card"). vera_lamina (C2) y vera_boceto_milo (C8) no
+   tienen asset: se mantienen las líneas de diálogo y se omite el
+   grantItem/midReveal, tal como pide el documento en ese caso.
 
-   Cada etapa de ENTREGA lleva grantItem/reveal (no reward()): a diferencia
-   de los pines de las otras 8 campañas, aquí SÍ importa que la entrega
-   ocurra durante la conversación, no en el instante en que se cumple el
-   objetivo — así que el cuadro se añade al inventario y se dispara
-   <CuadroReveal> (la pantalla grande "imagen → efectos → click para
-   continuar" que pide el documento) solo cuando el jugador de verdad lee
-   la última frase de esa escena (ver applyOnRead/queueStageScene), nunca
-   antes. Con reward() (como usan las demás campañas) la entrega salta en
-   cuanto checkStories detecta el objetivo cumplido, aunque el jugador
-   todavía no haya hablado con el personaje — para un pin silencioso eso
-   pasa desapercibido, pero para la pantalla grande de un cuadro se nota
-   muchísimo (el popup salta solo, sin que Vera "te lo dé" en la charla).
+   Pose incomoda (propuesta en el documento, capítulos 9-12/Final/
+   Epílogo): sin asset creado, sustituida por seria en todas partes,
+   tal como indica el documento cuando no se crea el asset. */
+/* helper de una línea, análogo a newMatches del documento */
+const newMatches = (g, snap) => (g.matchHistory || []).slice(snap.matchCount || 0);
 
-   Moods: el documento no define asset para [suave] (solo lista idle,
-   happy, seria, preocupada, pintora, pintora_pensando, playa,
-   playa_regalo, icon) — igual que con Coco, se deja el mood tal cual y
-   cae automáticamente a "idle" (npc.def) mediante el fallback ya
-   existente en el motor, sin inventar un asset nuevo.
+/* líneas condicionales de la decisión del capítulo 11 (ver sección 10 del documento) */
+const VERA_PATH_LINE_C12 = {
+  veraPath_si: { m: "seria", t: "Y dijiste que sí sin pensarlo, que es lo que más miedo me dio de todo. Llevo dos semanas esperando a que te arrepintieras." },
+  veraPath_condicion: { m: "idle", t: "Y lo viste tú antes que nadie, en el estudio, con la puerta cerrada. Eso es lo único que necesitaba hacer distinto." },
+  veraPath_espera: { m: "seria", t: "Y me hiciste esperar cuatro días. Los mejores cuatro días de esta historia, aunque no lo parezca." },
+};
+const VERA_PATH_LINE_FINAL = {
+  veraPath_si: { m: "seria", t: "Y si me he equivocado, me lo dices. Confiaste antes de saber lo que había dentro y eso me obliga a haberlo hecho bien." },
+  veraPath_condicion: { m: "idle", t: "Ya lo has visto una vez, así que esto no es una sorpresa. Es la segunda mirada, que es la que cuenta de verdad." },
+  veraPath_espera: { m: "seria", t: "Te lo pensaste. Y volviste igual. No sé si sabes lo raro que es eso." },
+};
+const VERA_PATH_LINE_EPILOGO = {
+  veraPath_si: { m: "seria", t: "Y a ti te lo pregunté y dijiste que sí en cuatro segundos. Trece años de miedo y se resolvió en cuatro segundos." },
+  veraPath_condicion: { m: "happy", t: "Tú me pediste verlo primero. Ruth no pudo. Es exactamente la misma frase con trece años de diferencia." },
+  veraPath_espera: { m: "idle", t: "Y tú te lo pensaste, que es lo que ella nunca tuvo ocasión de hacer." },
+};
+const veraPath = (g) => g.veraPath_si ? "veraPath_si" : g.veraPath_condicion ? "veraPath_condicion" : g.veraPath_espera ? "veraPath_espera" : null;
 
-   Checks: el documento pide explícitamente mapear cada misión a una
-   condición que YA exista en el juego. CAP5/CAP6 ("hito social",
-   "interactúa con 3 personajes") se resuelven con game.seenMoods (ya
-   usado por el motor para marcar qué mood de cada npc ha leído el
-   jugador — su claves son, por tanto, "personajes con los que ya has
-   interactuado") comparando contra un snapshot tomado al empezar la
-   etapa, igual que el resto de checks "desde que empezó el capítulo". */
 const VERA_STORY = {
   npc: "vera",
-  chapters: [
-    { id: "cap1", title: "Primer toque", trigger: () => true,
-      stages: [
-        /* PRÓLOGO — Algo que pintar (sin MISIÓN propia en el documento:
-           se resuelve en cuanto se lee, igual que el FINAL de Milly/Beka) */
-        { title: "Algo que pintar", zone: "parque",
-          objective: "Sin objetivo adicional.",
+  chapters: [{
+    id: "cap1",
+    title: "Vera",
+    trigger: () => true,
+    stages: [
+        { title: "Estabas en medio", zone: "parque",
+          objective: "Juega un partido.",
           intro: [
-            { m: "idle", t: "Perdona. ¿Puedes quedarte quieto un segundo?" },
-            { m: "sorprendida", t: "No, no por nada raro. Estaba intentando dibujar lo que tienes detrás y, de repente, me he quedado mirándote a ti." },
-            { m: "happy", t: "Eso suele ser buena señal." },
-            { m: "idle", t: "Soy Vera. Pinto. Bueno... intento pintar. Últimamente tengo un pequeño problema." },
-            { m: "preocupada", t: "Tengo materiales, tiempo, ideas a medias, tres cuadernos llenos de cosas que no terminé y una cantidad bastante preocupante de dibujos de tazas." },
-            { m: "happy", t: "No sé por qué dibujo tantas tazas." },
-            { m: "idle", t: "Lo que no tengo es una idea que me haga pensar: esto merece convertirse en un cuadro." },
-            { m: "seria", t: "Así que he decidido observar un poco más." },
-            { m: "idle", t: "Y tú pareces estar haciendo muchas cosas. Entrenas, intentas mejorar, comes, descansas... incluso sales por ahí." },
-            { m: "happy", t: "Quizá pueda encontrar algo interesante en todo eso." },
-            { m: "pintora_pensando", t: "No necesito que poses para mí. Solo quiero ver qué ocurre cuando alguien intenta cambiar algo de su vida." },
-            { m: "idle", t: "Si no te importa, voy a acompañarte un poco." },
-            { m: "happy", t: "Prometo no dibujarte mientras duermes." },
+            { m: "pintora_pensando", t: "Perdona. ¿Te puedes mover un poco a la izquierda?" },
+            { m: "happy", t: "No, más. Más. Ahí." },
+            { m: "idle", t: "Gracias." },
+            { m: "happy", t: "Y ahora te voy a explicar por qué, que si no te vas pensando cosas raras." },
+            { m: "pintora_pensando", t: "Llevo desde las cinco con esos árboles. Los tres del fondo, los que están mal plantados." },
+            { m: "idle", t: "Están demasiado juntos y el cuadro se queda tapado por la derecha. Llevo una hora buscando cómo abrirlo." },
+            { m: "seria", t: "Y entonces has entrado tú por ahí y se ha abierto solo." },
+            { m: "happy", t: "Lo cual es un poco humillante, la verdad. Una hora yo, cuatro segundos tú." },
+            { m: "idle", t: "Vera, por cierto. Pinto aquí casi todas las tardes." },
+            { m: "pintora_pensando", t: "Y no, no soy de las que pintan por hobby los domingos. Vivo de esto. Mal, pero vivo." },
+            { m: "seria", t: "…" },
+            { m: "pintora_pensando", t: "Oye. Una cosa." },
+            { m: "idle", t: "¿Tú juegas al fútbol? De verdad, digo. Federado." },
+            { m: "happy", t: "No lo digo por la ropa. Lo digo porque estás de pie de una manera muy concreta." },
+            { m: "pintora_pensando", t: "La gente normal reparte el peso. Tú lo tienes todo en una pierna, listo para salir corriendo." },
+            { m: "idle", t: "Se ve enseguida. Es de las pocas cosas que se ven enseguida." },
+            { m: "happy", t: "…Y acabo de dibujarte sin preguntar, cosa que está fatal." },
+            { m: "idle", t: "Ha sido una esquina de la hoja. Tres líneas. Ni siquiera se te ve la cara." },
+            { m: "seria", t: "Si te molesta, lo tacho ahora mismo y no pasa nada." },
+            { m: "idle", t: "Bueno. Pues nada, ya has cumplido tu función: has arreglado un cuadro sin enterarte." },
+            { m: "happy", t: "Aunque ahora tengo un problema nuevo." },
+            { m: "pintora_pensando", t: "Y es que llevo tres líneas hechas y ya sé que las tres están mal." },
+            { m: "idle", t: "Porque te he dibujado quieto. Y tú, quieto, no eres tú." },
+            { m: "seria", t: "Así que hazme un favor: juega." },
+            { m: "idle", t: "Un partido. El que tengas, el que sea, no me importa el resultado." },
+            { m: "pintora_pensando", t: "Yo voy y miro." },
+            { m: "happy", t: "Y así, la próxima vez que te dibuje, por lo menos estaré dibujando a la persona correcta." },
+          ],
+          replies: [
+            { t: "No me molesta.", m: "idle",
+              r: [{ m: "idle", t: "Vale." }, { m: "happy", t: "Normalmente la gente dice que no le molesta y luego mira el papel de reojo cuarenta veces." },
+                { m: "pintora_pensando", t: "Tú lo has dicho sin mirar. Eso es raro." }] },
+            { t: "Enséñamelo.", m: "idle",
+              r: [{ m: "seria", t: "No." }, { m: "idle", t: "…" }, { m: "happy", t: "Perdona, ha sido un no muy seco." },
+                { m: "seria", t: "No enseño cosas a medias. Es una norma vieja y no la voy a explicar hoy." }] },
+            { t: "¿Tan claro se ve?", m: "idle",
+              r: [{ m: "pintora_pensando", t: "Clarísimo." }, { m: "idle", t: "Llevo diez años mirando a gente estar de pie. Es literalmente mi oficio." },
+                { m: "happy", t: "Es un oficio horrible para las fiestas, por cierto. Nadie quiere que le miren tanto." }] },
           ],
           setFlags: ["veraMet"],
-          snap: () => ({}), check: () => true },
-        /* CAPÍTULO 1 — Primer toque */
-        { title: "Primer toque", zone: "parque",
-          objective: "Completa un día de preparación: entrenamiento + alimentación + sueño.",
-          intro: [
-            { m: "idle", t: "He estado observándote un poco. No te preocupes, no tanto como para saber a qué hora desayunas." },
-            { m: "happy", t: "Aunque ahora que lo pienso, eso sería bastante útil para una artista obsesionada con los detalles." },
-            { m: "seria", t: "Hay algo que me interesa de los comienzos. Desde fuera parecen insignificantes." },
-            { m: "idle", t: "Un entrenamiento más. Una comida más. Un día en el que decides hacer algo en lugar de dejarlo para mañana." },
-            { m: "pintora_pensando", t: "Pero cuando juntas muchos de esos momentos, de repente existe una historia." },
-            { m: "happy", t: "Y creo que quiero empezar por ahí." },
-            { m: "seria", t: "No quiero pintar una gran victoria todavía. Quiero pintar el momento en el que alguien decide dar el primer paso." },
-            { m: "idle", t: "Así que voy a observarte mientras empiezas a construir esa rutina." },
-            { m: "happy", t: "No hace falta que sea perfecto. Solo necesito ver que de verdad has empezado." },
+          snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
+          subs: [
+            (g, s) => newMatches(g, s).length >= 1,
           ],
+          check: (g, s) => newMatches(g, s).length >= 1,
+          progressCount: (g, s) => newMatches(g, s).length, progressGoal: 1 },
+        { title: "El lienzo", zone: "parque",
+          objective: "Consigue una victoria y cierra un día de objetivos.",
+          intro: [
+            { m: "happy", t: "Fui." },
+            { m: "idle", t: "Al partido. Fui, me puse detrás de la portería y estuve los noventa minutos." },
+            { m: "pintora_pensando", t: "Y no dibujé nada, que es lo que suele pasar la primera vez." },
+            { m: "seria", t: "Pero ya sé cómo te mueves, que era lo que quería." },
+            { m: "pintora_pensando", t: "Te cuento lo que vi, y no es un cumplido, así que no pongas esa cara." },
+            { m: "idle", t: "Corres antes de decidir. Arrancas y luego eliges a dónde ibas." },
+            { m: "happy", t: "Que en un cuadro es maravilloso y en la vida imagino que da bastantes problemas." },
+            { m: "idle", t: "Y hay un momento, justo antes de recibir, en el que se te va todo el cuerpo hacia delante." },
+            { m: "pintora_pensando", t: "Ese medio segundo. Ese es el que quiero." },
+            { m: "seria", t: "…" },
+            { m: "idle", t: "Voy a hacerte un cuadro." },
+            { m: "happy", t: "No te lo estoy pidiendo, fíjate. Te lo estoy avisando." },
+            { m: "seria", t: "Aunque si me dices que no, no lo hago. Eso sí es en serio." },
+            { m: "idle", t: "He empezado el lienzo esta mañana. Lo he medido y lo he marcado y no he puesto ni una gota de pintura." },
+            { m: "pintora_pensando", t: "Porque marcar un lienzo lleva veinte minutos y decidir a quién pintas lleva meses." },
+            { m: "happy", t: "Y yo llevo tres años sin decidir a nadie." },
+            { m: "seria", t: "…Eso ha sonado más triste de lo que pretendía. Sigamos." },
+            { m: "idle", t: "Y ahora, la parte práctica, que es la que a mí me sirve." },
+            { m: "pintora_pensando", t: "Necesito verte otra vez. Y necesito verte ganando." },
+            { m: "happy", t: "No por moral deportiva. Es que la gente se mueve distinto cuando gana y quiero saber cuál de los dos eres tú." },
+            { m: "idle", t: "Y un día. Un día tuyo, de esos que cierras entero." },
+            { m: "seria", t: "Ese no es para el cuadro." },
+            { m: "idle", t: "Ese es porque quiero pintar a alguien que va a seguir existiendo dentro de seis meses." },
+            { m: "happy", t: "He tenido malas experiencias con modelos que desaparecen." },
+          ],
+          replies: [
+            { t: "¿Por qué yo?", m: "idle",
+              r: [{ m: "pintora_pensando", t: "Porque te vi el medio segundo." },
+                { m: "idle", t: "La mayoría de la gente no tiene un medio segundo. Va de un sitio a otro y ya está." },
+                { m: "happy", t: "Tú tienes uno. Y encima lo repites cada vez que te llega la pelota, que es comodísimo para mí." }] },
+            { t: "¿Cuánto vas a tardar?", m: "idle",
+              r: [{ m: "happy", t: "Ni idea." }, { m: "idle", t: "Meses. Puede que más." }, { m: "seria", t: "Y no porque pinte despacio. Pinto rápido." },
+                { m: "pintora_pensando", t: "Es que un cuadro de una persona no se termina cuando está pintado. Se termina cuando yo digo que ya sé quién eres." }] },
+            { t: "¿Y si no me gusta cómo quedo?", m: "idle",
+              r: [{ m: "seria", t: "…" }, { m: "idle", t: "Esa es una pregunta muy buena y no te la voy a contestar hoy." },
+                { m: "happy", t: "Te la contesto dentro de unos meses, cuando ya no puedas huir." }] },
+          ],
+          setFlags: ["veraLienzo"],
+          snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
+          subs: [
+            (g, s) => newMatches(g, s).some((m) => m.res === "V"),
+            (g, s) => daysGoalsCompletedSince(g, s.since) >= 1,
+          ],
+          check: (g, s) => newMatches(g, s).some((m) => m.res === "V") && daysGoalsCompletedSince(g, s.since) >= 1,
+          progressGoal: 1 },
+        { title: "Cómo se paga esto", zone: "tienda",
+          objective: "Cierra 2 días de objetivos y consigue una victoria.",
+          intro: [
+            { m: "happy", t: "Ganaste y cerraste el día." },
+            { m: "idle", t: "Ya tengo el fondo puesto. Tres capas de un verde bastante feo." },
+            { m: "pintora_pensando", t: "Los fondos siempre son feos al principio. Es lo que hace que la figura funcione después." },
+            { m: "happy", t: "Y no, no te lo voy a enseñar. Ya conoces la norma." },
+            { m: "idle", t: "Esto es lo otro que hago. Aquí, los sábados por la mañana." },
+            { m: "happy", t: "Láminas. Pequeñas. El puerto, la plaza, el parque con los tres árboles mal plantados." },
+            { m: "idle", t: "Ocho euros. Doce si van con marco, y el marco me cuesta nueve, así que el marco es prácticamente caridad." },
+            { m: "pintora_pensando", t: "Vendo entre seis y quince cada sábado. En verano más." },
+            { m: "seria", t: "Y con eso pago los lienzos, el óleo y la parte del alquiler que no cubre lo otro." },
+            { m: "happy", t: "Lo otro son retratos por encargo. Bodas, comuniones, perros. Sobre todo perros." },
+            { m: "idle", t: "He pintado más perros que personas en los últimos tres años, y eso dice algo de mi carrera que prefiero no analizar." },
+            { m: "seria", t: "…" },
+            { m: "idle", t: "Te cuento esto por un motivo concreto, no por dar pena." },
+            { m: "seria", t: "Tu cuadro no lo estoy haciendo por encargo. No hay nadie pagándolo y tú no me debes nada." },
+            { m: "idle", t: "Lo cual significa que puedo tardar lo que quiera y que puedo hacerlo mal." },
+            { m: "pintora_pensando", t: "Y significa otra cosa más importante: que si algún día te pido algo, no es porque me lo debas." },
+            { m: "happy", t: "Es porque quiero pedírtelo. Que es distinto y bastante peor para mí." },
+            { m: "idle", t: "Toma. Coge una." },
+            { m: "happy", t: "No, no la pagues. Ni se te ocurra sacar la cartera, que me ofendo." },
+            { m: "pintora_pensando", t: "Esa es el parque. Los tres árboles." },
+            { m: "idle", t: "La pinté hace dos años y he vendido como cuarenta copias, así que técnicamente es mi obra maestra." },
+            { m: "happy", t: "Cuarenta personas tienen mis árboles mal plantados colgados en el pasillo." },
+            { m: "seria", t: "Es la primera cosa mía que va a tener alguien a quien conozco." },
+            { m: "happy", t: "…Vale, eso ha vuelto a sonar triste. Es una lámina de ocho euros, no te la tomes tan en serio." },
+            { m: "idle", t: "Bueno. Voy a recoger, que a la una se llena esto de gente que solo mira." },
+            { m: "pintora_pensando", t: "Pero necesito una cosa tuya antes." },
+            { m: "idle", t: "Dos días cerrados y una victoria." },
+            { m: "happy", t: "Y no es por el cuadro esta vez, para variar." },
+            { m: "seria", t: "Es que llevo tres años pintando cosas que ya estaban quietas." },
+            { m: "pintora_pensando", t: "Puertos. Plazas. Perros muertos, algunos." },
+            { m: "idle", t: "Y me apetece muchísimo estar pintando algo mientras cambia." },
+            { m: "happy", t: "Así que cambia. Eso es todo lo que te pido." },
+          ],
+          replies: [
+            { t: "¿Nunca has expuesto?", m: "idle",
+              r: [{ m: "seria", t: "Una vez." }, { m: "idle", t: "…" }, { m: "happy", t: "Hace mucho. Y no salió bien." },
+                { m: "seria", t: "Y esa es toda la respuesta que hay hoy sobre ese tema." }] },
+            { t: "Yo te la compro.", m: "happy",
+              r: [{ m: "happy", t: "No." }, { m: "idle", t: "Si me la compras, es una lámina." },
+                { m: "seria", t: "Si te la doy, es otra cosa." }, { m: "happy", t: "Y hoy me apetece que sea otra cosa. Mañana igual te cobro." }] },
+            { t: "¿Por qué perros?", m: "idle",
+              r: [{ m: "happy", t: "Porque la gente quiere un retrato de su perro y no de su marido." },
+                { m: "idle", t: "Y no es un chiste, es un dato. Llevo tres años viéndolo." },
+                { m: "pintora_pensando", t: "Un perro no se va a quejar de cómo lo has pintado. Eso vale mucho dinero." }] },
+          ],
+          setFlags: ["veraOficio"],
+          snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
+          subs: [
+            (g, s) => daysGoalsCompletedSince(g, s.since) >= 2,
+            (g, s) => newMatches(g, s).some((m) => m.res === "V"),
+          ],
+          check: (g, s) => daysGoalsCompletedSince(g, s.since) >= 2 && newMatches(g, s).some((m) => m.res === "V"),
+          progressCount: (g, s) => daysGoalsCompletedSince(g, s.since), progressGoal: 2 },
+        { title: "De cara a la pared", zone: "casa",
+          objective: "Cierra 3 días de objetivos.",
+          intro: [
+            { m: "idle", t: "Dos días y la victoria." },
+            { m: "happy", t: "Y yo no he tocado el cuadro en toda la semana, así que vas ganando por goleada." },
+            { m: "pintora_pensando", t: "No es bloqueo. Es que todavía no sé por dónde entrar." },
+            { m: "seria", t: "Pasa. Y no juzgues, que no esperaba visita." },
+            { m: "idle", t: "Esto es el estudio. Y sí, también es el salón, y por esa puerta está la cama." },
+            { m: "happy", t: "El olor se te pasa en diez minutos. A mí me duró seis años." },
+            { m: "pintora_pensando", t: "Ese de ahí es el tuyo. El que está en el caballete." },
+            { m: "seria", t: "No te acerques por detrás." },
+            { m: "idle", t: "…" },
+            { m: "idle", t: "Y esos son los demás." },
+            { m: "pintora_pensando", t: "Sí. Todos vueltos hacia la pared." },
+            { m: "happy", t: "Hay unos cuarenta. Cuarenta y tantos. Llevo sin contarlos desde que dejaron de caber en el armario." },
+            { m: "seria", t: "Puedes darles la vuelta si quieres. En serio. No hay nada raro." },
+            { m: "idle", t: "…" },
+            { m: "pintora_pensando", t: "¿Ves? Están todos terminados." },
+            { m: "idle", t: "Los fondos, las manos, la ropa, la luz. Todo." },
+            { m: "seria", t: "Menos la cara." },
+            { m: "happy", t: "Cuarenta y tantos cuadros de gente sin cara. Es una colección muy inquietante y no me la ha pedido ninguna galería, cosa que entiendo." },
+            { m: "idle", t: "Y sí, es a propósito. No es que me canse ni que se me olvide." },
+            { m: "pintora_pensando", t: "Es que una cara es lo único del cuadro donde tienes que decidir quién es esa persona." },
+            { m: "seria", t: "Todo lo demás lo copias. La cara la eliges." },
+            { m: "idle", t: "Y yo hace tiempo que decidí que no me corresponde elegir eso por nadie." },
+            { m: "happy", t: "Es una postura muy noble que además me ha arruinado la carrera. Las dos cosas a la vez." },
+            { m: "idle", t: "Bueno, vámonos, que si te quedas más rato acabo enseñándote cosas." },
+            { m: "happy", t: "Y ya sabes la norma." },
+            { m: "pintora_pensando", t: "Antes de irte, lo de siempre: necesito material." },
+            { m: "idle", t: "Tres días. Cerrados, seguidos o no, me da igual." },
+            { m: "seria", t: "Y esta vez no es para tener una excusa para verte." },
+            { m: "idle", t: "Es que llevo una semana mirando ese lienzo y no sé por dónde entrar." },
+            { m: "pintora_pensando", t: "Y cuando eso me pasa, la solución nunca está en el estudio. Está en mirar más a la persona." },
+            { m: "happy", t: "Así que dame tres días de persona." },
+          ],
+          replies: [
+            { t: "¿Y el mío también acabará así?", m: "idle",
+              r: [{ m: "seria", t: "…" }, { m: "pintora_pensando", t: "No lo sé." }, { m: "idle", t: "Es la primera vez en tres años que no lo sé de antemano." },
+                { m: "happy", t: "Cosa que me tiene bastante inquieta, para serte sincera." }] },
+            { t: "¿Quién es esta?", m: "idle",
+              r: [{ m: "seria", t: "Nadie." }, { m: "idle", t: "…" }, { m: "seria", t: "Perdona. Ha sido otro no muy seco." },
+                { m: "pintora_pensando", t: "Es una amiga. Era. Y ese cuadro lleva ahí desde antes de que yo empezara a hacerlos sin cara." },
+                { m: "idle", t: "Es el único que sí la tiene. Por eso está el último." }] },
+            { t: "Píntame sin cara si quieres.", m: "idle",
+              r: [{ m: "happy", t: "…" }, { m: "seria", t: "No digas eso." },
+                { m: "idle", t: "Eso es exactamente lo que me digo yo para dormir tranquila y no me lo creo desde hace años." },
+                { m: "pintora_pensando", t: "Si te pinto, te pinto entero. O no te pinto." }] },
+          ],
+          setFlags: ["veraEstudio"],
           snap: () => ({ since: todayStr() }),
-          check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 1 },
-        /* ENTREGA — Cuadro «Primer toque» (final:true: cierra el capítulo 1 y entrega el
-           cuadro; su reacción es la que el documento escribe al principio de "CAPÍTULO 2") */
-        { title: "Primer toque", final: true,
-          intro: [
-            { m: "happy", t: "Así que lo hiciste." },
-            { m: "idle", t: "Ayer parecía un día cualquiera. Y, sin embargo, ahora puedo mirarlo y decir que fue el principio de algo." },
-            { m: "seria", t: "Eso es lo que quería ver." },
+          subs: [
+            (g, s) => daysGoalsCompletedSince(g, s.since) >= 3,
           ],
-          grantItem: "cuadro_primer_toque", reveal: "cuadro_primer_toque" },
-      ] },
-    { id: "cap2", title: "No parar", trigger: () => true,
-      stages: [
-        { title: "No parar", zone: "parque",
-          objective: "Mantén una racha de 3 días de objetivos diarios.",
-          intro: [
-            { m: "pintora_pensando", t: "He hecho un dibujo esta mañana. No es exactamente una persona corriendo. Es más bien... una persona que ha decidido volver a correr." },
-            { m: "idle", t: "Hay una diferencia enorme entre las dos cosas." },
-            { m: "seria", t: "El primer día puede ser entusiasmo. El segundo ya es una elección." },
-            { m: "idle", t: "Y después llega esa parte aburrida en la que nadie te aplaude por repetir lo que dijiste que ibas a hacer." },
-            { m: "happy", t: "Creo que ahí está el cuadro." },
-            { m: "seria", t: "Durante unos días, no busques hacer algo espectacular. Solo intenta no romper el hilo que acabas de empezar." },
-          ],
-          progressCount: (g) => g.player.streak || 0, progressGoal: 3,
-          snap: () => ({}),
-          check: (g) => (g.player.streak || 0) >= 3 },
-        { title: "No parar", final: true,
+          check: (g, s) => daysGoalsCompletedSince(g, s.since) >= 3,
+          progressCount: (g, s) => daysGoalsCompletedSince(g, s.since), progressGoal: 3 },
+        { title: "No te estás quieto", zone: "ciudad-dep",
+          objective: "Sube tu media (OVR) respecto al inicio del capítulo y cierra 3 días de objetivos.",
           intro: [
             { m: "happy", t: "Tres días." },
-            { m: "seria", t: "No parece una cifra enorme escrita en una pantalla, pero ahora entiendo por qué me interesaba." },
-            { m: "idle", t: "Has vuelto a hacerlo incluso después de que la novedad desapareciera." },
+            { m: "pintora_pensando", t: "Y ya he entrado en el lienzo. Tenías razón tú sin decir nada: el problema era yo." },
+            { m: "idle", t: "El cuerpo ya está puesto. En carboncillo, todavía se borra con la mano." },
+            { m: "seria", t: "Lo he hecho y deshecho cuatro veces esta semana, así que tampoco te emociones." },
+            { m: "pintora_pensando", t: "Vengo a mirarte entrenar y te voy a decir un problema que tengo contigo." },
+            { m: "happy", t: "Es un problema técnico, no personal. Bueno. Un poco personal." },
+            { m: "idle", t: "No te estás quieto." },
+            { m: "seria", t: "Y no me refiero a ahora mismo. Me refiero a los meses." },
+            { m: "pintora_pensando", t: "El boceto que te hice el primer día ya no sirve. Ni de lejos." },
+            { m: "idle", t: "Estás más ancho de espalda. Apoyas distinto. Y hay algo en cómo levantas la cabeza que antes no hacías." },
+            { m: "happy", t: "Hace ocho semanas mirabas al suelo antes de recibir. Ahora miras arriba primero." },
+            { m: "seria", t: "Eso no es músculo. Eso es otra cosa." },
+            { m: "idle", t: "Y aquí está mi problema." },
+            { m: "pintora_pensando", t: "Un retrato es una foto larga. Pintas a alguien durante meses y lo que sale es un promedio." },
+            { m: "idle", t: "Con un puerto no pasa nada, el puerto sigue ahí. Con un perro tampoco, más o menos." },
+            { m: "seria", t: "Pero tú vas a ser una persona distinta cuando yo termine." },
+            { m: "happy", t: "Así que estoy pintando a alguien que no va a existir." },
+            { m: "idle", t: "…" },
+            { m: "pintora_pensando", t: "O lo estoy haciendo al revés y estoy pintando a alguien que todavía no existe." },
+            { m: "seria", t: "Que sería la primera vez que hago eso y me da un vértigo considerable." },
+            { m: "pintora_pensando", t: "Total, que necesito que te muevas más rápido que yo, ya que estamos." },
+            { m: "idle", t: "Quiero ver tu media subir. La que sale en el informe." },
+            { m: "happy", t: "Sí, la miro. Me la enseñaste una vez y ahora la miro todas las semanas como una acosadora." },
+            { m: "seria", t: "Y tres días cerrados por el medio." },
+            { m: "idle", t: "Porque si vas a cambiar mientras te pinto, prefiero ir persiguiéndote." },
+            { m: "pintora_pensando", t: "Es más difícil y me va a salir peor." },
+            { m: "happy", t: "Y llevo tres años sin que nada me salga peor, así que ya me toca." },
           ],
-          grantItem: "cuadro_no_parar", reveal: "cuadro_no_parar" },
-      ] },
-    { id: "cap3", title: "Después del esfuerzo", trigger: () => true,
-      stages: [
-        { title: "Después del esfuerzo", zone: "parque",
-          objective: "Cumple el objetivo de proteína durante 3 días.",
+          replies: [
+            { t: "Píntame como voy a ser.", m: "idle",
+              r: [{ m: "seria", t: "…" }, { m: "pintora_pensando", t: "Eso es exactamente lo que no me atrevo a hacer." },
+                { m: "idle", t: "Porque para pintar a alguien como va a ser, tienes que decidir en qué va a convertirse." },
+                { m: "happy", t: "Y ya te dije el otro día lo que pienso de decidir cosas de otra gente." }] },
+            { t: "Empieza otra vez si hace falta.", m: "idle",
+              r: [{ m: "happy", t: "Es lo que llevo haciendo cuatro veces." }, { m: "idle", t: "…" },
+                { m: "pintora_pensando", t: "Aunque tienes razón. Empezar otra vez es gratis. Lo caro es terminar." }] },
+            { t: "¿Y tú has cambiado?", m: "idle",
+              r: [{ m: "seria", t: "…" }, { m: "idle", t: "Qué pregunta más incómoda." }, { m: "happy", t: "No." },
+                { m: "pintora_pensando", t: "Llevo tres años exactamente igual. Es lo que pasa cuando decides no decidir nada." },
+                { m: "idle", t: "…Vamos a hablar de otra cosa." }] },
+          ],
+          snap: (g) => ({ since: todayStr(), ovr: calcOVR(g.player.stats) }),
+          subs: [
+            (g, s) => calcOVR(g.player.stats) > s.ovr,
+            (g, s) => daysGoalsCompletedSince(g, s.since) >= 3,
+          ],
+          check: (g, s) => calcOVR(g.player.stats) > s.ovr && daysGoalsCompletedSince(g, s.since) >= 3,
+          progressCount: (g, s) => daysGoalsCompletedSince(g, s.since), progressGoal: 3 },
+        { title: "Qué se mira", zone: "playa",
+          objective: "Consigue una nota de 7.0 o más en un partido y cierra 2 días de objetivos.",
           intro: [
-            { m: "pintora_pensando", t: "Y mientras terminaba el segundo cuadro me di cuenta de que estaba dibujando siempre la misma mitad de la historia." },
-            { m: "sorprendida", t: "El esfuerzo." },
-            { m: "seria", t: "Entrenar. Correr. Intentarlo otra vez. Todo eso queda muy bien en un cuadro." },
-            { m: "idle", t: "Pero nadie pinta lo que pasa cuando termina." },
-            { m: "happy", t: "El cuerpo pide cosas. La cabeza también." },
-            { m: "seria", t: "Y si estás intentando mejorar de verdad, no puedes tratar la alimentación como si fuera una nota al pie." },
-            { m: "idle", t: "Creo que mi siguiente cuadro tiene que hablar de eso." },
-            { m: "happy", t: "No de comer mucho. De entender que lo que haces después también forma parte del esfuerzo." },
-            { m: "seria", t: "Ayúdame a verlo durante unos días." },
+            { m: "happy", t: "Subiste. Y los tres días." },
+            { m: "pintora_pensando", t: "Y yo he puesto la luz esta semana." },
+            { m: "idle", t: "Es la primera parte del cuadro que me ha salido bien a la primera." },
+            { m: "seria", t: "Lo cual normalmente significa que el resto va a ser un desastre. Pero hoy no quiero pensarlo." },
+            { m: "idle", t: "Te he traído aquí porque quiero que veas una cosa y luego me digas si me estoy volviendo loca." },
+            { m: "pintora_pensando", t: "Mira el agua. No mires a nada. Mira el agua diez segundos." },
+            { m: "idle", t: "…" },
+            { m: "pintora_pensando", t: "¿Ves que no es azul?" },
+            { m: "happy", t: "Nunca es azul. Es gris, o verde, o marrón, o naranja a esta hora." },
+            { m: "idle", t: "Y sin embargo si te pregunto de qué color es el mar, dices azul. Todo el mundo dice azul." },
+            { m: "seria", t: "Eso es lo que hace mi oficio, básicamente. Mirar el tiempo suficiente para dejar de decir azul." },
+            { m: "idle", t: "…" },
+            { m: "pintora_pensando", t: "Y ahora te digo la parte incómoda." },
+            { m: "seria", t: "Con la gente pasa exactamente igual." },
+            { m: "idle", t: "Todo el mundo tiene un color que dice ser y otro que es." },
+            { m: "happy", t: "Y no hablo de mentir. Nadie miente. Es que nos vemos de lejos y de lejos todo es azul." },
+            { m: "pintora_pensando", t: "Yo llevo veinte años mirando a gente el tiempo suficiente. Es lo único que sé hacer." },
+            { m: "seria", t: "Y la mayoría de las veces veo cosas antes de que la persona las diga." },
+            { m: "idle", t: "A veces antes de que la persona las sepa." },
+            { m: "seria", t: "…" },
+            { m: "happy", t: "Y eso, que suena a superpoder, es en realidad un problema bastante serio." },
+            { m: "idle", t: "Pero ese es otro día." },
+            { m: "idle", t: "En fin. Vamos a lo práctico antes de que se ponga el sol y me ponga peor." },
+            { m: "pintora_pensando", t: "Necesito verte en un partido bueno. Uno de verdad." },
+            { m: "seria", t: "No que ganéis. Que estés tú bien." },
+            { m: "idle", t: "Con nota de esas que salen en el resumen. Siete y algo, lo que sea." },
+            { m: "happy", t: "Y dos días cerrados antes, que ya sabes que eso me lo apunto." },
+            { m: "pintora_pensando", t: "Porque llevo cinco capítulos pintándote de lejos, con los prismáticos, básicamente." },
+            { m: "seria", t: "Y quiero verte una vez de cerca haciendo lo que se te da bien." },
+            { m: "idle", t: "Es lo único que me falta para el cuerpo." },
           ],
-          progressCount: (g, snap) => proteinDaysSince(g, snap.since), progressGoal: 3,
+          replies: [
+            { t: "¿Qué has visto en mí?", m: "idle",
+              r: [{ m: "seria", t: "…" }, { m: "idle", t: "No." }, { m: "seria", t: "No te lo voy a decir." },
+                { m: "happy", t: "Y no es por hacerme la interesante, te lo juro." },
+                { m: "pintora_pensando", t: "Es que decirle a alguien lo que has visto en él es la cosa más violenta que puedes hacerle." }] },
+            { t: "El mar hoy es naranja.", m: "happy",
+              r: [{ m: "happy", t: "…" }, { m: "pintora_pensando", t: "Bien." }, { m: "idle", t: "Has tardado como cuarenta segundos, pero bien." },
+                { m: "happy", t: "La mayoría no lo ve nunca. En serio. Nunca." }] },
+            { t: "¿Y a ti quién te mira?", m: "idle",
+              r: [{ m: "seria", t: "…" }, { m: "idle", t: "Uf." }, { m: "happy", t: "Vale, esa ha ido directa." },
+                { m: "pintora_pensando", t: "Nadie. Esa es la respuesta y es bastante aburrida." }, { m: "idle", t: "Yo miro. Es un puesto de trabajo y solo hay una silla." }] },
+          ],
+          snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
+          subs: [
+            (g, s) => newMatches(g, s).some((m) => (m.rating || 0) >= 7.0),
+            (g, s) => daysGoalsCompletedSince(g, s.since) >= 2,
+          ],
+          check: (g, s) => newMatches(g, s).some((m) => (m.rating || 0) >= 7.0) && daysGoalsCompletedSince(g, s.since) >= 2,
+          progressCount: (g, s) => daysGoalsCompletedSince(g, s.since), progressGoal: 2 },
+        { title: "El encargo", zone: "patro",
+          objective: "Supera tu mejor nota de carrera en un partido.",
+          intro: [
+            { m: "happy", t: "Siete y pico. Y los dos días." },
+            { m: "pintora_pensando", t: "Fui. Segunda fila, detrás del banquillo, con un cuaderno pequeño para no dar el espectáculo." },
+            { m: "idle", t: "El cuerpo ya está. Terminado." },
+            { m: "seria", t: "…" },
+            { m: "happy", t: "Queda poco. Ya hablaremos de qué." },
+            { m: "idle", t: "Me han llamado." },
+            { m: "happy", t: "A mí. Con teléfono y todo, como a la gente que trabaja." },
+            { m: "seria", t: "La gente de tus patrocinadores. Quieren un retrato tuyo." },
+            { m: "idle", t: "Grande. Para una campaña, para el vestíbulo, para lo que sea. No me lo han explicado del todo." },
+            { m: "pintora_pensando", t: "Y lo han encontrado porque alguien vio una lámina mía en un pasillo. Los árboles. Los malditos árboles." },
+            { m: "seria", t: "…" },
+            { m: "idle", t: "Es más dinero del que he ganado en los últimos dos años juntos." },
+            { m: "happy", t: "No estoy exagerando para que suene dramático. Lo he calculado tres veces esta noche." },
+            { m: "seria", t: "Y no lo voy a aceptar. Ya está decidido, así que no me convenzas." },
+            { m: "idle", t: "…" },
+            { m: "pintora_pensando", t: "Te explico por qué, que si no parece que me hago la digna y me arruino por gusto." },
+            { m: "seria", t: "Si me pagan por pintarte, tengo que pintarte como ellos quieren que se te vea." },
+            { m: "idle", t: "Y eso no es un retrato. Eso es un cartel." },
+            { m: "pintora_pensando", t: "Un cartel es la versión tuya que sirve para vender algo. Sale bien, sale limpio y no se equivoca nunca." },
+            { m: "seria", t: "Y un retrato se puede equivocar. Ese es el trato entero." },
+            { m: "happy", t: "Además, tengo un cuadro tuyo casi terminado en casa que nadie me ha pedido y que no me va a pagar nadie." },
+            { m: "idle", t: "Y me está costando más que todo lo que he hecho en tres años." },
+            { m: "seria", t: "Sería bastante estúpido dejarlo a medias para hacer un cartel." },
+            { m: "idle", t: "Bueno. Vamos a salir de aquí antes de que alguien me pregunte por mis tarifas." },
+            { m: "pintora_pensando", t: "Pero te voy a pedir algo, y esta vez es medio egoísta." },
+            { m: "seria", t: "Tienes una nota máxima en tu historial. La mejor que has hecho nunca." },
+            { m: "idle", t: "Bórrala. Haz otra." },
+            { m: "happy", t: "Y no es por el cuadro. El cuadro ya casi está." },
+            { m: "seria", t: "Es que acabo de rechazar el mayor cheque de mi vida por pintar a alguien que me parece que va a ser importante." },
+            { m: "idle", t: "Y me vendría muy bien tener razón." },
+            { m: "happy", t: "Aunque sea una vez." },
+          ],
+          replies: [
+            { t: "Acéptalo. Necesitas el dinero.", m: "seria",
+              r: [{ m: "seria", t: "Ya lo sé." }, { m: "idle", t: "…" }, { m: "pintora_pensando", t: "Sé exactamente cuánto lo necesito. Tengo una hoja en la nevera con los números." },
+                { m: "seria", t: "Y aun así no." }, { m: "happy", t: "Ya venderé más árboles." }] },
+            { t: "Podrías hacer los dos.", m: "idle",
+              r: [{ m: "pintora_pensando", t: "…" }, { m: "idle", t: "No se puede." },
+                { m: "seria", t: "Si pinto el cartel primero, después ya no voy a poder mirarte sin ver el cartel." },
+                { m: "idle", t: "Se contamina. Suena a excusa de artista y no lo es: pasa de verdad." }] },
+            { t: "¿Qué pasa si te equivocas?", m: "idle",
+              r: [{ m: "seria", t: "…" }, { m: "idle", t: "Esa es la pregunta correcta." },
+                { m: "pintora_pensando", t: "Y algún día te voy a contar qué pasa, porque ya me pasó una vez." },
+                { m: "happy", t: "Hoy no. Hoy estamos rodeados de gente con traje." }] },
+          ],
+          setFlags: ["veraEncargoRechazado"],
+          snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length, bestRating: g.bestRating || 0 }),
+          subs: [
+            (g, s) => newMatches(g, s).some((m) => (m.rating || 0) > s.bestRating),
+          ],
+          check: (g, s) => newMatches(g, s).some((m) => (m.rating || 0) > s.bestRating),
+          progressGoal: 1 },
+        { title: "El fondo definitivo", zone: "estadio",
+          objective: "Gana un partido por dos goles de diferencia o más.",
+          intro: [
+            { m: "happy", t: "Nueva mejor nota." },
+            { m: "seria", t: "Tenía razón. Que conste que lo dije antes." },
+            { m: "pintora_pensando", t: "Y he tomado una decisión que me va a costar dos semanas de trabajo." },
+            { m: "idle", t: "He tapado el fondo. El verde. Los tres árboles." },
+            { m: "happy", t: "Todo. Adiós." },
+            { m: "pintora_pensando", t: "Es que ya no es verdad." },
+            { m: "idle", t: "Cuando empecé el cuadro, tú eras un tío en un parque que arreglaba una composición sin enterarse." },
+            { m: "seria", t: "Y ahora eres esto." },
+            { m: "idle", t: "Mira el sitio. Mira el tamaño de la portería desde aquí." },
+            { m: "happy", t: "He venido tres veces esta semana con la excusa de medir la luz y me he quedado mirando las gradas vacías como una turista." },
+            { m: "pintora_pensando", t: "Lo que pasa con los sitios grandes es que se comen a la gente." },
+            { m: "idle", t: "Si te pinto pequeño aquí dentro, el cuadro va a decir «mira qué enorme es el estadio»." },
+            { m: "seria", t: "Y no quiero que diga eso. Quiero que diga «mira quién cabe aquí»." },
+            { m: "idle", t: "…" },
+            { m: "pintora_pensando", t: "Es un problema de escala y he tardado cuatro días en resolverlo." },
+            { m: "idle", t: "Y lo he resuelto poniéndote muy cerca. Casi encima del que mira." },
+            { m: "seria", t: "Tan cerca que el estadio se queda detrás y desenfocado." },
+            { m: "happy", t: "Que es exactamente lo que pasa cuando estás dentro de uno, por cierto. Te lo dice alguien que solo ha estado en la grada." },
+            { m: "idle", t: "…" },
+            { m: "seria", t: "Solo hay un problema con ponerte tan cerca." },
+            { m: "pintora_pensando", t: "Que a esa distancia solo se mira una cosa." },
+            { m: "seria", t: "…Bueno. Ya llegaremos." },
+            { m: "idle", t: "Para el fondo necesito una cosa y es la primera vez que te pido algo del resultado." },
+            { m: "seria", t: "Quiero pintar el estadio lleno. Y lleno de gente contenta." },
+            { m: "happy", t: "Y para eso necesito que ganéis bien. No de uno en el noventa y cinco." },
+            { m: "pintora_pensando", t: "De dos, por lo menos. De esos en los que la grada se relaja y la gente se pone de pie porque quiere, no porque esté sufriendo." },
+            { m: "idle", t: "La cara de una grada que gana de dos es completamente distinta a la de una que gana de uno." },
+            { m: "seria", t: "Y ese detalle no me lo puedo inventar. Lo tengo que ver." },
+          ],
+          replies: [
+            { t: "Podías haberme dejado en el parque.", m: "idle",
+              r: [{ m: "happy", t: "Sí." }, { m: "pintora_pensando", t: "Y habría sido un cuadro más fácil y peor." },
+                { m: "idle", t: "Ya he hecho cuarenta cuadros fáciles. Están vueltos hacia la pared." }] },
+            { t: "¿Cuánto llevas con esto ya?", m: "idle",
+              r: [{ m: "idle", t: "Cinco meses." }, { m: "happy", t: "El puerto lo hice en nueve días. Un perro me lleva tarde y media." },
+                { m: "seria", t: "…Cinco meses." }, { m: "pintora_pensando", t: "No lo había contado hasta ahora y preferiría no haberlo hecho." }] },
+            { t: "Sigue sin gustarme que no me lo enseñes.", m: "idle",
+              r: [{ m: "happy", t: "Ya." }, { m: "seria", t: "Cuando esté." },
+                { m: "idle", t: "Y no es por dramatismo. Es que si te lo enseño ahora, lo que veas se va a quedar." },
+                { m: "pintora_pensando", t: "Y todavía puedo cambiarlo todo." }] },
+          ],
+          snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
+          subs: [
+            (g, s) => newMatches(g, s).some((m) => m.res === "V" && (m.gf || 0) - (m.ga || 0) >= 2),
+          ],
+          check: (g, s) => newMatches(g, s).some((m) => m.res === "V" && (m.gf || 0) - (m.ga || 0) >= 2),
+          progressGoal: 1 },
+        { title: "El que está detrás de la roca", zone: "parque",
+          objective: "Cierra 4 días de objetivos.",
+          intro: [
+            { m: "happy", t: "De dos. Y la grada se levantó en el segundo, justo como te dije." },
+            { m: "pintora_pensando", t: "Ya tengo el fondo. Terminado, esta vez de verdad." },
+            { m: "idle", t: "El estadio detrás, borroso. Tú delante." },
+            { m: "seria", t: "Y ya no queda nada más que hacer excepto lo que sabes." },
+            { m: "pintora_pensando", t: "Shhh. No te muevas." },
+            { m: "idle", t: "Detrás de la roca. La grande, la que está torcida." },
+            { m: "happy", t: "No mires directamente. Mira hacia los árboles y usa el rabillo del ojo." },
+            { m: "seria", t: "…" },
+            { m: "happy", t: "Ya. Se ha metido otra vez." },
+            { m: "idle", t: "Se llama Milo. Lleva viniendo aquí más tiempo que yo, creo." },
+            { m: "pintora_pensando", t: "Y lleva meses mirándome pintar desde ahí, convencido de que no me he dado cuenta." },
+            { m: "happy", t: "Me di cuenta el primer día. Soy pintora, es literalmente mi trabajo ver cosas que se están quietas donde no deberían." },
+            { m: "idle", t: "…" },
+            { m: "seria", t: "¿Y sabes qué no he hecho en todos estos meses?" },
+            { m: "seria", t: "Acercarme." },
+            { m: "idle", t: "Ni una vez. Ni siquiera he mirado hacia allí abiertamente." },
+            { m: "pintora_pensando", t: "Porque si me acerco y él no está listo, se va y no vuelve. Y entonces el parque se queda sin Milo por mi culpa." },
+            { m: "happy", t: "Y yo me quedaría con la satisfacción de haber sido muy simpática durante cuatro segundos." },
+            { m: "idle", t: "…" },
+            { m: "seria", t: "Con la gente pasa lo mismo, ¿sabes?" },
+            { m: "pintora_pensando", t: "Puedes ver a alguien entero desde el primer día y no servir de nada, porque verlo no es lo mismo que tener permiso para decirlo." },
+            { m: "idle", t: "Yo tardé bastantes años en aprender eso." },
+            { m: "seria", t: "Y lo aprendí de la peor manera posible." },
+            { m: "happy", t: "…Milo lo aprendió solo y es mucho más joven. Qué rabia." },
+            { m: "pintora_pensando", t: "Toma. Esto sí te lo puedo enseñar, porque no es un cuadro." },
+            { m: "idle", t: "Es un boceto. Cinco minutos, a lápiz, hecho el mes pasado." },
+            { m: "happy", t: "Son dos ojos y una roca. Nada más. No se le ve la forma." },
+            { m: "seria", t: "Y así es exactamente como quiero que se quede hasta que él decida otra cosa." },
+            { m: "idle", t: "Es tuyo. Yo tengo la libreta entera." },
+            { m: "happy", t: "Y si algún día lo conoces de verdad, no le enseñes el dibujo el primer día." },
+            { m: "seria", t: "Es un consejo que me habría venido bien a mí hace unos años." },
+            { m: "idle", t: "Bueno. Vámonos, que si nos quedamos mirando no va a salir en toda la tarde." },
+            { m: "seria", t: "Y hoy te voy a pedir algo aburrido a propósito." },
+            { m: "pintora_pensando", t: "Cuatro días cerrados." },
+            { m: "happy", t: "Nada de partidos, nada de notas, nada de números que suban." },
+            { m: "idle", t: "Es que llevo toda la tarde hablando de esperar a alguien sin presionarle." },
+            { m: "seria", t: "Y me he dado cuenta de que a ti llevo seis meses pidiéndote cosas cada vez que nos vemos." },
+            { m: "happy", t: "Así que esta vez te pido lo mínimo. Solo que sigas ahí." },
+          ],
+          replies: [
+            { t: "¿Y si nunca sale?", m: "idle",
+              r: [{ m: "idle", t: "Pues nunca sale." }, { m: "seria", t: "Y yo sigo pintando aquí todas las tardes con alguien mirándome desde una roca." },
+                { m: "happy", t: "Que es, si lo piensas, la relación más sana que he tenido en años." }] },
+            { t: "«De la peor manera posible».", m: "seria",
+              r: [{ m: "seria", t: "…" }, { m: "idle", t: "Sí. Lo he dicho y lo has cogido." },
+                { m: "pintora_pensando", t: "Te lo cuento. Pero no aquí y no hoy." }, { m: "happy", t: "Aquí hay un testigo detrás de una roca y esto no es asunto suyo." }] },
+            { t: "Hola, Milo.", m: "happy",
+              r: [{ m: "seria", t: "…" }, { m: "happy", t: "Se ha metido más adentro." }, { m: "idle", t: "Pero no se ha ido, fíjate." },
+                { m: "pintora_pensando", t: "Eso, en Milo, es prácticamente un abrazo." }] },
+          ],
+          setFlags: ["veraMilo"],
           snap: () => ({ since: todayStr() }),
-          check: (g, snap) => proteinDaysSince(g, snap.since) >= 3 },
-        { title: "Después del esfuerzo", final: true,
-          intro: [
-            { m: "suave", t: "Ahora sí lo entiendo." },
-            { m: "idle", t: "No puedes separar el esfuerzo de lo que haces para recuperarte de él." },
-            { m: "seria", t: "He pasado tanto tiempo buscando movimiento para mis cuadros que me había olvidado de algo muy sencillo." },
+          subs: [
+            (g, s) => daysGoalsCompletedSince(g, s.since) >= 4,
           ],
-          grantItem: "cuadro_despues_del_esfuerzo", reveal: "cuadro_despues_del_esfuerzo" },
-      ] },
-    { id: "cap4", title: "Donde el ruido termina", trigger: () => true,
-      stages: [
-        /* única excepción de zona de toda la campaña: transcurre en la Playa (ver
-           NOTA DE ZONAS del documento) */
-        { title: "Donde el ruido termina", zone: "playa",
-          objective: "Cumple el objetivo de sueño durante 3 días.",
+          check: (g, s) => daysGoalsCompletedSince(g, s.since) >= 4,
+          progressCount: (g, s) => daysGoalsCompletedSince(g, s.since), progressGoal: 4 },
+        { title: "Todo menos la cara", zone: "casa",
+          objective: "Alcanza una racha de 5 días.",
           intro: [
-            { m: "happy", t: "A veces la mejor escena es la que no está pasando nada." },
-            { m: "pintora_pensando", t: "Mira el mar." },
-            { m: "idle", t: "No hay una barra que suba. No hay una racha que mantener. No hay nadie diciendo que tienes que ser mejor mañana." },
-            { m: "suave", t: "Solo hay un momento en el que puedes parar." },
-            { m: "seria", t: "Y eso también forma parte de cuidar de ti." },
-            { m: "happy", t: "Quiero pintar esa sensación. El segundo en el que el ruido de todo lo demás desaparece." },
-            { m: "idle", t: "Así que durante unos días quiero que me enseñes algo distinto: que también sabes descansar." },
+            { m: "idle", t: "Cuatro días. Los cuatro." },
+            { m: "seria", t: "Y yo llevo nueve sin tocar el cuadro." },
+            { m: "seria", t: "…" },
+            { m: "seria", t: "Te he hecho subir para decírtelo a la cara, porque por mensaje sonaba fatal." },
+            { m: "seria", t: "Está terminado." },
+            { m: "idle", t: "El cuerpo, el fondo, la luz, las manos. Las manos me han quedado bien, que no siempre pasa." },
+            { m: "seria", t: "Todo." },
+            { m: "seria", t: "Menos la cara." },
+            { m: "idle", t: "…" },
+            { m: "seria", t: "Y no es que no me dé tiempo. Ni que esté esperando el momento adecuado." },
+            { m: "seria", t: "Es que llevo nueve días delante de ese lienzo sin poder levantar el pincel." },
+            { m: "pintora_pensando", t: "Y sé perfectamente por qué, que es lo peor de todo." },
+            { m: "idle", t: "…" },
+            { m: "seria", t: "¿Te acuerdas de lo que te dije de los cuarenta cuadros? Que no me corresponde decidir quién es la gente." },
+            { m: "seria", t: "Eso es mentira." },
+            { m: "seria", t: "Es una frase que llevo tres años diciendo y que suena muy elegante y es completamente mentira." },
+            { m: "seria", t: "La verdad es que sí sé quién eres. Lo sé desde hace meses." },
+            { m: "pintora_pensando", t: "Sé exactamente qué cara tienes cuando crees que nadie está mirando, y esa es la que tendría que pintar." },
+            { m: "seria", t: "Y no me atrevo." },
+            { m: "idle", t: "Porque si la pinto y acierto, tú vas a ver una cosa tuya que a lo mejor no querías que se viera." },
+            { m: "seria", t: "Y no puedes elegir dejar de verla después." },
+            { m: "seria", t: "Eso no se deshace. Lo sé porque ya lo hice una vez." },
+            { m: "seria", t: "…" },
+            { m: "seria", t: "Y ahora te voy a pedir que te vayas, porque si te quedas te lo cuento y hoy no puedo." },
+            { m: "idle", t: "Antes de que te vayas, una cosa. Práctica." },
+            { m: "seria", t: "Sigue haciendo lo tuyo." },
+            { m: "idle", t: "Quiero verte encadenar cinco días. Cinco seguidos." },
+            { m: "seria", t: "Y no es para el cuadro. El cuadro está parado y va a seguir parado unos días." },
+            { m: "seria", t: "Es que yo llevo tres años sin encadenar cinco de nada." },
+            { m: "idle", t: "Y esta semana me vendría muy bien mirar a alguien que sí puede." },
+            { m: "seria", t: "Aunque sea desde lejos. Aunque sea en una app." },
           ],
-          progressCount: (g, snap) => Object.entries(g.logs || {}).filter(([d, l]) =>
-            d >= snap.since && l.closed && l.sleep != null && l.sleep >= g.player.goals.sleepGoal).length,
-          progressGoal: 3,
+          replies: [
+            { t: "Píntala. Yo asumo el riesgo.", m: "seria",
+              r: [{ m: "seria", t: "No." }, { m: "seria", t: "Eso no lo puedes decidir sin saber lo que hay dentro." },
+                { m: "idle", t: "Nadie firma un papel sin leerlo por educación." }, { m: "seria", t: "…Aunque gracias. De verdad." }] },
+            { t: "Cuéntamelo cuando puedas.", m: "idle",
+              r: [{ m: "seria", t: "…" }, { m: "idle", t: "Vale." }, { m: "seria", t: "Gracias por no insistir." },
+                { m: "seria", t: "La gente insiste siempre. Es lo que hace la gente cuando le dices que hay algo." }] },
+            { t: "Déjalo sin cara y ya está.", m: "idle",
+              r: [{ m: "seria", t: "…" }, { m: "seria", t: "No." }, { m: "idle", t: "Ese es el cuadro cuarenta y uno y no pienso hacer el cuadro cuarenta y uno." },
+                { m: "seria", t: "Si acaba sin cara, prefiero quemarlo. Y lo digo bastante en serio." }] },
+          ],
+          setFlags: ["veraBloqueo"],
           snap: () => ({ since: todayStr() }),
-          check: (g, snap) => Object.entries(g.logs || {}).filter(([d, l]) =>
-            d >= snap.since && l.closed && l.sleep != null && l.sleep >= g.player.goals.sleepGoal).length >= 3 },
-        { title: "Donde el ruido termina", final: true,
-          intro: [
-            { m: "happy", t: "Vale. Lo admito." },
-            { m: "happy", t: "Pensaba que iba a ser imposible hacer un cuadro sobre descanso y acabar aquí." },
-            { m: "idle", t: "Pero supongo que descansar no significa quedarse quieto para siempre." },
-          ],
-          grantItem: "cuadro_donde_el_ruido_termina", reveal: "cuadro_donde_el_ruido_termina" },
-      ] },
-    { id: "cap5", title: "Una noche más", trigger: () => true,
-      stages: [
-        { title: "Una noche más", zone: "parque",
-          objective: "Completa un hito social existente del juego y visita la Discoteca.",
-          intro: [
-            { m: "seria", t: "Hay días para apretar. Hay días para parar. Y también hay días para salir, hablar, reírte y recordar que no eres una máquina de estadísticas." },
-            { m: "happy", t: "Además, este sitio tiene una luz increíble." },
-            { m: "pintora_pensando", t: "Mira todas esas formas. Nadie se queda quieto. Todo cambia de color cada segundo." },
-            { m: "idle", t: "Creo que llevo demasiado tiempo intentando encontrar inspiración en cosas importantes." },
-            { m: "happy", t: "Quizá también esté en una noche que no tiene ninguna consecuencia." },
-            { m: "seria", t: "Quiero capturar esa sensación: una noche que simplemente ocurre y mañana ya será un recuerdo." },
-            { m: "happy", t: "No necesito que ganes nada para este cuadro. Necesito que vuelvas a hacer algo por ti." },
-          ],
-          snap: (g) => ({ since: todayStr(), seenNpcs: Object.keys(g.seenMoods || {}) }),
           subs: [
-            (g, snap) => Object.keys(g.seenMoods || {}).some((n) => !snap.seenNpcs.includes(n)),
-            (g, snap) => zoneVisitedSince(g, "discoteca", snap.since),
+            (g) => (g.player.streak || 0) >= 5,
           ],
-          check: (g, snap) => Object.keys(g.seenMoods || {}).some((n) => !snap.seenNpcs.includes(n)) &&
-            zoneVisitedSince(g, "discoteca", snap.since) },
-        { title: "Una noche más", final: true,
+          check: (g) => (g.player.streak || 0) >= 5,
+          progressCount: (g) => Math.min(g.player.streak || 0, 5), progressGoal: 5 },
+        { title: "Ruth", zone: "barrio",
+          objective: "Cierra 3 días completos: entrenamiento, comida y sueño el mismo día.",
           intro: [
-            { m: "happy", t: "La noche me ha dejado pensando." },
-            { m: "idle", t: "No por la pintura. Bueno, también por la pintura." },
-            { m: "seria", t: "Me di cuenta de que cuando intentaba recordar lo que había visto, no recordaba las luces." },
+            { m: "idle", t: "Cinco días seguidos." },
+            { m: "seria", t: "Los miré todos. Cada mañana, con el café, como una rutina." },
+            { m: "seria", t: "Y me ayudó. No sé explicar por qué, pero me ayudó." },
+            { m: "idle", t: "Así que hoy te cuento lo otro. Andando, que sentada no me sale." },
+            { m: "idle", t: "Se llamaba Ruth. Se llama, supongo. No se ha muerto ni nada dramático." },
+            { m: "seria", t: "Íbamos juntas a Bellas Artes. Ella era mucho mejor que yo, por cierto, eso también hay que decirlo." },
+            { m: "idle", t: "Y en cuarto había una exposición de fin de curso. La única del año que iba alguien de fuera." },
+            { m: "pintora_pensando", t: "Yo la pinté a ella. Cuatro meses. Fue lo mejor que había hecho en mi vida y lo sigue siendo." },
+            { m: "seria", t: "…" },
+            { m: "idle", t: "Y la pinté como la veía." },
+            { m: "seria", t: "Que era como estaba: agotada, aguantando, haciendo como que todo iba bien delante de todo el mundo." },
+            { m: "idle", t: "Yo lo veía desde hacía meses. No me lo había dicho. No se lo había dicho a nadie." },
+            { m: "seria", t: "Y creo que ni siquiera se lo había dicho a ella misma, que es la parte importante." },
+            { m: "seria", t: "Yo tenía diecinueve años y pensaba que eso era lo que hacía a un cuadro bueno. Ver la verdad." },
+            { m: "idle", t: "…" },
+            { m: "seria", t: "Lo colgué sin avisarla." },
+            { m: "seria", t: "Ese es el crimen entero. No el cuadro. Lo de no avisar." },
+            { m: "idle", t: "Se lo encontró en una pared, con luz encima y una cartela con su nombre, y ochenta personas mirándolo." },
+            { m: "seria", t: "Y la miraron a ella. Y a partir de ese día ya sabían." },
+            { m: "seria", t: "No hubo escena. Eso es lo peor. No hubo una bronca ni nada que se pudiera arreglar." },
+            { m: "idle", t: "Me dijo «está muy bien» y se fue a su casa." },
+            { m: "seria", t: "Y después dejamos de coincidir. Poco a poco. Sin decidirlo." },
+            { m: "seria", t: "Y llevo trece años sin pintarle la cara a nadie." },
+            { m: "seria", t: "Ese es el cuadro que viste vuelto hacia la pared, el último de todos. El único con cara." },
+            { m: "idle", t: "No lo tiro y no lo miro. Lleva ahí trece años haciendo las dos cosas." },
+            { m: "seria", t: "Bueno. Ya está. Ya lo sabes." },
+            { m: "seria", t: "Y ahora entiendes por qué llevo dos semanas sin poder pintarte la cara." },
+            { m: "idle", t: "…" },
+            { m: "idle", t: "Te voy a pedir una cosa rara y va a sonar a que estoy cambiando de tema, porque lo estoy haciendo." },
+            { m: "seria", t: "Tres días completos. Enteros: entrenar, comer y dormir. Los tres, el mismo día, tres veces." },
+            { m: "seria", t: "Es lo más difícil que te he pedido y lo sé." },
+            { m: "seria", t: "Es que llevo trece años cuidando muchísimo a la gente y bastante mal a mí misma." },
+            { m: "idle", t: "Y no me apetece pedirle a nadie que haga lo mismo." },
+            { m: "happy", t: "Así que cuídate tú, ya que uno de los dos tiene que empezar." },
           ],
-          grantItem: "cuadro_una_noche_mas", reveal: "cuadro_una_noche_mas" },
-      ] },
-    { id: "cap6", title: "La gente que pasa", trigger: () => true,
-      stages: [
-        { title: "La gente que pasa", zone: "parque",
-          objective: "Interactúa con 3 personajes y completa 2 acciones de ciudad existentes.",
-          intro: [
-            { m: "pintora_pensando", t: "Recordaba a la gente." },
-            { m: "idle", t: "A alguien riéndose. A alguien que iba con prisa. A alguien que parecía completamente perdido en sus pensamientos." },
-            { m: "seria", t: "Incluso me acordé de algunos de los personajes que he ido viendo por la ciudad." },
-            { m: "happy", t: "Supongo que ese es el problema de pintar FUTABITA." },
-            { m: "idle", t: "Hay demasiadas personas interesantes." },
-            { m: "seria", t: "Hasta ahora estaba intentando pintar lo que haces." },
-            { m: "happy", t: "Ahora quiero pintar a quién eres cuando nadie está pensando en tus estadísticas." },
-            { m: "idle", t: "Quiero llenar el cuadro de pequeños momentos. No hace falta que sean importantes." },
-            { m: "pintora_pensando", t: "Solo tienen que ser reales." },
-            { m: "seria", t: "Ayúdame a observar la ciudad. Habla con gente. Muévete por ella. Quiero ver qué aparece cuando dejamos de mirar solo el campo." },
+          replies: [
+            { t: "¿Y si hubieras preguntado?", m: "idle",
+              r: [{ m: "seria", t: "…" }, { m: "seria", t: "Habría dicho que no." }, { m: "idle", t: "…" },
+                { m: "pintora_pensando", t: "O habría dicho que sí, que es lo que llevo trece años sin poder averiguar." },
+                { m: "seria", t: "Y esa es exactamente la parte que no me deja dormir." }] },
+            { t: "El cuadro no era el problema.", m: "seria",
+              r: [{ m: "seria", t: "No." }, { m: "idle", t: "El cuadro era bueno. Sigue siendo bueno, es lo que lo hace insoportable." },
+                { m: "seria", t: "El problema fue decidir por ella cuándo estaba lista." }] },
+            { t: "¿Has intentado escribirle?", m: "idle",
+              r: [{ m: "seria", t: "Sí." }, { m: "idle", t: "Muchas veces. Nunca lo he enviado." },
+                { m: "seria", t: "Porque no sé qué se pide en un mensaje así." }, { m: "happy", t: "«Perdona por verte». Suena fatal." }] },
           ],
-          snap: (g) => ({ since: todayStr(), seenNpcs: Object.keys(g.seenMoods || {}) }),
+          setFlags: ["veraRuth"],
+          snap: () => ({ since: todayStr() }),
           subs: [
-            (g, snap) => Object.keys(g.seenMoods || {}).filter((n) => !snap.seenNpcs.includes(n)).length >= 3,
-            (g, snap) => Object.entries(g.zoneVisits || {}).filter(([, d]) => d >= snap.since).length >= 2,
+            (g, s) => proteinSleepDaysSince(g, s.since) >= 3,
+            (g, s) => Object.entries(g.logs || {}).filter(([d, l]) => d >= s.since && l.closed && l.gym).length >= 3,
           ],
-          check: (g, snap) => Object.keys(g.seenMoods || {}).filter((n) => !snap.seenNpcs.includes(n)).length >= 3 &&
-            Object.entries(g.zoneVisits || {}).filter(([, d]) => d >= snap.since).length >= 2 },
-        { title: "La gente que pasa", final: true,
+          check: (g, s) => proteinSleepDaysSince(g, s.since) >= 3 &&
+            Object.entries(g.logs || {}).filter(([d, l]) => d >= s.since && l.closed && l.gym).length >= 3,
+          progressCount: (g, s) => proteinSleepDaysSince(g, s.since), progressGoal: 3 },
+        { title: "La pregunta", zone: "playa",
+          objective: "Cierra 5 días de objetivos.",
           intro: [
-            { m: "suave", t: "Ya lo entiendo." },
-            { m: "idle", t: "He estado buscando inspiración como si fuera una cosa que pudiera encontrar escondida en algún sitio." },
-            { m: "seria", t: "Pero no estaba escondida." },
-            { m: "happy", t: "Estaba en todo lo que has ido haciendo." },
+            { m: "happy", t: "Tres días completos. Los tres." },
+            { m: "idle", t: "Y yo he dormido siete horas dos noches seguidas, que es mi récord del año." },
+            { m: "seria", t: "Te lo cuento porque me lo pediste sin pedírmelo." },
+            { m: "seria", t: "…He traído los pinceles, por cierto. Están en el coche." },
+            { m: "idle", t: "Quería venir aquí porque aquí te dije lo del mar." },
+            { m: "pintora_pensando", t: "Que nunca es azul y que la gente dice azul igual." },
+            { m: "seria", t: "Y llevo dos semanas dándole vueltas a algo que no vi entonces." },
+            { m: "idle", t: "Con Ruth yo hice lo correcto y lo hice mal." },
+            { m: "seria", t: "Verla no estuvo mal. Pintarla tampoco. Lo que estuvo mal fue el orden." },
+            { m: "seria", t: "Colgué primero y avisé nunca." },
+            { m: "idle", t: "…" },
+            { m: "pintora_pensando", t: "Y luego pasé trece años pensando que la solución era dejar de ver." },
+            { m: "seria", t: "Y no. La solución era una frase de nueve palabras que no dije." },
+            { m: "seria", t: "Así que te la voy a decir a ti ahora, y me va a costar bastante." },
+            { m: "seria", t: "…" },
+            { m: "seria", t: "¿Me dejas pintarte la cara como te veo?" },
+            { m: "idle", t: "Y necesito que entiendas lo que estás contestando, así que te lo explico entero." },
+            { m: "seria", t: "No voy a pintarte favorecido. No es un cartel." },
+            { m: "idle", t: "Va a haber cosas ahí que tú no le has enseñado a nadie. Yo las he visto y no puedo dejar de haberlas visto." },
+            { m: "seria", t: "Y una vez que lo veas, no vas a poder dejar de verlo tú tampoco." },
+            { m: "seria", t: "Puedes decir que no. En serio, puedes decir que no." },
+            { m: "idle", t: "Si dices que no, lo dejo sin cara, lo guardo con los otros cuarenta y seguimos exactamente igual." },
+            { m: "seria", t: "Y no me voy a enfadar ni voy a desaparecer. Eso te lo garantizo." },
+            { m: "seria", t: "Pero necesitaba preguntarlo." },
+            { m: "seria", t: "Trece años tarde, pero necesitaba preguntarlo." },
+            { m: "idle", t: "Bueno. Sea lo que sea, hay una cosa que no cambia." },
+            { m: "pintora_pensando", t: "Sigo necesitando mirarte." },
+            { m: "seria", t: "Cinco días cerrados. Y si puede ser sin que te cueste la vida, mejor." },
+            { m: "happy", t: "Es la última vez que te pido días, por cierto. Después de esto ya solo quedan cosas grandes." },
+            { m: "idle", t: "Y de las grandes se ocupa tu carrera, no yo." },
           ],
-          grantItem: "cuadro_la_gente_que_pasa", reveal: "cuadro_la_gente_que_pasa" },
-      ] },
-    { id: "cap7", title: "Lo que queda", trigger: () => true,
-      stages: [
-        { title: "Lo que queda", zone: "parque",
-          objective: "Completa un hito global de progreso existente y mantén una racha de 5 días.",
-          intro: [
-            { m: "idle", t: "El primer día en el que decidiste empezar." },
-            { m: "seria", t: "Los días en los que seguiste aunque ya no fuera emocionante." },
-            { m: "idle", t: "La comida después del entrenamiento. El descanso. Una noche cualquiera. La gente que pasa por la ciudad y que normalmente ni miramos." },
-            { m: "pintora_pensando", t: "He intentado pintar cada una de esas cosas por separado." },
-            { m: "suave", t: "Y creo que ahora sé por qué no terminaba de funcionar." },
-            { m: "seria", t: "No son historias separadas." },
-            { m: "happy", t: "Son partes de la misma." },
-            { m: "idle", t: "La tuya." },
-            { m: "preocupada", t: "Me da un poco de miedo este cuadro." },
-            { m: "happy", t: "No porque no sepa qué pintar. Por primera vez sé exactamente qué quiero hacer." },
-            { m: "seria", t: "Me da miedo que, cuando lo termine, ya no tenga ninguna excusa para seguir buscando." },
-            { m: "suave", t: "Pero supongo que eso también forma parte de pintar." },
-            { m: "idle", t: "Así que esta vez no quiero observarte desde lejos." },
-            { m: "seria", t: "Quiero que completes una última etapa de todo lo que hemos estado hablando." },
-            { m: "happy", t: "No tiene que ser perfecto. Solo tiene que demostrar que la historia que empezamos no era solo una idea bonita." },
+          replies: [
+            { t: "Sí. Píntala.", m: "seria", setFlag: "veraPath_si",
+              r: [{ m: "seria", t: "…" }, { m: "seria", t: "¿Sin pensarlo?" }, { m: "idle", t: "…" }, { m: "pintora_pensando", t: "Vale." },
+                { m: "happy", t: "Vale. Vale, vale." }, { m: "seria", t: "Voy a por los pinceles antes de que se me pase." }] },
+            { t: "Sí, pero enséñamela antes que a nadie.", m: "seria", setFlag: "veraPath_condicion",
+              r: [{ m: "seria", t: "…" }, { m: "seria", t: "Eso es exactamente lo que Ruth no pudo pedirme." },
+                { m: "idle", t: "Porque no le di la oportunidad." }, { m: "happy", t: "Sí. Claro que sí. Tú primero, siempre." },
+                { m: "seria", t: "Y lo escribo, si quieres. Lo digo medio en serio." }] },
+            { t: "Déjame pensarlo.", m: "idle", setFlag: "veraPath_espera",
+              r: [{ m: "seria", t: "…" }, { m: "idle", t: "Sí." }, { m: "seria", t: "Sí, claro que sí." },
+                { m: "happy", t: "¿Sabes que llevo toda mi vida diciéndole a la gente que puede decidir mañana y es la primera vez que me lo dicen a mí?" },
+                { m: "idle", t: "Tómate el tiempo que quieras. El lienzo lleva parado dos semanas, dos más no lo van a matar." }] },
           ],
-          progressCount: (g) => g.player.streak || 0, progressGoal: 5,
-          snap: (g) => ({ tierId: g.tier.id, ovr: calcOVR(g.player.stats) }),
+          setFlags: ["veraPregunta"],
+          snap: () => ({ since: todayStr() }),
           subs: [
-            (g, snap) => g.tier.id !== snap.tierId || calcOVR(g.player.stats) > snap.ovr,
-            { count: (g) => g.player.streak || 0, goal: 5 },
+            (g, s) => daysGoalsCompletedSince(g, s.since) >= 5,
           ],
-          check: (g, snap) => (g.tier.id !== snap.tierId || calcOVR(g.player.stats) > snap.ovr) && (g.player.streak || 0) >= 5 },
-        { title: "Lo que queda", final: true,
-          intro: [
-            { m: "happy", t: "Lo terminamos." },
-            { m: "suave", t: "Bueno. Lo terminé yo. Pero me entiendes." },
+          check: (g, s) => daysGoalsCompletedSince(g, s.since) >= 5,
+          progressCount: (g, s) => daysGoalsCompletedSince(g, s.since), progressGoal: 5 },
+        { title: "La exposición", zone: "casino",
+          objective: "Alcanza la categoría Europa.",
+          introBuild: (g) => {
+            const extra = VERA_PATH_LINE_C12[veraPath(g)];
+            return [
+              { m: "happy", t: "Cinco días. Los cinco." },
+              { m: "seria", t: "Y yo he pintado. Cuatro sesiones, dos de ellas hasta las tres de la mañana." },
+              { m: "pintora_pensando", t: "Está terminado." },
+              { m: "seria", t: "Con cara." },
+              { m: "seria", t: "No te acostumbres a verme así. Este vestido es de mi hermana y me está grande." },
+              { m: "idle", t: "Esto es una gala benéfica y hay cuatro obras colgadas para que la gente con dinero se sienta interesante." },
+              { m: "happy", t: "Una es un paisaje horrible. Otra es un caballo. La tercera no la entiendo y llevo veinte años en esto." },
+              { m: "seria", t: "Y la cuarta es la que está tapada con una tela al fondo." },
+              { m: "idle", t: "…" },
+              { m: "seria", t: "Me llamaron hace ocho días. Buscaban a alguien local y barato y yo soy las dos cosas." },
+              { m: "seria", t: "Y dije que sí antes de pensarlo, que es lo que hago cuando algo me da miedo." },
+              { m: "idle", t: "Y he pasado toda la semana arrepintiéndome y sin poder echarme atrás." },
+              { m: "pintora_pensando", t: "Trece años sin colgar nada. Trece." },
+              { m: "seria", t: "Y la última vez que colgué algo, se rompió una amistad de cuatro años en una tarde." },
+              { m: "seria", t: "…" },
+              { m: "idle", t: "Pero esta vez hay una diferencia, y es la única que importa." },
+              { m: "seria", t: "Esta vez pregunté antes." },
+              ...(extra ? [extra] : []),
+              { m: "idle", t: "Y si en algún momento de esta noche me dices que quieres que lo baje, lo bajo. Delante de todo el mundo, sin explicaciones." },
+              { m: "seria", t: "Lo digo completamente en serio. Tengo el destornillador en el bolso." },
+              { m: "happy", t: "…Vale, eso último igual sobraba." },
+              { m: "idle", t: "Bueno. Vamos allá, que el del caballo lleva media hora mirándome." },
+              { m: "seria", t: "Y una última cosa, que ya te dije que las mías se habían acabado y esta es de las tuyas." },
+              { m: "pintora_pensando", t: "Quiero verte llegar arriba. A Europa, a lo que sea que se llame el escalón ese del que hablas." },
+              { m: "happy", t: "Y no es por el cuadro. El cuadro ya está y no va a cambiar." },
+              { m: "seria", t: "Es que llevo seis meses pintando a alguien porque me pareció que iba a llegar." },
+              { m: "idle", t: "Y esta noche va a haber ochenta personas mirando ese retrato." },
+              { m: "happy", t: "Y me haría muchísima ilusión que dentro de un año alguna de ellas se acordara y dijera «anda, ese es»." },
+            ];
+          },
+          replies: [
+            { t: "Destápalo.", m: "seria",
+              r: [{ m: "seria", t: "…" }, { m: "seria", t: "¿Ahora?" }, { m: "idle", t: "…" }, { m: "happy", t: "Vale. Ahora." },
+                { m: "seria", t: "Pero mírame a mí mientras la gente lo mira a él. Necesito ver tu cara y no la suya." }] },
+            { t: "¿Cómo se llama el cuadro?", m: "idle",
+              r: [{ m: "idle", t: "…" }, { m: "seria", t: "No tiene título." }, { m: "seria", t: "La cartela dice «Retrato». Nada más." },
+                { m: "pintora_pensando", t: "Poner un título es decidir qué significa. Y eso ya no lo hago." }, { m: "happy", t: "Algunas manías las conservo." }] },
+            { t: "¿Vas a poder mirarlo tú?", m: "idle",
+              r: [{ m: "seria", t: "…" }, { m: "seria", t: "Esa pregunta no me la esperaba." }, { m: "idle", t: "No lo sé." },
+                { m: "seria", t: "Llevo cuatro días sin mirarlo de frente y lo pinté yo." }] },
           ],
-          grantItem: "cuadro_lo_que_queda", reveal: "cuadro_lo_que_queda" },
-      ] },
-    /* FINAL — El cuadro que faltaba (capítulo de cierre: sin MISIÓN propia, narración de
-       cierre + desbloqueo de INSPIRACIÓN LIBRE, ver refreshVeraFreeVisit. Pantalla especial
-       con vera_playa_regalo.webp en vez del cuadro de campaña — "tratamiento ligeramente
-       más especial" que pide el documento, ver CuadroReveal) */
-    { id: "cap8", title: "El cuadro que faltaba", trigger: () => true,
-      stages: [
-        { title: "El cuadro que faltaba", zone: "parque", final: true,
-          intro: [
-            { m: "seria", t: "He estado mirando el cuadro durante un rato intentando decidir si le faltaba algo." },
-            { m: "idle", t: "Y creo que no." },
-            { m: "suave", t: "No porque sea perfecto. Porque ya no necesita serlo." },
-            { m: "happy", t: "Tiene el principio, la constancia, la comida, el descanso, la noche y todas esas personas que pasan por la ciudad." },
-            { m: "seria", t: "Y en algún sitio, casi escondido, estás tú." },
-            { m: "suave", t: "No como un retrato." },
-            { m: "happy", t: "Como la persona que hizo que todo lo demás ocurriera." },
-            { m: "idle", t: "Supongo que eso era lo que estaba buscando desde el principio." },
-            { m: "suave", t: "No quería encontrar algo bonito." },
-            { m: "seria", t: "Quería encontrar algo que mereciera ser recordado." },
-            { m: "happy", t: "Gracias por ayudarme a encontrarlo." },
+          setFlags: ["veraExpo"],
+          snap: () => ({ since: todayStr() }),
+          subs: [
+            (g) => g.tier.id >= 5,
           ],
-          setFlags: ["veraStoryComplete"],
-          reveal: "vera_completion" },
-      ] },
-  ],
+          check: (g) => g.tier.id >= 5,
+          progressCount: (g) => calcOVR(g.player.stats), progressGoal: 81 },
+        { title: "Retrato", zone: "parque",
+          objective: "Supera tu mejor media (OVR) y alcanza una racha de 6 días.",
+          introBuild: (g) => {
+            const extra = VERA_PATH_LINE_FINAL[veraPath(g)] || { m: "seria", t: "Y si me he equivocado otra vez, me lo dices y no pasa nada." };
+            return [
+              { m: "happy", t: "Europa." },
+              { m: "idle", t: "Me enteré por la tele, en un bar, con el sonido quitado." },
+              { m: "pintora_pensando", t: "Y me quedé mirando la pantalla pensando «esa cara la he pintado yo»." },
+              { m: "seria", t: "Ha sido una sensación bastante rara y bastante buena." },
+              { m: "idle", t: "Te he citado aquí y no en el estudio porque aquí empezó." },
+              { m: "happy", t: "Ahí. Justo ahí estabas, tapándome los tres árboles." },
+              { m: "pintora_pensando", t: "Que siguen mal plantados, por cierto. Nadie los ha arreglado." },
+              { m: "idle", t: "…" },
+              { m: "seria", t: "Lo traigo. Está en la manta." },
+              { m: "seria", t: "Y antes de dártelo te voy a decir una cosa que no le he dicho a nadie en trece años." },
+              { m: "seria", t: "Te voy a decir lo que vi." },
+              { m: "idle", t: "…" },
+              { m: "pintora_pensando", t: "El primer día pensé que eras alguien esperando a salir corriendo. Todo el peso en una pierna, listo para arrancar." },
+              { m: "seria", t: "Y me equivoqué, aunque tardé seis meses en darme cuenta." },
+              { m: "idle", t: "No estabas listo para salir corriendo. Estabas listo por si alguien te necesitaba." },
+              { m: "seria", t: "Es la misma postura y no es lo mismo en absoluto." },
+              { m: "pintora_pensando", t: "Lo vi claro el día del estadio, cuando ganasteis de dos. Se acabó el partido y tú miraste a la grada antes de mirar el marcador." },
+              { m: "idle", t: "Nadie hace eso. Todo el mundo mira el marcador." },
+              { m: "seria", t: "Y eso es lo que está pintado ahí. No el gol, ni el estadio, ni la media." },
+              { m: "seria", t: "Eso." },
+              extra,
+              { m: "idle", t: "Ahora puedo aguantar que me lo digas. Antes no podía. Esa es toda la diferencia de estos seis meses." },
+              { m: "seria", t: "Toma. Quita la manta tú." },
+              { m: "seria", t: "…" },
+              { m: "idle", t: "No digas nada todavía." },
+              { m: "pintora_pensando", t: "Míralo un rato. La gente contesta demasiado rápido a los cuadros." },
+              { m: "seria", t: "…" },
+              { m: "happy", t: "Es tuyo. Obviamente es tuyo." },
+              { m: "idle", t: "Lo he firmado en el borde de abajo, muy pequeño, para no molestar." },
+            ];
+          },
+          midReveal: "vera_retrato",
+          introAfter: [
+            { m: "idle", t: "Y ahora la última cosa que te voy a pedir con capítulo detrás." },
+            { m: "pintora_pensando", t: "Sigue subiendo. Hasta arriba." },
+            { m: "seria", t: "Quiero verte con tu mejor media y una racha de seis días detrás." },
+            { m: "happy", t: "Y esta vez ni siquiera intento disimular que es por mí." },
+            { m: "idle", t: "Es que llevo seis meses diciéndole a todo el mundo que rechacé el encargo de tu vida por hacerte un cuadro gratis." },
+            { m: "happy", t: "Y me miran raro. Todos. Sin excepción." },
+            { m: "seria", t: "Así que hazme quedar bien." },
+          ],
+          replies: [
+            { t: "No te has equivocado.", m: "seria",
+              r: [{ m: "seria", t: "…" }, { m: "seria", t: "Vale." }, { m: "idle", t: "Necesitaba oír eso más de lo que pensaba." },
+                { m: "happy", t: "Y ahora vamos a dejar de mirarnos, que esto se está poniendo insoportable." }] },
+            { t: "Es el cuadro cuarenta y uno.", m: "idle",
+              r: [{ m: "happy", t: "No." }, { m: "seria", t: "Es el número dos." }, { m: "idle", t: "Los otros cuarenta no cuentan. Nunca contaron." },
+                { m: "pintora_pensando", t: "Hay uno de hace trece años y hay este. Y en medio no hay nada." }] },
+            { t: "Deberías haberlo vendido.", m: "idle",
+              r: [{ m: "happy", t: "Me ofrecieron por él en la gala." }, { m: "seria", t: "Bastante, además. Lo suficiente para dos años de lienzos." },
+                { m: "idle", t: "Dije que no estaba en venta y el hombre se ofendió muchísimo." },
+                { m: "happy", t: "Fue el mejor momento de mi vida profesional, sinceramente." }] },
+          ],
+          snap: (g) => ({ since: todayStr(), ovr: calcOVR(g.player.stats) }),
+          subs: [
+            (g, s) => calcOVR(g.player.stats) > s.ovr,
+            (g) => (g.player.streak || 0) >= 6,
+          ],
+          check: (g, s) => calcOVR(g.player.stats) > s.ovr && (g.player.streak || 0) >= 6,
+          progressCount: (g) => Math.min(g.player.streak || 0, 6), progressGoal: 6 },
+        { title: "El espejo", zone: "casa", final: true,
+          objective: null,
+          introBuild: (g) => {
+            const extra = VERA_PATH_LINE_EPILOGO[veraPath(g)];
+            return [
+              { m: "happy", t: "Tu mejor media y seis días." },
+              { m: "idle", t: "Me has hecho quedar bien. Ya se lo he restregado a tres personas." },
+              { m: "seria", t: "Pasa. Y mira hacia allí antes de sentarte." },
+              { m: "idle", t: "Sí. Está vacía." },
+              { m: "happy", t: "Los cuarenta cuadros. Ya no están." },
+              { m: "pintora_pensando", t: "No los he tirado, tranquilo. Están en casa de mi hermana, en el trastero, tapados con sábanas." },
+              { m: "seria", t: "Y ahí se pueden quedar. Un día decidiré si les pinto la cara o no, pero hoy no me corre prisa." },
+              { m: "idle", t: "…" },
+              { m: "seria", t: "Le escribí a Ruth." },
+              { m: "seria", t: "El martes. Cuatro líneas. Lo envié y apagué el móvil como una cobarde." },
+              { m: "idle", t: "No he pedido perdón por el cuadro. El cuadro era bueno." },
+              { m: "seria", t: "He pedido perdón por no haber preguntado." },
+              { m: "seria", t: "…" },
+              { m: "idle", t: "Ha contestado. Ayer." },
+              { m: "happy", t: "Ha dicho que se acordaba del cuadro. Que le sigue pareciendo el mejor que he hecho nunca." },
+              { m: "idle", t: "Y que ella también habría querido que se lo preguntara." },
+              { m: "seria", t: "Trece años. Y era eso." },
+              ...(extra ? [extra] : []),
+              { m: "seria", t: "No vamos a volver a ser amigas. Eso no se arregla con cuatro líneas y no pretendo que se arregle." },
+              { m: "happy", t: "Pero ya no tengo un cuadro en un trastero al que no puedo mirar." },
+              { m: "idle", t: "Ahora solo tengo un cuadro en un trastero. Que es muchísimo más llevadero." },
+              { m: "idle", t: "Ah, y esto. Casi se me olvida y llevo dos semanas con ello en el bolsillo." },
+              { m: "happy", t: "Es un pin. Es minúsculo y vale menos que una lámina." },
+              { m: "seria", t: "Me lo dieron en la escuela al terminar la carrera. Todos los de mi promoción tenemos uno." },
+              { m: "idle", t: "Y llevo trece años sin ponérmelo porque me parecía que no me lo había ganado." },
+              { m: "seria", t: "Y ahora me parece que sí, pero ya no me hace falta llevarlo." },
+              { m: "happy", t: "Así que es tuyo. Póntelo en la mochila y hazme el favor de perderlo pronto, que es feísimo." },
+            ];
+          },
+          midReveal: "vera_pin",
+          introAfter: [
+            { m: "idle", t: "Bueno. Vete ya, que quiero probar una cosa y no quiero público." },
+            { m: "pintora_pensando", t: "Voy a sentarme delante de ese espejo y voy a mirarme un rato." },
+            { m: "seria", t: "No a pintar. Solo a mirar." },
+            { m: "happy", t: "Que ya sé que suena a poquísimo, pero llevo veinte años sin hacerlo." },
+            { m: "idle", t: "Y si sale algo, te lo enseño." },
+            { m: "seria", t: "Antes que a nadie. Como hicimos." },
+            { m: "happy", t: "Y si no sale nada, pues me habré pasado una tarde mirándome. Tampoco pasa nada." },
+            { m: "pintora_pensando", t: "Puedo decidir mañana." },
+          ],
+          replies: [
+            { t: "¿Y el lienzo en blanco?", m: "idle",
+              r: [{ m: "seria", t: "…" }, { m: "seria", t: "Ya lo has visto, entonces." }, { m: "idle", t: "Y el espejo. El espejo es lo importante." },
+                { m: "seria", t: "Llevo veinte años pintando gente y no me he pintado a mí ni una sola vez." },
+                { m: "seria", t: "Ni un boceto. Nada." }, { m: "happy", t: "Y resulta que se me da fatal mirarme. Quién lo habría dicho." }] },
+            { t: "Te la pinto yo, si quieres.", m: "happy",
+              r: [{ m: "happy", t: "…" }, { m: "seria", t: "¿Sabes pintar?" }, { m: "idle", t: "…" },
+                { m: "happy", t: "Da igual. Sería mucho peor y probablemente más honesto." },
+                { m: "pintora_pensando", t: "Guárdate la oferta. Igual algún día te la acepto." }] },
+            { t: "Pregúntate antes.", m: "seria",
+              r: [{ m: "seria", t: "…" }, { m: "seria", t: "…" }, { m: "happy", t: "Vale, eso ha sido cruel y perfecto a la vez." },
+                { m: "idle", t: "Sí. Supongo que eso es exactamente lo que me falta." }] },
+          ],
+          setFlags: ["veraStoryComplete", "veraPinEarned"],
+          snap: () => ({}), check: () => true,
+          reward: (g) => {
+            const stats = { ...g.player.stats };
+            stats.MEN = Math.min(99, stats.MEN + 1);
+            return { ...g, player: { ...g.player, stats } };
+          } },
+    ],
+  }],
 };
-/* INSPIRACIÓN LIBRE: modo semanal que se desbloquea tras VERA_STORY (flag veraStoryComplete).
-   No es parte de STORIES/checkStories (esa historia ya queda "done" tras el capítulo 8, y
-   checkStories nunca reevalúa un capítulo "done") — es una visita periódica independiente,
-   con la misma arquitectura que game.cocoVisit/refreshCocoVisit pero mucho más simple: no
-   hay tienda, solo una escena corta y un cuadro genérico de precio aleatorio (ver
-   refreshVeraFreeVisit, llamado desde checkZoneUnlocks junto a refreshCocoVisit). */
-const VERA_FREE_BEATS = [
-  { m: "happy", t: "He cometido un error." },
-  { m: "idle", t: "Pensaba que terminar este cuadro iba a dejarme tranquila durante un tiempo." },
-  { m: "happy", t: "Ha ocurrido exactamente lo contrario." },
-  { m: "pintora_pensando", t: "Ahora tengo ideas para veinte cuadros." },
-  { m: "seria", t: "Así que, si no te importa, voy a seguir necesitando inspiración." },
-  { m: "happy", t: "Y quizá pueda darte algo a cambio." },
-];
-
 /* ============================================================
    ALEXIA · introduce los cassettes musicales (ver ITEMS kind:"cassette",
    activateCassette/applyDayClose y refreshAlexiaVisit más abajo en App).
@@ -8392,11 +8958,11 @@ const MILO_STORY = {
    el capítulo 9) y su anuncio dentro de la propia escena del capítulo 9, listos para que una
    tarea aparte le añada mecanismo real más adelante.
 
-   Objetos: la linterna (C4), el reloj parado (C12) y el pin (Epílogo) no tienen asset
-   todavía (ver NPCS.wendy) — se han dejado TODAS las líneas de diálogo tal cual, incluida
-   la entrega en mano, y solo se ha omitido el grantItem/reveal, tal y como pedía el propio
-   documento como fallback explícito ("si no hay asset, mantener las líneas y eliminar solo
-   el itemReveal"). Añadir los tres grantItem en cuanto existan los assets.
+   Objetos: la linterna (C4, wendy_linterna) y el pin (Epílogo, wendy_pin) ya tienen asset y
+   se entregan con revelado bloqueante a mitad de escena (midReveal). El reloj parado (C12)
+   sigue sin asset — se mantienen sus líneas y se omite el grantItem/reveal, tal y como pedía
+   el propio documento como fallback explícito ("si no hay asset, mantener las líneas y
+   eliminar solo el itemReveal"). Añadir su grantItem en cuanto exista el asset.
 
    Zonas: el documento pide "parque de noche" y "playa de noche" como zonas separadas de
    las diurnas. Para no duplicar assets ni zonas nuevas, se reutilizan "parque" y "playa" ya
@@ -8610,11 +9176,12 @@ const WENDY_STORY = {
           (g, s) => daysGoalsCompletedSince(g, s.since) >= 3,
         ],
         check: (g, s) => daysGoalsCompletedSince(g, s.since) >= 3 },
-      /* CAPÍTULO 4 — Las cosas que solo pasan de noche. Primer objeto (linterna): sin asset
-         todavía, se mantienen las líneas y se omite el grantItem/reveal (ver cabecera). */
+      /* CAPÍTULO 4 — Las cosas que solo pasan de noche. Primer objeto (linterna): asset ya
+         disponible (wendy_linterna, ver ITEMS) — revelado bloqueante a mitad de escena, justo
+         tras la descripción del objeto, igual que el resto de personajes (Elisa/Yuna/Beka). */
       { title: "Las cosas que solo pasan de noche", zone: "playa", timeWindow: { from: "22:00", to: "07:00" },
         objective: "Duerme 2 noches cumpliendo tu objetivo de sueño y alcanza una racha de 3 días.",
-        intro: [
+        introBefore: [
           { m: "happy", t: "Tres días. Y sin ayuda." },
           { m: "idle", t: "Ya está. Comprobado. Lo tuyo vale más que lo mío." },
           { m: "sleepy", t: "Me deja bastante tranquila, la verdad." },
@@ -8635,6 +9202,9 @@ const WENDY_STORY = {
           { m: "happy", t: "Tú te paras. Eso es lo raro." },
           { m: "idle", t: "Ah, espera. Te he traído una cosa y es completamente práctica, no le des vueltas." },
           { m: "sleepy", t: "Es una linterna de llavero. De las malas. Se le acaba la pila en nada." },
+        ],
+        midReveal: "wendy_linterna",
+        introAfter: [
           { m: "idle", t: "Es que el parque está oscurísimo por la parte de los bancos y yo te veo llegar cuando ya estás encima." },
           { m: "happy", t: "Y me paso el rato mirando hacia la entrada como una tonta por si eres tú o es el señor del perro." },
           { m: "idle", t: "Así que enciéndela cuando entres y ya está. Me ahorras diez minutos de mirar." },
@@ -9178,11 +9748,11 @@ const WENDY_STORY = {
         ],
         check: (g, s) => daysGoalsCompletedSince(g, s.since) >= 7 && (g.player.streak || 0) >= 7 },
       /* EPÍLOGO — Las diez y cinco (última etapa: final:true, sin objetivo propio). Objeto
-         de cierre (pin): sin asset todavía, se mantienen las líneas y se omite el
-         grantItem/reveal — ver cabecera y NPCS.wendy. El reward (+1 MEN) se mueve aquí desde
-         el FINAL, porque solo salta al ENTRAR en la etapa con final:true. */
+         de cierre (pin): asset ya disponible (wendy_pin, ver ITEMS) — revelado bloqueante a
+         mitad de escena, justo tras la descripción del objeto. El reward (+1 MEN) se mueve
+         aquí desde el FINAL, porque solo salta al ENTRAR en la etapa con final:true. */
       { title: "Las diez y cinco", zone: "parque", timeWindow: { from: "22:00", to: "07:00" }, final: true,
-        intro: [
+        introBefore: [
           { m: "happy", t: "Siete días." },
           { m: "idle", t: "Una semana entera. Normal. Aburridísima." },
           { m: "sleepy", t: "Te odio un poquito, para que lo sepas. Es un odio con mucho cariño." },
@@ -9201,6 +9771,9 @@ const WENDY_STORY = {
           { m: "sleepy", t: "Toma." },
           { m: "idle", t: "Es un pin. Es pequeño y no vale nada y lo tengo desde hace años." },
           { m: "happy", t: "Estaba en la caja donde guardo las cosas que no sé dónde poner." },
+        ],
+        midReveal: "wendy_pin",
+        introAfter: [
           { m: "sleepy", t: "Y ahora ya sé dónde ponerlo." },
           { m: "idle", t: "Significa que estuviste despierto conmigo cuando yo no sabía hacer otra cosa." },
           { m: "happy", t: "Y que te quedaste igual cuando aprendí." },
@@ -9302,6 +9875,8 @@ const ITEMS = {
     desc: "Carta coleccionable de Alexia. Vendible a Coco por 15 monedas." },
   milo_pin: { name: "Carta de Milo", icon: "🎴", img: "/images/cartas/milo_pin.webp", kind: "card", sellMin: 15, sellMax: 15,
     desc: "La carta que Milo te dio el día que dejó de necesitar esconderse. Coleccionable, vendible a Coco por 15 monedas." },
+  wendy_pin: { name: "Carta de Wendy", icon: "🎴", img: "/images/cartas/wendy_pin.webp", kind: "card", sellMin: 15, sellMax: 15,
+    desc: "La carta que Wendy te dio la noche que dejó de salir huyendo de la cama. Coleccionable, vendible a Coco por 15 monedas." },
   /* Objetos de ELISA_STORY (rework 3.0): kind:"keepsake" — recuerdos de campaña no
      consumibles, sin sellMin/sellMax a propósito (el guion los describe como "sin valor",
      no se venden a Coco). Distintos de sus tocayos genéricos que ya vende Coco
@@ -9327,29 +9902,13 @@ const ITEMS = {
     desc: "Esta vez tardó cuatro minutos en elegirla. Sin excusa." },
   beka_pulsera: { name: "Pulsera de personal", icon: "📿", img: "/images/objects/pulsera_evento.webp", kind: "keepsake",
     desc: "«No es un regalo. Es logística.» Entra sin cola y sin pagar, cualquier noche." },
-  /* Cuadros de Vera (ver VERA_STORY): kind:"painting", no consumible ni regalable (igual
-     que los pines, sin botón de acción en InventoryPanel), pero sí vendibles a Coco —
-     ITEMS[id].sellMin/sellMax es lo único que gatilla el botón VENDER en CocoShop (ver
-     openSell), sin necesitar ningún caso especial para "painting" en ese código. Los 7
-     cuadros de campaña llevan precio fijo (sellMin===sellMax, el documento pide un precio
-     exacto creciente); el cuadro genérico semanal usa el rango 100–300 que pide el
-     documento, resuelto con el mismo rollSellPrice que ya usan los peces de Nina. */
-  cuadro_primer_toque: { name: "Cuadro: Primer toque", icon: "🖼️", img: "/images/cuadros/Primer%20toque.webp", kind: "painting", sellMin: 100, sellMax: 100,
-    desc: "El primer cuadro de Vera desde que empezó a observarte. El día en el que decidiste dar el primer paso." },
-  cuadro_no_parar: { name: "Cuadro: No parar", icon: "🖼️", img: "/images/cuadros/No%20parar.webp", kind: "painting", sellMin: 150, sellMax: 150,
-    desc: "La parte aburrida de la constancia, la que nadie aplaude. Vera dice que ahí estaba el cuadro de verdad." },
-  cuadro_despues_del_esfuerzo: { name: "Cuadro: Después del esfuerzo", icon: "🖼️", img: "/images/cuadros/Despues%20del%20esfuerzo.webp", kind: "painting", sellMin: 200, sellMax: 200,
-    desc: "Lo que pasa cuando termina el esfuerzo. Vera quería pintar la otra mitad de la historia que nadie pinta." },
-  cuadro_donde_el_ruido_termina: { name: "Cuadro: Donde el ruido termina", icon: "🖼️", img: "/images/cuadros/Donde%20el%20ruido%20termina.webp", kind: "painting", sellMin: 250, sellMax: 250,
-    desc: "El segundo en el que el ruido de todo lo demás desaparece. El mar, y nada más que el mar." },
-  cuadro_una_noche_mas: { name: "Cuadro: Una noche más", icon: "🖼️", img: "/images/cuadros/Una%20noche%20mas.webp", kind: "painting", sellMin: 300, sellMax: 300,
-    desc: "Una noche sin ninguna consecuencia, que mañana ya sería solo un recuerdo. Vera dice que no necesitaba que ganaras nada para pintarla." },
-  cuadro_la_gente_que_pasa: { name: "Cuadro: La gente que pasa", icon: "🖼️", img: "/images/cuadros/La%20gente%20que%20pasa.webp", kind: "painting", sellMin: 350, sellMax: 350,
-    desc: "Pequeños momentos de la gente de la ciudad, ninguno importante por sí solo. Vera dice que solo tenían que ser reales." },
-  cuadro_lo_que_queda: { name: "Cuadro: Lo que queda", icon: "🖼️", img: "/images/cuadros/Lo%20que%20queda.webp", kind: "painting", sellMin: 400, sellMax: 400,
-    desc: "La síntesis de todo lo que Vera estuvo observando: el principio, la constancia, el descanso, la gente. Todo junto por fin." },
-  cuadro_generico: { name: "Cuadro de Vera", icon: "🖼️", img: "/images/cuadros/cuadro%20generico.webp", kind: "painting", sellMin: 100, sellMax: 300,
-    desc: "Uno más de los cuadros que Vera sigue pintando cada semana desde que terminasteis su campaña. Nunca sabes cuál va a traer." },
+  wendy_linterna: { name: "Linterna de llavero", icon: "🔦", img: "/images/objects/linterna.webp", kind: "keepsake",
+    desc: "De las malas. Se le acaba la pila en nada. «No es un detalle. Es logística.»" },
+  /* Retrato de VERA_STORY (rework 3.0): kind:"keepsake" como los demás objetos de historia
+     (elisa_libreta, beka_pulsera...) — sin sellMin/sellMax, no se vende. Sin asset propio en
+     el catálogo: reutiliza el cuadro genérico que ya existía en /images/cuadros. */
+  vera_retrato: { name: "Retrato", icon: "🖼️", img: "/images/cuadros/cuadro%20generico.webp", kind: "keepsake",
+    desc: "Sin título. Firmado muy pequeño en el borde de abajo, para no molestar." },
   /* capturas de Nina: objetos normales del inventario (kind:"fish"), sin sistema aparte —
      ver FishingSequence y FISH_RARITY para cómo se muestran en la pantalla de captura.
      sellMin/sellMax: precio al que Coco los compra (ver sellPriceFor/COCO_STORY) — son
@@ -9410,7 +9969,7 @@ const CARD_POOL = Object.keys(ITEMS).filter((id) => ITEMS[id].kind === "card");
 const CARD_STORY_FLAG = {
   elisa_pin: "elisaPinEarned", milly_pin: "millyPinEarned", yuna_pin: "yunaPinEarned",
   lopez_pin: "lopezPinEarned", igor_pin: "igorPinEarned", karla_pin: "karlaPinEarned", beka_pin: "bekaPinEarned",
-  milo_pin: "miloPinEarned",
+  milo_pin: "miloPinEarned", wendy_pin: "wendyPinEarned",
 };
 const isCardDiscovered = (g, cardId) =>
   !!(CARD_STORY_FLAG[cardId] && g[CARD_STORY_FLAG[cardId]]) || !!(g.cardsDiscovered && g.cardsDiscovered[cardId]);
@@ -9470,6 +10029,8 @@ const CARDS = [
     bio: "Relajada, segura y muy ligada a la música. Convierte distintos estados mentales en cassettes que dan un empujón temporal a tu entrenamiento." },
   { npc: "milo", unlocked: (g) => !!g.miloMet,
     bio: "Una criatura que vive escondida tras una roca del Parque. Le cuesta confiar, pero poco a poco deja de necesitar esconderse." },
+  { npc: "wendy", unlocked: (g) => !!g.wendyMet,
+    bio: "La encuentras de madrugada en el Parque o la Playa. No duerme bien casi nunca, pero ha aprendido a no salir huyendo de la cama." },
 ];
 
 /* --- EL PERIÓDICO · plantillas con titular y cuerpo, por secciones.
@@ -10318,45 +10879,40 @@ function FishingSequence({ entry, onConfirm }) {
     </div>);
 }
 
-/* Pantalla grande de entrega de un cuadro de Vera (ver VERA_STORY/reward y
-   game.pendingCuadroReveal): "imagen grande -> efectos -> click para continuar" que pide
-   el documento de Vera. Reutiliza la misma estructura visual que la revelación de pesca de
-   Nina (FishingSequence, fase "reveal") en vez de inventar un patrón nuevo: mismo glow,
-   misma animación de aparición (fishpop/fishglow), solo con sus propias clases "cuadro-*"
-   porque el layout (imagen más ancha, sin tarjeta de rareza) es distinto. itemId puede ser
-   el id de uno de los 8 ITEMS de tipo "painting", o el sentinel especial "vera_completion"
-   (cierre de campaña, sin objeto de inventario: usa vera_playa_regalo con un tratamiento
-   ligeramente más grande, tal como pide el documento). */
-/* subtítulo genérico según el tipo de objeto — "painting" (cuadros de Vera), "cassette"
-   (mezclas de Alexia) y cualquier otro kind futuro caen a un "Nuevo objeto conseguido"
-   neutro en vez de dar por hecho que todo lo que pasa por esta pantalla es un cuadro. */
-const REWARD_KIND_LABEL = { painting: "Nuevo cuadro conseguido", cassette: "Nuevo cassette conseguido", card: "Nueva carta conseguida", keepsake: "Objeto conseguido" };
+/* Pantalla grande de entrega de un objeto de historia (ver stage.grantItem/reveal y
+   game.pendingCuadroReveal): "imagen grande -> efectos -> click para continuar", usada por
+   todas las campañas para su pin/carta/keepsake final. Reutiliza la misma estructura visual
+   que la revelación de pesca de Nina (FishingSequence, fase "reveal") en vez de inventar un
+   patrón nuevo: mismo glow, misma animación de aparición (fishpop/fishglow), solo con sus
+   propias clases "cuadro-*" porque el layout (imagen más ancha, sin tarjeta de rareza) es
+   distinto. */
+/* subtítulo genérico según el tipo de objeto — "cassette" (mezclas de Alexia) y cualquier
+   otro kind futuro caen a un "Nuevo objeto conseguido" neutro. */
+const REWARD_KIND_LABEL = { cassette: "Nuevo cassette conseguido", card: "Nueva carta conseguida", keepsake: "Objeto conseguido" };
 /* de qué personaje es cada carta (ver ITEMS kind:"card"), solo para elegir el color del
    resplandor en CuadroReveal — su id no siempre coincide con la clave de NPCS (karla_pin
    es de "lisa", no de "karla"), así que no se puede derivar quitando el sufijo "_pin". */
 const CARD_NPC = { elisa_pin: "elisa", milly_pin: "milly", yuna_pin: "yuna", lopez_pin: "lopez",
   igor_pin: "igor", karla_pin: "lisa", beka_pin: "beka", nina_pin: "nina", coco_pin: "coco", vera_pin: "vera",
-  alexia_pin: "alexia", milo_pin: "milo" };
+  alexia_pin: "alexia", milo_pin: "milo", wendy_pin: "wendy" };
 /* mismo propósito que CARD_NPC pero para los objetos kind:"keepsake" (recuerdos no
    vendibles que entrega una historia, distintos de las cartas coleccionables). */
 const KEEPSAKE_NPC = { elisa_libreta: "elisa", elisa_taza: "elisa", elisa_amuleto: "elisa", elisa_botiquin: "elisa",
-  yuna_bufanda: "yuna", yuna_entrada: "yuna", yuna_foto: "yuna", yuna_bufanda2: "yuna", beka_pulsera: "beka" };
+  yuna_bufanda: "yuna", yuna_entrada: "yuna", yuna_foto: "yuna", yuna_bufanda2: "yuna", beka_pulsera: "beka",
+  vera_retrato: "vera", wendy_linterna: "wendy" };
 function CuadroReveal({ itemId, onClose }) {
-  const isCompletion = itemId === "vera_completion";
-  const item = !isCompletion ? ITEMS[itemId] : null;
-  const img = isCompletion ? NPCS.vera.arts.playa_regalo : item && item.img;
-  const title = isCompletion ? "La historia de Vera" : item && item.name;
-  const subtitle = isCompletion ? "Campaña completada · Inspiración libre desbloqueada"
-    : REWARD_KIND_LABEL[item && item.kind] || "Nuevo objeto conseguido";
-  const glow = isCompletion ? NPCS.vera.color
-    : item && item.kind === "cassette" ? NPCS.alexia.color
+  const item = ITEMS[itemId];
+  const img = item && item.img;
+  const title = item && item.name;
+  const subtitle = REWARD_KIND_LABEL[item && item.kind] || "Nuevo objeto conseguido";
+  const glow = item && item.kind === "cassette" ? NPCS.alexia.color
     : item && item.kind === "card" && CARD_NPC[itemId] ? NPCS[CARD_NPC[itemId]].color
     : item && item.kind === "keepsake" && KEEPSAKE_NPC[itemId] ? NPCS[KEEPSAKE_NPC[itemId]].color
     : NPCS.vera.color;
   useEffect(() => { rewardShimmer(); }, [itemId]);
   return (
     <div className="cuadro-reveal-ov" onClick={onClose}>
-      <div className={"cuadro-reveal-card" + (isCompletion ? " cuadro-reveal-big" : "")} style={{ "--cuadro-glow": glow }}>
+      <div className="cuadro-reveal-card" style={{ "--cuadro-glow": glow }}>
         <div className="cuadro-reveal-glow" />
         {img && <img src={img} alt={title} className="cuadro-reveal-img" />}
         <div className="cuadro-reveal-name">{title}</div>
@@ -12451,25 +13007,8 @@ export default function App() {
     });
     return out;
   };
-  /* Vera, modo INSPIRACIÓN LIBRE (ver VERA_FREE_BEATS): mismo patrón día-activo/ausente que
-     refreshCocoVisit, pero sin tienda — solo una escena corta que entrega un cuadro genérico
-     con applyOnRead.grantItem/reveal (ver applyOnRead más abajo), 1 vez cada 7 días, y solo
-     después de completar la campaña (game.veraStoryComplete). */
-  const refreshVeraFreeVisit = (g) => {
-    if (!g.veraStoryComplete) return g;
-    const today = todayStr();
-    if (g.veraFreeVisit && g.veraFreeVisit.day === today) return g;
-    let nextDay = g.veraNextFreeDay;
-    if (g.veraFreeVisit && g.veraFreeVisit.day !== today && !nextDay) nextDay = addDays(g.veraFreeVisit.day, 7);
-    if (nextDay && dayDiff(today, nextDay) > 0) {
-      return g.veraFreeVisit ? { ...g, veraFreeVisit: null, veraNextFreeDay: nextDay } : g;
-    }
-    let out = addScene(g, "Vera", VERA_FREE_BEATS, { zone: "parque",
-      applyOnRead: { grantItem: "cuadro_generico", reveal: "cuadro_generico" } });
-    return { ...out, veraFreeVisit: { day: today }, veraNextFreeDay: addDays(today, 7) };
-  };
   /* Alexia, modo infinito post-historia (ver ALEXIA_STORY): mismo patrón día-activo/ausente
-     que refreshVeraFreeVisit, pero con el ciclo 1 día activa / 4 ausente que pedía el
+     que refreshCocoVisit, pero con el ciclo 1 día activa / 4 ausente que pedía el
      documento (el que tenía Coco en su v1, antes del rework a puesto fijo alterno) —
      solo entrega un cassette de stat al azar (nunca ALL IN, que es recompensa única de
      historia — ver ALEXIA_CASSETTE_POOL), y solo tras completar la campaña
@@ -12501,7 +13040,7 @@ export default function App() {
      y, si es la primera vez, encola su escena de presentación. Se llama tras cualquier
      acción que pueda mover el requisito: media, goles de carrera o ascenso de categoría. */
   const checkZoneUnlocks = (g) => {
-    let out = refreshAlexiaVisit(refreshCocoGreeting(refreshVeraFreeVisit(refreshCocoVisit(g))));
+    let out = refreshAlexiaVisit(refreshCocoGreeting(refreshCocoVisit(g)));
     [...ZONES, ...EXTRA_NPCS].forEach((z) => {
       if (!z.metFlag || out[z.metFlag] || (out.introQueued && out.introQueued[z.metFlag]) || !z.unlocked(out)) return;
       /* el flag "ya lo conoces" no se marca aquí: se marca cuando el jugador lee la escena
@@ -12654,9 +13193,10 @@ export default function App() {
 
   /* aplica lo que una escena "confirma" solo al leerla de verdad: flags de "ya conoces a X"
      y/o el arranque o avance de una misión. Así el estado nunca se adelanta a la conversación.
-     grantItem/reveal: usados por la entrega semanal de Vera (ver refreshVeraFreeVisit), que no
-     pasa por STORIES/reward — añade el objeto al inventario y marca qué cuadro debe mostrar la
-     pantalla grande (ver game.pendingCuadroReveal/CuadroReveal) solo al leer la escena de verdad. */
+     grantItem/reveal: usados por las entregas de objeto de historia (ver stage.grantItem/
+     reveal y stage.midReveal) — añade el objeto al inventario y marca qué objeto debe mostrar
+     la pantalla grande (ver game.pendingCuadroReveal/CuadroReveal) solo al leer la escena de
+     verdad, nunca en el momento en que se cumple la condición. */
   const applyOnRead = (g, patch) => {
     if (!patch) return g;
     let out = g;

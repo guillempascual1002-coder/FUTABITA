@@ -963,6 +963,14 @@ function pickEvent(g) {
    (moods/poses); algunas poses vienen de las antiguas variantes
    fuera-de-servicio, ahora fundidas aquí como un mood más. --- */
 const NPCS = {
+  /* Wendy: personaje nocturno (ver WENDY_STORY), solo aparece entre las 22:00 y las 07:00
+     (ver inTimeWindow/stage.timeWindow en checkStories). Cuatro poses únicamente: no existe
+     asset para "despierta" (capítulo 11, la crisis) todavía, así que cae al fallback normal
+     de npc.arts[npc.def] = idle — la escena funciona igual, solo pierde el contraste visual
+     que pedía el documento. Añadir wendy_despierta.webp aquí en cuanto exista el asset. */
+  wendy: { name: "Wendy", color: "#5B4B9E", voice: "/audio/vozchica01.mp3", icon: "/images/wendy/wendy_icon.webp",
+    arts: { idle: "/images/wendy/wendy_idle.webp", sleepy: "/images/wendy/wendy_sleepy.webp",
+      happy: "/images/wendy/wendy_happy.webp", hug: "/images/wendy/wendy_hug.webp" }, def: "idle" },
   lopez: { name: "López", color: "#D65A2E", voice: "/audio/vozchico02.mp3", icon: "/images/lopez/lopez_icon.webp",
     /* capitan: liderazgo, reservado para escenas clave. playa: outfit único, no se mezcla
        con moods de uniforme dentro de una misma escena. */
@@ -1103,6 +1111,7 @@ const senderToNpc = (from) => {
   if (from === "Vera") return "vera";
   if (from === "Alexia") return "alexia";
   if (from === "Milo") return "milo";
+  if (from === "Wendy") return "wendy";
   return null; /* prensa/afición/redes/club -> periódico */
 };
 const paperSec = (from) =>
@@ -1370,6 +1379,25 @@ const proteinDaysSince = (g, sinceDay) =>
 const proteinSleepDaysSince = (g, sinceDay) =>
   Object.entries(g.logs || {}).filter(([d, l]) => d >= sinceDay && l.closed &&
     (l.prot || 0) >= g.player.goals.protein && l.sleep != null && l.sleep >= g.player.goals.sleepGoal).length;
+/* noches cerradas cumpliendo SOLO el objetivo de sueño (ver WENDY_STORY) — igual que
+   proteinSleepDaysSince pero sin exigir proteína, porque Wendy es la única campaña cuyas
+   misiones dependen del sueño por separado. */
+const sleepDaysSince = (g, sinceDay) =>
+  Object.entries(g.logs || {}).filter(([d, l]) => d >= sinceDay && l.closed &&
+    l.sleep != null && l.sleep >= g.player.goals.sleepGoal).length;
+/* ¿cae la hora real del dispositivo dentro de una ventana horaria "de" -> "a" (ver
+   stage.timeWindow en WENDY_STORY)? Admite ventanas que cruzan medianoche (22:00–07:00):
+   si "from" > "to" en horas decimales, se interpreta como [from,24) ∪ [0,to). Sin
+   timeWindow, cualquier hora vale — así el resto de personajes no se ven afectados. */
+const inTimeWindow = (win) => {
+  if (!win) return true;
+  const now = new Date();
+  const h = now.getHours() + now.getMinutes() / 60;
+  const [fh, fm] = win.from.split(":").map(Number);
+  const [th, tm] = win.to.split(":").map(Number);
+  const from = fh + fm / 60, to = th + tm / 60;
+  return from <= to ? (h >= from && h < to) : (h >= from || h < to);
+};
 /* ¿ha visitado esta zona desde una fecha? (ver g.zoneVisits, que registra la última vez que
    se abrió cada zona — infraestructura mínima añadida para objetivos tipo "visita X",
    que hasta ahora ningún capítulo necesitaba: ver BEKA_STORY) */
@@ -1471,7 +1499,7 @@ const ZONES = [
      con el orden alfabético original la burbuja del Parque mostraba siempre a Vera durante
      toda la campaña de Milo en vez de a él. No afecta a Vera cuando tiene una escena propia
      sin Milo: milo solo "gana" cuando de verdad hay algo suyo pendiente. */
-  { id: "parque", kind: "npc", npc: ["elisa", "lisa", "milly", "yuna", "lopez", "beka", "milo", "vera"], label: "Parque", icon: "🌳", x: 47.99, y: 42.84,
+  { id: "parque", kind: "npc", npc: ["elisa", "lisa", "milly", "yuna", "lopez", "beka", "milo", "vera", "wendy"], label: "Parque", icon: "🌳", x: 47.99, y: 42.84,
     pts: "204.76 310.38 181.53 393.1 289.27 402.29 204.76 310.38",
     unlocked: (g) => isZoneUnlocked(g, "parque") },
   { id: "casino", kind: "npc", npc: ["elisa", "lisa"], label: "Casino", icon: "🎰", x: 63.79, y: 72.25,
@@ -1480,7 +1508,7 @@ const ZONES = [
   { id: "enfermeria", kind: "npc", npc: ["elisa", "milly", "beka"], label: "Enfermería", icon: "🏥", x: 70.56, y: 8.09,
     pts: "269.53 96.59 375.7 85.45 379.45 140.6 271.57 150.46 269.53 96.59",
     unlocked: (g) => isZoneUnlocked(g, "enfermeria") },
-  { id: "playa", kind: "npc", npc: ["elisa", "milly", "lopez", "lisa", "yuna", "igor", "nina", "vera"], label: "Playa", icon: "🏖️", x: 18.88, y: 62.76,
+  { id: "playa", kind: "npc", npc: ["elisa", "milly", "lopez", "lisa", "yuna", "igor", "nina", "vera", "wendy"], label: "Playa", icon: "🏖️", x: 18.88, y: 62.76,
     pts: "76.85 417.61 148.34 442.12 135.57 514.12 96.25 602.97 31.4 583.57 76.85 417.61",
     unlocked: (g) => isZoneUnlocked(g, "playa") },
   { id: "atico", kind: "npc", npc: ["elisa", "lisa", "alexia"], label: "Ático de Lujo", icon: "🌇", x: 34.48, y: 19.29,
@@ -1503,7 +1531,7 @@ const ZONES = [
 /* home zone de cada personaje: dónde "vive" por defecto si una escena no especifica zona
    explícita (varios personajes están asignados a más de una zona ahora que la zona es
    contexto de escena y no una identidad de npc distinta, ver NPCS más arriba) */
-const HOME_ZONE = { elisa: "oficina", lopez: "ciudad-dep", milly: "kiosco", yuna: "barrio", lisa: "patro", igor: "restaurante", beka: "barrio", nina: "playa", vera: "parque", coco: "tienda", alexia: "atico", milo: "parque" };
+const HOME_ZONE = { elisa: "oficina", lopez: "ciudad-dep", milly: "kiosco", yuna: "barrio", lisa: "patro", igor: "restaurante", beka: "barrio", nina: "playa", vera: "parque", coco: "tienda", alexia: "atico", milo: "parque", wendy: "parque" };
 /* una zona puede tener uno o varios personajes asignados (p.ej. El Barrio) */
 const zoneNpcList = (z) => (Array.isArray(z.npc) ? z.npc : z.npc ? [z.npc] : []);
 /* una entrada de npcQueue cuenta para una zona si su "zone" explícito coincide, o si no
@@ -7800,9 +7828,870 @@ const MILO_STORY = {
   }],
 };
 
+/* WENDY_STORY — campaña nocturna, ver FUTABITA_Wendy_Rework_3.0.docx.
+
+   Alcance de SOÑAR en esta implementación (decidido con el usuario): los cuatro sueños
+   narrativos de la campaña (C2/C5/C7/C9) están completos — cada uno acredita EXACTAMENTE
+   una unidad de la misión que la propia etapa acaba de asignar, vía una flag
+   (wendyDream_c2/c5/c7/c9) que la propia etapa activa sobre sí misma y que sus subs/check
+   consultan en directo (ver el patrón {count,goal} de abajo: el crédito se suma al count,
+   no se resta del goal, para que la barra de progreso muestre exactamente la granularidad
+   de unidades que pide el documento). El "modo infinito" post-campaña (soñar sobre
+   CUALQUIER misión activa de CUALQUIER personaje) se deja fuera de alcance a propósito:
+   exigiría inspeccionar el sistema de historias de todo el juego, con riesgo de romper
+   otras campañas. Queda su flag (wendySonarInfinito, en el capítulo 10, justo al completar
+   el capítulo 9) y su anuncio dentro de la propia escena del capítulo 9, listos para que una
+   tarea aparte le añada mecanismo real más adelante.
+
+   Objetos: la linterna (C4), el reloj parado (C12) y el pin (Epílogo) no tienen asset
+   todavía (ver NPCS.wendy) — se han dejado TODAS las líneas de diálogo tal cual, incluida
+   la entrega en mano, y solo se ha omitido el grantItem/reveal, tal y como pedía el propio
+   documento como fallback explícito ("si no hay asset, mantener las líneas y eliminar solo
+   el itemReveal"). Añadir los tres grantItem en cuanto existan los assets.
+
+   Zonas: el documento pide "parque de noche" y "playa de noche" como zonas separadas de
+   las diurnas. Para no duplicar assets ni zonas nuevas, se reutilizan "parque" y "playa" ya
+   existentes (con "wendy" añadida a su npc[]) y es la ventana horaria real (stage.timeWindow,
+   ver inTimeWindow en checkStories) la que hace que Wendy solo aparezca de 22:00 a 07:00. */
+const WENDY_STORY = {
+  npc: "wendy",
+  chapters: [{
+    id: "cap1",
+    title: "La gente normal duerme",
+    trigger: () => true,
+    stages: [
+      /* PRÓLOGO — La gente normal duerme */
+      { title: "La gente normal duerme", zone: "parque", timeWindow: { from: "22:00", to: "07:00" },
+        objective: "Duerme una noche cumpliendo tu objetivo de sueño.",
+        intro: [
+          { m: "idle", t: "Ah. Tú también estás despierto." },
+          { m: "idle", t: "No te preocupes, no voy a preguntarte por qué. A estas horas todo el mundo tiene una razón rara y ninguna se cuenta bien." },
+          { m: "sleepy", t: "Son las tres y diez, por cierto." },
+          { m: "idle", t: "No he mirado el móvil. Lo sé y ya está." },
+          { m: "happy", t: "Es lo único que se me da realmente bien y no sirve absolutamente para nada." },
+          { m: "sleepy", t: "Yo estoy aquí porque no consigo dormirme. Como casi siempre." },
+          { m: "idle", t: "Y cuando no puedo dormir, venir aquí ayuda. Hay menos gente, menos ruido, y sobre todo nadie espera que estés haciendo algo." },
+          { m: "idle", t: "Eso es lo importante. De día, si estás parada, es que estás perdiendo el tiempo." },
+          { m: "sleepy", t: "De noche estar parada es lo normal. Es casi lo único que se puede hacer." },
+          { m: "idle", t: "Ah, y este es Gilbert." },
+          { m: "idle", t: "Es mi almohada." },
+          { m: "happy", t: "Y mi mejor amigo. Sí, ya sé cómo suena. Puedes pensar lo que quieras, no voy a discutirlo a las tres de la mañana." },
+          { m: "sleepy", t: "Aunque, si lo piensas bien, tener un amigo que no te obliga a contestar mensajes es bastante práctico." },
+          { m: "idle", t: "Tú tampoco pareces tener prisa." },
+          { m: "happy", t: "Eso me gusta. La gente con prisa a estas horas da mala espina." },
+          { m: "idle", t: "Puedes quedarte un rato si quieres. Pero no me pidas conversación brillante, que son casi las tres y cuarto." },
+          { m: "sleepy", t: "Y ahora te voy a decir una cosa un poco hipócrita, avisando de que es hipócrita." },
+          { m: "idle", t: "Vete a dormir." },
+          { m: "idle", t: "No ahora mismo. Cuando te apetezca. Pero esta noche duerme lo que tengas que dormir." },
+          { m: "happy", t: "Ya sé que te lo está diciendo la persona que lleva ocho años sin conseguirlo." },
+          { m: "sleepy", t: "Por eso mismo, de hecho." },
+          { m: "idle", t: "Uno de los dos tiene que hacerlo bien, y yo he perdido mi turno." },
+        ],
+        replies: [
+          { t: "Yo tampoco duermo.", m: "idle",
+            r: [{ m: "idle", t: "Ya." }, { m: "sleepy", t: "Se nota, además. Tienes la cara de las tres y diez." },
+              { m: "happy", t: "No es un insulto. Yo la tengo todos los días." }] },
+          { t: "Hola, Gilbert.", m: "happy",
+            r: [{ m: "idle", t: "…" }, { m: "happy", t: "Vale, no esperaba eso." },
+              { m: "sleepy", t: "Normalmente la gente hace como que no lo he dicho." },
+              { m: "happy", t: "Dice que hola. Bueno. Lo digo yo. Pero lo diría." }] },
+          { t: "¿Vienes mucho por aquí?", m: "idle",
+            r: [{ m: "sleepy", t: "Casi todas las noches." },
+              { m: "idle", t: "Desde hace bastante. No voy a decir cuánto porque suena peor de lo que es." },
+              { m: "happy", t: "…Ocho años. Ya está. Lo he dicho igual." }] },
+        ],
+        setFlags: ["wendyMet"],
+        snap: () => ({ since: todayStr() }),
+        subs: [
+          (g, s) => sleepDaysSince(g, s.since) >= 1,
+        ],
+        check: (g, s) => sleepDaysSince(g, s.since) >= 1 },
+      /* CAPÍTULO 1 — Gilbert. Único capítulo donde se explica su origen. */
+      { title: "Gilbert", zone: "parque", timeWindow: { from: "22:00", to: "07:00" },
+        objective: "Duerme 2 noches cumpliendo tu objetivo de sueño.",
+        intro: [
+          { m: "sleepy", t: "Has vuelto." },
+          { m: "happy", t: "Bien. No sabía si ibas a volver." },
+          { m: "idle", t: "Y dormiste. Se te nota en que hoy no tienes la cara de las tres." },
+          { m: "sleepy", t: "Son las tres menos cinco, por cierto." },
+          { m: "happy", t: "Y aun así no la tienes. Eso es tener suerte." },
+          { m: "idle", t: "Gilbert tampoco sabía si ibas a volver." },
+          { m: "idle", t: "Bueno… Gilbert no ha dicho nada. Soy yo la que imagina lo que diría. Es distinto y me parece importante que lo sepas." },
+          { m: "sleepy", t: "No habla de verdad. Nunca he pensado que hablara de verdad." },
+          { m: "idle", t: "Pero llevo tantos años hablando con él que a veces sé perfectamente qué me contestaría, y eso ya no lo puedo desactivar." },
+          { m: "happy", t: "No tienes que fingir que lo ves. A mí me basta con que no te rías." },
+          { m: "sleepy", t: "Aunque si te ríes un poco tampoco pasa nada. Yo me río bastante de él." },
+          { m: "idle", t: "…" },
+          { m: "idle", t: "Te cuento de dónde salió, ya que estamos y ya que son las tres." },
+          { m: "sleepy", t: "Yo no dormía de pequeña. Nada. Cinco, seis años, y me pasaba las noches enteras despierta." },
+          { m: "idle", t: "Y no era por monstruos ni por miedo a la oscuridad, que es lo que todo el mundo asume." },
+          { m: "sleepy", t: "Era que si me dormía dejaba de estar pendiente. Y a mí me parecía importantísimo estar pendiente." },
+          { m: "idle", t: "¿De qué? De nada concreto. Ese era el problema." },
+          { m: "idle", t: "Mi madre lo intentó todo. Y una noche me trajo esta almohada y me dijo que se llamaba Gilbert." },
+          { m: "sleepy", t: "Y que su trabajo era quedarse despierto." },
+          { m: "idle", t: "Que él vigilaba por mí, y que yo ya podía dormirme porque había alguien de guardia." },
+          { m: "happy", t: "Y funcionó. Funcionó durante años, lo cual dice mucho de mi madre y bastante poco de mí." },
+          { m: "sleepy", t: "El problema es que tengo veintitrés y sigo teniendo la almohada." },
+          { m: "idle", t: "Y el turno de Gilbert se le ha hecho un poco largo." },
+          { m: "sleepy", t: "¿Sabes qué es lo peor de no poder dormir?" },
+          { m: "idle", t: "Que cuando por fin tienes sueño, tu cabeza decide que es un momento fantástico para acordarse de todo." },
+          { m: "idle", t: "Cosas que hiciste hace años. Cosas que tienes que hacer mañana. Cosas que ni siquiera importan y aun así ahí están, en fila." },
+          { m: "sleepy", t: "Así que hazme un favor y no me lo discutas, que es tarde." },
+          { m: "idle", t: "Dos noches. Dos noches durmiendo lo que tienes que dormir." },
+          { m: "happy", t: "Una ya la hiciste, así que técnicamente te estoy pidiendo una." },
+          { m: "sleepy", t: "Es un truco. Lo hago con todo el mundo y funciona siempre." },
+        ],
+        replies: [
+          { t: "Tu madre era lista.", m: "happy",
+            r: [{ m: "happy", t: "Muchísimo." },
+              { m: "sleepy", t: "Se lo digo a veces y dice que fue lo primero que se le ocurrió." },
+              { m: "idle", t: "Yo creo que miente para no ponerse tierna." }] },
+          { t: "¿Y ahora de qué estás pendiente?", m: "idle",
+            r: [{ m: "idle", t: "…" }, { m: "sleepy", t: "De nada. Sigue sin haber nada." },
+              { m: "idle", t: "Esa es la parte que no mejora con los años." },
+              { m: "sleepy", t: "Estar de guardia sin saber de qué es agotador y además es ridículo." }] },
+          { t: "Pues dile que se tome la noche libre.", m: "happy",
+            r: [{ m: "happy", t: "…" }, { m: "idle", t: "Se lo he dicho. Muchas veces." },
+              { m: "sleepy", t: "Pero si él se duerme me toca a mí. Y ahí está el problema entero." }] },
+        ],
+        setFlags: ["wendyGilbert"],
+        snap: () => ({ since: todayStr() }),
+        subs: [
+          (g, s) => sleepDaysSince(g, s.since) >= 2,
+        ],
+        check: (g, s) => sleepDaysSince(g, s.since) >= 2 },
+      /* CAPÍTULO 2 — El primer sueño. SOÑAR uso 1 de 4: acredita una unidad de esta misma
+         misión (3 noches + 1 victoria = 4 unidades → 1 acreditada deja la barra al 25%). */
+      { title: "El primer sueño", zone: "playa", timeWindow: { from: "22:00", to: "07:00" },
+        objective: "Duerme 3 noches cumpliendo tu objetivo de sueño y consigue una victoria.",
+        intro: [
+          { m: "happy", t: "Dos noches seguidas." },
+          { m: "idle", t: "Te lo digo con envidia, para que no suene a felicitación falsa." },
+          { m: "sleepy", t: "Son las tres y veinte y yo llevo despierta desde ayer a las siete, así que la envidia es bastante literal." },
+          { m: "idle", t: "Hoy quería enseñarte algo. Pero no sé si funciona siempre, así que no te ilusiones." },
+          { m: "sleepy", t: "Y prefiero enseñártelo aquí, en la playa, que si sale mal por lo menos hay ruido de agua y disimula." },
+          { m: "idle", t: "Anoche soñé contigo." },
+          { m: "happy", t: "Espera. No con esa cara. Fue un sueño aburridísimo." },
+          { m: "sleepy", t: "Tú haciendo una de las cosas que tenías pendientes. Yo mirando desde un banco. Gilbert por ahí, en el suelo, como siempre." },
+          { m: "idle", t: "Nada más. Cero argumento. Ni siquiera había color, creo." },
+          { m: "idle", t: "Lo raro fue al despertarme." },
+          { m: "sleepy", t: "Porque esa parte parecía que ya estaba hecha." },
+          { m: "idle", t: "No entera. Un trozo. Un día suelto de algo que tenías a medias." },
+          { m: "happy", t: "Probablemente fue casualidad. Casi seguro que fue casualidad." },
+          { m: "sleepy", t: "Pero llevo todo el día pensando en ello y no me lo he podido quitar de encima, así que vamos a comprobarlo y me dejas en paz." },
+          { m: "idle", t: "Antes de dormirme, dime qué tienes pendiente. Lo que sea, no hace falta que sea importante." },
+          { m: "sleepy", t: "…Vale. Eso puedo soñarlo." },
+          { m: "idle", t: "Tres noches durmiendo lo tuyo. Y una victoria, para que no digas que solo te pido siestas." },
+          { m: "happy", t: "Son cuatro cosas en total. Cuatro." },
+          { m: "sleepy", t: "Voy a intentar quitarte una." },
+          { m: "idle", t: "Solo una. Y ni siquiera puedo elegir cuál." },
+          { m: "hug", t: "Gilbert, tú también. Venga." },
+          { m: "sleepy", t: "Tú quédate por aquí. No porque haga falta." },
+          { m: "hug", t: "Buenas noches." },
+          { m: "sleepy", t: "— transición de sueño —" },
+          { m: "sleepy", t: "…" },
+          { m: "idle", t: "Ya está. Ya me he despertado." },
+          { m: "idle", t: "No mires así. Yo tampoco sé si ha servido de algo." },
+        ],
+        replies: [
+          { t: "¿Te ha pasado antes con otras personas?", m: "idle",
+            r: [{ m: "idle", t: "…" }, { m: "sleepy", t: "No." },
+              { m: "idle", t: "No he tenido a nadie con quien comprobarlo." },
+              { m: "happy", t: "Eso también suena peor de lo que es. O igual suena exactamente como es." }] },
+          { t: "¿Y si funciona?", m: "idle",
+            r: [{ m: "sleepy", t: "Pues funciona." },
+              { m: "idle", t: "Y entonces tendré que pensar bastante sobre qué significa eso." },
+              { m: "happy", t: "Pero eso lo hago mañana. Hoy solo quiero dormirme." }] },
+          { t: "¿Y si no funciona?", m: "idle",
+            r: [{ m: "happy", t: "Fingimos que nunca lo intentamos." },
+              { m: "idle", t: "Se me da muy bien fingir que no he intentado cosas." },
+              { m: "sleepy", t: "Es prácticamente mi segunda habilidad, después de lo de la hora." }] },
+        ],
+        setFlags: ["wendyDream_c2"],
+        snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
+        subs: [
+          { count: (g, s) => sleepDaysSince(g, s.since) + (g.wendyDream_c2 ? 1 : 0), goal: 3 },
+          (g, s) => (g.matchHistory || []).slice(s.matchCount).some((m) => m.res === "V"),
+        ],
+        check: (g, s) => sleepDaysSince(g, s.since) + (g.wendyDream_c2 ? 1 : 0) >= 3 &&
+          (g.matchHistory || []).slice(s.matchCount).some((m) => m.res === "V") },
+      /* CAPÍTULO 3 — No lo he hecho yo. Pone el límite moral de SOÑAR desde dentro de la
+         ficción: soñar no sustituye hacer. */
+      { title: "No lo he hecho yo", zone: "parque", timeWindow: { from: "22:00", to: "07:00" },
+        objective: "Cierra 3 días de objetivos.",
+        intro: [
+          { m: "happy", t: "Ha funcionado." },
+          { m: "idle", t: "O eso parece." },
+          { m: "sleepy", t: "No pongas esa cara. Yo tampoco sé cómo, y llevo dos días con ello." },
+          { m: "idle", t: "Vamos a dejar clara una cosa, porque es importante y porque me he pasado el martes entero pensándolo." },
+          { m: "idle", t: "Yo no he hecho la actividad por ti." },
+          { m: "sleepy", t: "Solo he soñado con ella. Supongo que hay una diferencia bastante grande entre esas dos cosas." },
+          { m: "idle", t: "Y tampoco puedo elegir qué condición se completa. Lo he intentado. Me concentré muchísimo y salió otra." },
+          { m: "happy", t: "Eso sería demasiado útil. Y entonces dejaría de ser un sueño y pasaría a ser una herramienta." },
+          { m: "sleepy", t: "Y las herramientas se usan. Los sueños solo se tienen." },
+          { m: "idle", t: "…" },
+          { m: "sleepy", t: "Aunque hay una parte que me tiene un poco rara, si te digo la verdad." },
+          { m: "idle", t: "Llevo ocho años pensando que dormir era el rato en el que no pasa nada. El agujero entre dos días." },
+          { m: "sleepy", t: "Y resulta que esa noche pasó algo. Algo pequeño y bastante tonto, pero pasó." },
+          { m: "idle", t: "Es la primera vez en mi vida que dormir sirve para algo." },
+          { m: "happy", t: "No sé si eso es maravilloso o si es lo peor que me podía pasar." },
+          { m: "idle", t: "En fin. Podemos probar otra noche, pero hoy no." },
+          { m: "sleepy", t: "Hoy necesito dormir de verdad. Sin soñar contigo, sin soñar con nada, sin acordarme de nada." },
+          { m: "idle", t: "Y tú vas a hacer una cosa que no tiene absolutamente nada que ver con dormir, para que veas que no soy monotema." },
+          { m: "happy", t: "Tres días cerrados. Enteros, como los cierres tú. No me importa cómo." },
+          { m: "sleepy", t: "Solo quiero comprobar una cosa." },
+          { m: "idle", t: "Que las cosas que haces despierto siguen valiendo más que las que sueño yo." },
+          { m: "sleepy", t: "Porque si no, esto se pone raro y a mí ya me sobra rareza." },
+        ],
+        replies: [
+          { t: "Podrías dormir más ahora.", m: "idle",
+            r: [{ m: "idle", t: "Ese es exactamente el problema que estoy teniendo." },
+              { m: "sleepy", t: "Si dormir es útil, dormir se convierte en una tarea." },
+              { m: "idle", t: "Y si dormir es una tarea, ya nunca me voy a dormir. Yo funciono así." }] },
+          { t: "No hace falta que lo hagas más veces.", m: "happy",
+            r: [{ m: "happy", t: "…" }, { m: "idle", t: "Gracias." },
+              { m: "sleepy", t: "Pero lo voy a hacer igual. Un par de veces más, por lo menos." },
+              { m: "happy", t: "Es lo más interesante que me ha pasado en años y no lo pienso soltar." }] },
+          { t: "¿Y si dejas de soñar conmigo?", m: "idle",
+            r: [{ m: "sleepy", t: "…" }, { m: "idle", t: "Pues dejo de soñar contigo y sigues viniendo igual." },
+              { m: "idle", t: "Eso no depende del sueño." }, { m: "happy", t: "…¿No?" }] },
+        ],
+        snap: () => ({ since: todayStr() }),
+        subs: [
+          (g, s) => daysGoalsCompletedSince(g, s.since) >= 3,
+        ],
+        check: (g, s) => daysGoalsCompletedSince(g, s.since) >= 3 },
+      /* CAPÍTULO 4 — Las cosas que solo pasan de noche. Primer objeto (linterna): sin asset
+         todavía, se mantienen las líneas y se omite el grantItem/reveal (ver cabecera). */
+      { title: "Las cosas que solo pasan de noche", zone: "playa", timeWindow: { from: "22:00", to: "07:00" },
+        objective: "Duerme 2 noches cumpliendo tu objetivo de sueño y alcanza una racha de 3 días.",
+        intro: [
+          { m: "happy", t: "Tres días. Y sin ayuda." },
+          { m: "idle", t: "Ya está. Comprobado. Lo tuyo vale más que lo mío." },
+          { m: "sleepy", t: "Me deja bastante tranquila, la verdad." },
+          { m: "happy", t: "Y son la una y media, que es prácticamente de día para mis estándares." },
+          { m: "idle", t: "Me gusta la playa de noche." },
+          { m: "sleepy", t: "De día parece que todo tiene que servir para algo. Gente tomando el sol, gente corriendo, gente haciendo fotos de la misma ola." },
+          { m: "happy", t: "De noche solo está la playa. Y el ruido del agua." },
+          { m: "sleepy", t: "Y tú, si has venido." },
+          { m: "idle", t: "Creo que por eso empecé a venir. Cuando no puedo dormir necesito un sitio donde no pase nada." },
+          { m: "idle", t: "Un sitio que no me pida nada, básicamente." },
+          { m: "sleepy", t: "…" },
+          { m: "idle", t: "Aunque contigo últimamente pasan bastantes cosas, así que ese plan se ha ido al garete." },
+          { m: "happy", t: "No me quejo. Solo lo constato." },
+          { m: "idle", t: "He estado pensando en una cosa y te la voy a decir porque son la una y media y a la una y media digo cosas." },
+          { m: "sleepy", t: "Llevo ocho años saliendo de noche y nunca me había encontrado con nadie dos veces." },
+          { m: "idle", t: "Con gente sí. Con el señor que pasea al perro a las cuatro. Con los que salen a correr antes de trabajar." },
+          { m: "sleepy", t: "Pero nadie se para. La noche es de gente que va a algún sitio." },
+          { m: "happy", t: "Tú te paras. Eso es lo raro." },
+          { m: "idle", t: "Ah, espera. Te he traído una cosa y es completamente práctica, no le des vueltas." },
+          { m: "sleepy", t: "Es una linterna de llavero. De las malas. Se le acaba la pila en nada." },
+          { m: "idle", t: "Es que el parque está oscurísimo por la parte de los bancos y yo te veo llegar cuando ya estás encima." },
+          { m: "happy", t: "Y me paso el rato mirando hacia la entrada como una tonta por si eres tú o es el señor del perro." },
+          { m: "idle", t: "Así que enciéndela cuando entres y ya está. Me ahorras diez minutos de mirar." },
+          { m: "sleepy", t: "No es un detalle. Es logística." },
+          { m: "happy", t: "…Vale, eso lo he oído decir a alguien y me ha parecido una frase muy útil." },
+          { m: "idle", t: "Bueno, deberes, que si no esto se convierte en un club de gente sin sueño." },
+          { m: "sleepy", t: "Dos noches más durmiendo lo tuyo. Y quiero que llegues a tres días seguidos cuidándote." },
+          { m: "idle", t: "Seguidos. Esa es la parte difícil y lo sé perfectamente." },
+          { m: "happy", t: "Yo llevo ocho años sin encadenar tres de nada." },
+          { m: "sleepy", t: "Así que quiero ver a alguien haciéndolo. Aunque sea de lejos, aunque sea a través de una app." },
+          { m: "idle", t: "Me sirve para creerme que se puede." },
+        ],
+        replies: [
+          { t: "¿Y si un día no vengo?", m: "idle",
+            r: [{ m: "sleepy", t: "Pues no vienes." }, { m: "idle", t: "Yo he estado aquí sola ocho años. Sé hacerlo." },
+              { m: "sleepy", t: "…" }, { m: "idle", t: "Lo que pasa es que ahora se me da peor. Eso sí que no me lo esperaba." }] },
+          { t: "Te veo yo a ti desde lejos.", m: "happy",
+            r: [{ m: "happy", t: "Eso es porque yo llevo una almohada." },
+              { m: "idle", t: "Es difícil no verme. Es el precio de tener a Gilbert." },
+              { m: "happy", t: "Él dice que merece la pena." }, { m: "sleepy", t: "Lo digo yo. Ya lo sabes." }] },
+          { t: "Gracias por la linterna.", m: "happy",
+            r: [{ m: "idle", t: "He dicho que era logística." }, { m: "happy", t: "…" },
+              { m: "sleepy", t: "De nada. Va en serio, no la pierdas, que me costó dos euros y me hizo ilusión comprarla." }] },
+        ],
+        snap: (g) => ({ since: todayStr() }),
+        subs: [
+          (g, s) => sleepDaysSince(g, s.since) >= 2,
+          (g) => (g.player.streak || 0) >= 3,
+        ],
+        check: (g, s) => sleepDaysSince(g, s.since) >= 2 && (g.player.streak || 0) >= 3 },
+      /* CAPÍTULO 5 — Segundo sueño. SOÑAR uso 2 de 4 (4 noches + 1 victoria = 5 unidades). */
+      { title: "Segundo sueño", zone: "playa", timeWindow: { from: "22:00", to: "07:00" },
+        objective: "Duerme 4 noches cumpliendo tu objetivo de sueño y consigue una victoria.",
+        intro: [
+          { m: "happy", t: "Tres días seguidos." },
+          { m: "idle", t: "Seguidos de verdad, además. Lo he mirado tres veces." },
+          { m: "sleepy", t: "Y encima dormiste dos noches enteras por el medio." },
+          { m: "happy", t: "Eres insoportable y me alegro muchísimo." },
+          { m: "sleepy", t: "He estado pensando en lo de la otra noche. Bastante más de lo que pensaba pensar." },
+          { m: "idle", t: "Si pude soñar una condición una vez, quizá pueda hacerlo otra." },
+          { m: "happy", t: "No sé por qué funciona. Y sinceramente, prefiero no saberlo demasiado." },
+          { m: "idle", t: "Hay cosas que funcionan mejor si no las desmontas." },
+          { m: "sleepy", t: "Como cuando de pequeña sabía que Gilbert era una almohada y aun así funcionaba." },
+          { m: "idle", t: "Saberlo no lo rompía. Analizarlo sí lo habría roto." },
+          { m: "sleepy", t: "…" },
+          { m: "idle", t: "Aunque hay algo que sí quiero decirte antes, porque llevo tres noches queriendo decirlo." },
+          { m: "sleepy", t: "Las dos últimas veces que he dormido bien ha sido después de venir aquí." },
+          { m: "idle", t: "No digo que sea por ti. Puede ser el aire, o el ruido del agua, o que ya estoy tan cansada que caería igual." },
+          { m: "sleepy", t: "Pero es la primera vez en ocho años que hay un patrón." },
+          { m: "happy", t: "Y a mí los patrones me dan una alegría enorme. Es lo contrario de estar de guardia." },
+          { m: "idle", t: "Bueno. Vamos a hacerlo otra vez, que para eso hemos venido." },
+          { m: "sleepy", t: "Dime qué tienes ahora." },
+          { m: "idle", t: "…Vale. Cuatro noches durmiendo lo tuyo. Y una victoria." },
+          { m: "happy", t: "Cinco cosas. Te voy a quitar una." },
+          { m: "sleepy", t: "Y ya te aviso de que va a ser la que menos falta te haga, porque es lo que pasa siempre." },
+          { m: "hug", t: "Gilbert, arriba. Digo abajo." },
+          { m: "sleepy", t: "Tú quédate cerca. No porque haga falta. Porque me apetece." },
+          { m: "hug", t: "Buenas noches." },
+          { m: "sleepy", t: "— transición de sueño —" },
+          { m: "sleepy", t: "…" },
+          { m: "happy", t: "Otra vez." },
+          { m: "idle", t: "Vale. Ya no es casualidad. Ya lo podemos decir." },
+        ],
+        replies: [
+          { t: "Entonces vengo más.", m: "happy",
+            r: [{ m: "happy", t: "…" }, { m: "sleepy", t: "No lo digas así, que luego te lo tomo en serio." },
+              { m: "idle", t: "Yo me tomo las cosas en serio. Es un defecto." }] },
+          { t: "¿Duermes mejor últimamente?", m: "idle",
+            r: [{ m: "idle", t: "Un poco." }, { m: "sleepy", t: "Poquísimo. Pero un poco." },
+              { m: "happy", t: "Y me da un miedo horrible decirlo en voz alta por si se estropea." }] },
+          { t: "No lo desmontes, entonces.", m: "happy",
+            r: [{ m: "happy", t: "Exacto." }, { m: "idle", t: "Gracias por no preguntar más." },
+              { m: "sleepy", t: "Casi todo el mundo pregunta más." }] },
+        ],
+        setFlags: ["wendyDream_c5"],
+        snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
+        subs: [
+          { count: (g, s) => sleepDaysSince(g, s.since) + (g.wendyDream_c5 ? 1 : 0), goal: 4 },
+          (g, s) => (g.matchHistory || []).slice(s.matchCount).some((m) => m.res === "V"),
+        ],
+        check: (g, s) => sleepDaysSince(g, s.since) + (g.wendyDream_c5 ? 1 : 0) >= 4 &&
+          (g.matchHistory || []).slice(s.matchCount).some((m) => m.res === "V") },
+      /* CAPÍTULO 6 — La persona que espera. Pico del reloj (3:45): a partir de aquí el
+         número solo baja. */
+      { title: "La persona que espera", zone: "parque", timeWindow: { from: "22:00", to: "07:00" },
+        objective: "Cierra 4 días de objetivos.",
+        intro: [
+          { m: "sleepy", t: "Cuatro noches. Y la victoria." },
+          { m: "idle", t: "Lo vi ayer. Bueno, lo vi anteayer y ayer lo volví a mirar." },
+          { m: "happy", t: "Son las cuatro menos cuarto, por cierto." },
+          { m: "sleepy", t: "Sí. Es tarde incluso para mí." },
+          { m: "idle", t: "Anoche pensé que no vendrías." },
+          { m: "sleepy", t: "Y me quedé despierta un rato más." },
+          { m: "happy", t: "No mucho." },
+          { m: "idle", t: "Bueno… bastante. Hasta las cinco y media." },
+          { m: "sleepy", t: "Y hoy me he vuelto a quedar, que es por lo que son las cuatro menos cuarto y sigo aquí." },
+          { m: "idle", t: "Es raro esperar a alguien a estas horas." },
+          { m: "idle", t: "Normalmente la gente que está despierta a las cuatro está esperando que llegue la mañana. Es lo único que hay que esperar." },
+          { m: "happy", t: "Yo estaba esperando que llegaras tú." },
+          { m: "sleepy", t: "No hace falta que digas nada. Ya sé que suena un poco intenso." },
+          { m: "idle", t: "…" },
+          { m: "sleepy", t: "Y también me he dado cuenta de otra cosa, ya puestos." },
+          { m: "idle", t: "Antes salía porque no podía dormir. Esa era la causa y esto era la consecuencia." },
+          { m: "sleepy", t: "Y últimamente hay noches en las que salgo antes de saber si voy a poder dormir o no." },
+          { m: "idle", t: "Que es exactamente al revés." },
+          { m: "happy", t: "Y no sé si eso es bueno o si me acabo de meter en un lío." },
+          { m: "idle", t: "Vale. Te voy a pedir algo y esta vez no va de dormir, que ya me he dado cuenta de que soy pesadísima." },
+          { m: "happy", t: "Cuatro días cerrados. Enteros, a tu manera, como los cierres tú." },
+          { m: "sleepy", t: "Es que yo espero. Es lo único que hago bien y llevo ocho años practicándolo." },
+          { m: "idle", t: "Y esperar es fácil cuando no hay nada al final." },
+          { m: "sleepy", t: "Ahora hay algo al final y de repente se me da fatal." },
+          { m: "idle", t: "Así que dame cuatro días en los que sepa que estás bien, aunque no te vea." },
+          { m: "happy", t: "Y así puedo esperar tranquila, que es lo que llevo pidiendo toda la noche sin decirlo." },
+        ],
+        replies: [
+          { t: "Yo también vengo a propósito.", m: "idle",
+            r: [{ m: "idle", t: "…" }, { m: "happy", t: "Ya lo sé." },
+              { m: "sleepy", t: "Llevas dos semanas encendiendo la linterna en la entrada." },
+              { m: "happy", t: "Nadie enciende una linterna sin querer." }] },
+          { t: "Podrías escribirme y ya está.", m: "idle",
+            r: [{ m: "idle", t: "…" }, { m: "sleepy", t: "Se me había ocurrido." },
+              { m: "idle", t: "Y luego pensé que si te escribo, esto pasa a ser una cosa que se organiza." },
+              { m: "sleepy", t: "Y me gusta que sea una cosa que ocurre." }] },
+          { t: "No suena intenso.", m: "happy",
+            r: [{ m: "happy", t: "Sí suena intenso." },
+              { m: "sleepy", t: "Pero gracias por mentir. Son las cuatro menos cuarto, se agradece." }] },
+        ],
+        setFlags: ["wendyEspera"],
+        snap: () => ({ since: todayStr() }),
+        subs: [
+          (g, s) => daysGoalsCompletedSince(g, s.since) >= 4,
+        ],
+        check: (g, s) => daysGoalsCompletedSince(g, s.since) >= 4 },
+      /* CAPÍTULO 7 — Tercer sueño. SOÑAR uso 3 de 4 (5 noches + 2 días = 7 unidades). CAMBIO
+         DE ZONA respecto a la v2 (parque→playa) para cumplir la regla visual: los cuatro
+         sueños ocurren siempre en la playa. */
+      { title: "Tercer sueño", zone: "playa", timeWindow: { from: "22:00", to: "07:00" },
+        objective: "Duerme 5 noches cumpliendo tu objetivo de sueño y cierra 2 días de objetivos.",
+        intro: [
+          { m: "happy", t: "Cuatro días. Y yo he esperado tranquila, más o menos." },
+          { m: "idle", t: "Miento. He esperado fatal. Pero he esperado sabiendo que estabas bien, que era lo que pedí." },
+          { m: "sleepy", t: "La una y cuarto, por cierto." },
+          { m: "happy", t: "Cada vez salgo antes. No sé qué me está pasando." },
+          { m: "idle", t: "Hoy estoy cansada." },
+          { m: "sleepy", t: "Pero del cansancio bueno. Ese en el que sabes que en cuanto cierres los ojos te vas a dormir." },
+          { m: "happy", t: "Ese es mi favorito. Es como cuando te toca algo en una tómbola." },
+          { m: "idle", t: "El otro cansancio, el de estar despierta a la fuerza, es una cosa horrible que no le deseo a nadie." },
+          { m: "sleepy", t: "Estás agotada y a la vez completamente encendida. Es una contradicción y no se apaga." },
+          { m: "idle", t: "Este no. Este es el de la gente normal. Llevo tres días teniéndolo y todavía me sorprende." },
+          { m: "happy", t: "…" },
+          { m: "idle", t: "Antes de dormir quería hacer una cosa." },
+          { m: "sleepy", t: "Soñar contigo otra vez." },
+          { m: "idle", t: "No de esa manera." },
+          { m: "happy", t: "Bueno… ya sabes lo que quiero decir. Son la una y cuarto, no me hagas explicarlo." },
+          { m: "idle", t: "Quiero ver si vuelve a pasar. Y quiero verlo ahora que estoy durmiendo mejor, que es lo que de verdad me interesa comprobar." },
+          { m: "sleepy", t: "Porque si solo funcionaba cuando estaba destrozada, entonces esto tiene un precio y prefiero saberlo." },
+          { m: "idle", t: "Vale. Dime qué tienes ahora." },
+          { m: "sleepy", t: "…" },
+          { m: "idle", t: "Cinco noches durmiendo lo tuyo. Y dos días cerrados por el medio." },
+          { m: "happy", t: "Siete cosas. Muchas cosas." },
+          { m: "sleepy", t: "Voy a quitarte una. Sigue siendo una. No mejoro con la práctica, resulta." },
+          { m: "hug", t: "Gilbert y yo estamos listos." },
+          { m: "idle", t: "Tú solo quédate por aquí." },
+          { m: "hug", t: "Buenas noches." },
+          { m: "sleepy", t: "— transición de sueño —" },
+          { m: "sleepy", t: "…" },
+          { m: "happy", t: "Sigue funcionando." },
+          { m: "idle", t: "Y he dormido bien. Las dos cosas a la vez." },
+          { m: "sleepy", t: "No tiene precio. Menos mal." },
+        ],
+        replies: [
+          { t: "¿Y si tiene precio?", m: "idle",
+            r: [{ m: "idle", t: "…" }, { m: "sleepy", t: "Pues dejamos de hacerlo." },
+              { m: "idle", t: "No voy a estar peor a propósito para que a ti te salga un día gratis." },
+              { m: "happy", t: "Eso sería el peor trato del mundo y me insultaría bastante." }] },
+          { t: "Duermes mejor desde que vienes aquí.", m: "happy",
+            r: [{ m: "happy", t: "Ya lo sé." },
+              { m: "sleepy", t: "Llevo dos semanas sin decirlo en voz alta por si al decirlo se acaba." },
+              { m: "idle", t: "Y lo acabas de decir tú, así que ahora es culpa tuya." }] },
+          { t: "Descansa y ya está.", m: "idle",
+            r: [{ m: "sleepy", t: "…" }, { m: "idle", t: "Es la primera vez que alguien me dice eso sin sonar a reproche." },
+              { m: "happy", t: "Normalmente «descansa» quiere decir «me estás cansando a mí»." }] },
+        ],
+        setFlags: ["wendyDream_c7"],
+        snap: () => ({ since: todayStr() }),
+        subs: [
+          { count: (g, s) => sleepDaysSince(g, s.since) + (g.wendyDream_c7 ? 1 : 0), goal: 5 },
+          { count: (g, s) => daysGoalsCompletedSince(g, s.since), goal: 2 },
+        ],
+        check: (g, s) => sleepDaysSince(g, s.since) + (g.wendyDream_c7 ? 1 : 0) >= 5 &&
+          daysGoalsCompletedSince(g, s.since) >= 2 },
+      /* CAPÍTULO 8 — No todo tiene que estar hecho. MISIÓN FIRMA: única etapa del juego
+         cuyo objetivo no pide rendimiento, solo dormir. Salud: aquí se establece que Wendy
+         ya ha buscado ayuda profesional — no dramatizar, no convertirlo en el tema. */
+      { title: "No todo tiene que estar hecho", zone: "playa", timeWindow: { from: "22:00", to: "07:00" },
+        objective: "Duerme 5 noches cumpliendo tu objetivo de sueño.",
+        intro: [
+          { m: "happy", t: "Cinco noches. Cinco." },
+          { m: "idle", t: "Y los dos días, aunque uno te lo quité yo." },
+          { m: "sleepy", t: "Las doce y cuarenta, por cierto. Estoy saliendo antes de la una y eso no me pasaba desde el instituto." },
+          { m: "idle", t: "¿Sabes qué he aprendido este mes?" },
+          { m: "sleepy", t: "Que cuando tienes muchas cosas pendientes, dormir parece perder el tiempo." },
+          { m: "idle", t: "Y no es una sensación tonta. Es matemática. Ocho horas durmiendo son ocho horas no haciendo." },
+          { m: "sleepy", t: "Yo llevaba ocho años haciendo esa cuenta todas las noches a las dos de la mañana." },
+          { m: "idle", t: "Y luego duermes un poco y al día siguiente todo sigue exactamente igual de pendiente." },
+          { m: "happy", t: "Pero tú estás mejor. Y eso cambia bastante las cosas." },
+          { m: "idle", t: "Porque la lista no se hace más corta durmiendo. Se hace más corta el día siguiente, y el día siguiente depende de cómo llegues." },
+          { m: "sleepy", t: "Supongo que por eso me gusta tanto dormir. No porque desaparezcan los problemas." },
+          { m: "happy", t: "Porque cuando te despiertas puedes volver a ocuparte de ellos." },
+          { m: "idle", t: "Eso es exactamente lo que hace Gilbert conmigo." },
+          { m: "sleepy", t: "No resuelve nada. Nunca ha resuelto nada. Es una almohada." },
+          { m: "idle", t: "Solo me recuerda que puedo parar. Aunque sea un poco. Aunque sea mal." },
+          { m: "happy", t: "Que es más de lo que hace mucha gente con brazos y todo." },
+          { m: "idle", t: "Y ahora te voy a pedir la cosa más aburrida de toda la campaña, y lo voy a hacer sin ninguna vergüenza." },
+          { m: "sleepy", t: "Cinco noches. Solo eso." },
+          { m: "idle", t: "Nada de partidos, nada de números, nada de rachas." },
+          { m: "happy", t: "Cinco noches durmiendo lo que tienes que dormir y ya está." },
+          { m: "idle", t: "Porque llevo un mes viéndote hacer cosas y quiero ver qué pasa si durante cinco noches no haces ninguna." },
+          { m: "sleepy", t: "Es un experimento. Y sí, soy el sujeto de control, que es una posición horrible." },
+        ],
+        replies: [
+          { t: "A mí me cuesta parar.", m: "idle",
+            r: [{ m: "idle", t: "Ya." }, { m: "sleepy", t: "Se te nota en que cierras días a las once y media de la noche." },
+              { m: "happy", t: "Yo también lo hacía. Sigo haciéndolo. No soy un buen ejemplo de nada." },
+              { m: "idle", t: "Pero al menos ahora lo sé, que es el primer paso de algo." }] },
+          { t: "¿Nunca has pensado en ir al médico?", m: "idle",
+            r: [{ m: "idle", t: "Fui." }, { m: "sleepy", t: "Hace tres años. Y volví el año pasado." },
+              { m: "idle", t: "Estoy en ello, básicamente. Va lento y es aburridísimo y no da para una conversación bonita en la playa." },
+              { m: "happy", t: "Pero gracias por preguntar sin ponerte pesado." }] },
+          { t: "Gilbert hace bastante para ser una almohada.", m: "happy",
+            r: [{ m: "happy", t: "Le va a encantar oír eso." }, { m: "sleepy", t: "Lo digo yo. Como siempre." },
+              { m: "happy", t: "Pero le va a encantar igual." }] },
+        ],
+        snap: () => ({ since: todayStr() }),
+        subs: [
+          (g, s) => sleepDaysSince(g, s.since) >= 5,
+        ],
+        check: (g, s) => sleepDaysSince(g, s.since) >= 5 },
+      /* CAPÍTULO 9 — Cuarto sueño. SOÑAR uso 4 de 4, desbloquea el modo infinito (flag real
+         en el capítulo 10, al completar ESTE objetivo — ver cabecera). Sin sub de sueño: el
+         crédito del sueño se aplica a los 4 días cerrados. Siembra «las que no eran a
+         propósito eran mejores», que prepara los capítulos 11 y 12. */
+      { title: "Cuarto sueño", zone: "playa", timeWindow: { from: "22:00", to: "07:00" },
+        objective: "Sube tu media (OVR) respecto al inicio del capítulo y cierra 4 días de objetivos.",
+        intro: [
+          { m: "happy", t: "Cinco noches y ni un solo número." },
+          { m: "idle", t: "¿Y sabes lo mejor? Que se te ve mejor. No en la app. En la cara." },
+          { m: "sleepy", t: "Las doce menos diez. Casi salgo el día correcto." },
+          { m: "happy", t: "Este es el último." },
+          { m: "idle", t: "No el último sueño de mi vida, no me mires así." },
+          { m: "sleepy", t: "El último de los que te debía." },
+          { m: "idle", t: "Después vas a poder hacerlo tú cuando quieras." },
+          { m: "happy", t: "Bueno. Una vez al día. No nos volvamos locos, que esto sigue siendo dormir y dormir tiene un límite." },
+          { m: "idle", t: "He tardado un poco en entender qué estaba pasando aquí, y creo que ya lo tengo." },
+          { m: "idle", t: "No soy yo la que completa tus cosas. Nunca lo he sido." },
+          { m: "sleepy", t: "Yo solo sueño con una posibilidad. Y cuando me despierto, resulta que una de tus cosas ha avanzado." },
+          { m: "idle", t: "Es como si el sueño no hiciera el trabajo, sino que abriera un hueco para que el trabajo cupiera." },
+          { m: "happy", t: "Que es exactamente lo que hace dormir, si lo piensas." },
+          { m: "sleepy", t: "…" },
+          { m: "idle", t: "Y hay otra cosa que he entendido y esta me gusta menos." },
+          { m: "sleepy", t: "He soñado contigo cuatro veces a propósito. Y unas cuantas más sin querer." },
+          { m: "idle", t: "Y las que no eran a propósito eran mejores." },
+          { m: "happy", t: "En esas no había ninguna condición pendiente. Solo estábamos aquí." },
+          { m: "sleepy", t: "Y me desperté sin nada completado, y aun así fue mejor noche." },
+          { m: "idle", t: "Última vez. Dime qué tienes." },
+          { m: "sleepy", t: "…Vale. Sube tu media, entonces. Un punto, lo que sea, pero que suba." },
+          { m: "idle", t: "Y cuatro días cerrados por el medio." },
+          { m: "happy", t: "Y esta vez, en vez de intentar quitarte la más útil, voy a soñar con lo que salga." },
+          { m: "sleepy", t: "Que es lo que he estado haciendo siempre sin admitirlo." },
+          { m: "hug", t: "Gilbert, la última. Luego te lo compenso." },
+          { m: "sleepy", t: "Buenas noches." },
+          { m: "sleepy", t: "— transición de sueño —" },
+          { m: "sleepy", t: "…" },
+          { m: "idle", t: "Ya está." },
+          { m: "happy", t: "Ahora te toca a ti. Una vez al día, cuando quieras, mientras yo esté aquí." },
+          { m: "sleepy", t: "Que voy a estar. Por si te lo estabas preguntando." },
+        ],
+        replies: [
+          { t: "Entonces sueña sin propósito.", m: "idle",
+            r: [{ m: "idle", t: "…" }, { m: "sleepy", t: "Eso no se decide. Ese es el problema de los sueños." },
+              { m: "happy", t: "Si pudieras elegirlos serían planes." }] },
+          { t: "¿Qué pasaba en los otros sueños?", m: "idle",
+            r: [{ m: "sleepy", t: "Nada." }, { m: "idle", t: "En serio, nada. El parque, el banco, la linterna encendida en la entrada." },
+              { m: "happy", t: "Los mejores sueños que he tenido en años y no pasa absolutamente nada en ellos." },
+              { m: "sleepy", t: "Ocho años de insomnio para acabar soñando con estar sentada." }] },
+          { t: "Voy a echar de menos esto.", m: "idle",
+            r: [{ m: "idle", t: "…" }, { m: "sleepy", t: "No se acaba." },
+              { m: "happy", t: "Se acaba la parte de los cuatro. Lo otro sigue." },
+              { m: "idle", t: "…Eso espero, vamos." }] },
+        ],
+        setFlags: ["wendyDream_c9"],
+        snap: (g) => ({ since: todayStr(), ovr: calcOVR(g.player.stats) }),
+        subs: [
+          (g, s) => calcOVR(g.player.stats) > s.ovr,
+          { count: (g, s) => daysGoalsCompletedSince(g, s.since) + (g.wendyDream_c9 ? 1 : 0), goal: 4 },
+        ],
+        check: (g, s) => calcOVR(g.player.stats) > s.ovr &&
+          daysGoalsCompletedSince(g, s.since) + (g.wendyDream_c9 ? 1 : 0) >= 4 },
+      /* CAPÍTULO 10 — Siempre puedes volver. Aquí se activa wendySonarInfinito (al completar
+         el objetivo del capítulo 9, ver nota de cabecera): sin mecanismo real todavía
+         (fuera de alcance, decidido con el usuario), solo la flag y la siembra narrativa.
+         Última siembra antes de la crisis del capítulo 11. */
+      { title: "Siempre puedes volver", zone: "parque", timeWindow: { from: "22:00", to: "07:00" },
+        objective: "Alcanza una racha de 5 días.",
+        intro: [
+          { m: "happy", t: "Has venido otra vez." },
+          { m: "idle", t: "Y con la media subida y los cuatro días, que ya ni te pregunto." },
+          { m: "sleepy", t: "Las once y veinte. Cada vez salgo antes y cada vez me da más vergüenza decirlo." },
+          { m: "idle", t: "Ahora ya no tengo que inventarme una excusa para estar aquí." },
+          { m: "sleepy", t: "Bueno… quizá sí." },
+          { m: "happy", t: "Me gusta inventarme excusas. Son la mitad de mi personalidad." },
+          { m: "idle", t: "Antes pensaba que venir de noche era una forma de escapar. Que era lo que hacía la gente rota." },
+          { m: "sleepy", t: "Y me lo creía bastante. Me gustaba creérmelo, incluso. Era más interesante que «no duermo bien»." },
+          { m: "idle", t: "Ahora creo que simplemente me gusta este momento del día." },
+          { m: "idle", t: "Cuando casi todo el mundo está durmiendo y nadie espera nada de ti." },
+          { m: "happy", t: "Salvo tú. Tú apareces bastante." },
+          { m: "sleepy", t: "Eso está bien. Que quede claro que está bien." },
+          { m: "happy", t: "Gilbert está de acuerdo." },
+          { m: "idle", t: "Aunque, técnicamente, sigo hablando yo." },
+          { m: "sleepy", t: "…" },
+          { m: "idle", t: "Oye. Una cosa un poco rara y luego lo dejo." },
+          { m: "sleepy", t: "El jueves me metí en la cama a las once y me dormí en diez minutos." },
+          { m: "idle", t: "Diez minutos. Yo." },
+          { m: "happy", t: "Y estuvo muy bien, no me malinterpretes." },
+          { m: "sleepy", t: "Es solo que me desperté a las siete pensando «me he perdido la noche»." },
+          { m: "idle", t: "Y esa frase no tenía ningún sentido hace dos meses." },
+          { m: "idle", t: "Bueno, deberes rápidos que se me está haciendo tarde. Tarde para lo de ahora, quiero decir." },
+          { m: "happy", t: "Cinco días seguidos. Una racha de cinco." },
+          { m: "sleepy", t: "Y elijo eso porque es lo único que yo no he conseguido nunca." },
+          { m: "idle", t: "Cinco noches seguidas durmiendo, cinco días seguidos de nada. Nunca he encadenado cinco de algo." },
+          { m: "happy", t: "Así que hazlo tú y me lo cuentas." },
+          { m: "sleepy", t: "Y luego a lo mejor me lo creo." },
+        ],
+        replies: [
+          { t: "Yo estuve aquí el jueves.", m: "idle",
+            r: [{ m: "sleepy", t: "…" }, { m: "idle", t: "Ya lo sé." },
+              { m: "happy", t: "Vi la linterna desde mi ventana. En serio, se ve desde mi ventana." },
+              { m: "sleepy", t: "Y me quedé mirándola un rato y luego me dormí igual." },
+              { m: "idle", t: "No sé qué hacer con eso." }] },
+          { t: "Dormir no es perderse nada.", m: "idle",
+            r: [{ m: "idle", t: "Ya." }, { m: "sleepy", t: "Eso es lo que llevo diciéndote un mes entero, así que gracias por devolvérmelo." },
+              { m: "happy", t: "Es más fácil decirlo que creérselo, resulta." }] },
+          { t: "Puedes venir aunque hayas dormido.", m: "idle",
+            r: [{ m: "idle", t: "…" }, { m: "sleepy", t: "Supongo." },
+              { m: "happy", t: "No se me había ocurrido, la verdad. Y eso es un poco preocupante." }] },
+        ],
+        setFlags: ["wendySonarInfinito"],
+        snap: () => ({ since: todayStr() }),
+        subs: [
+          (g) => (g.player.streak || 0) >= 5,
+        ],
+        check: (g) => (g.player.streak || 0) >= 5 },
+      /* CAPÍTULO 11 — La noche que no vine. CAPÍTULO NUEVO (la v2 no tenía crisis). El
+         conflicto sale de la propia mecánica del personaje: Wendy solo existe entre las
+         22:00 y las 07:00, y curarse significaría dejar de estar despierta a esa hora.
+         LÍNEA ROJA DE SALUD: nombra el pensamiento de dormir peor a propósito y lo rechaza
+         dos veces en la misma escena — no alterar esa estructura. Pose "despierta": sin
+         asset (ver NPCS.wendy), cae a idle automáticamente. */
+      { title: "La noche que no vine", zone: "parque", timeWindow: { from: "22:00", to: "07:00" },
+        objective: "Cierra 5 días completos: entrenamiento, comida y sueño el mismo día.",
+        intro: [
+          { m: "despierta", t: "Perdona." },
+          { m: "despierta", t: "Perdona, perdona, perdona." },
+          { m: "idle", t: "Cinco días seguidos. Lo vi. Lo vi el martes y me alegré muchísimo y luego pasó lo otro." },
+          { m: "despierta", t: "Y llevo dos noches sin poder decírtelo." },
+          { m: "despierta", t: "El miércoles no vine." },
+          { m: "idle", t: "Y sé que viniste tú porque el jueves había una linterna en el banco. La dejaste ahí, ¿no? Como un idiota." },
+          { m: "sleepy", t: "…Gracias." },
+          { m: "despierta", t: "Me quedé dormida a las diez y media. En el sofá. Con la tele puesta." },
+          { m: "idle", t: "Y me desperté a las ocho de la mañana del día siguiente." },
+          { m: "despierta", t: "Nueve horas y media. Yo." },
+          { m: "idle", t: "Y en vez de alegrarme, que es lo que debería haber hecho…" },
+          { m: "despierta", t: "…me levanté con una sensación horrible en el estómago y tardé todo el día en entender cuál era." },
+          { m: "sleepy", t: "Y es esta, y la voy a decir aunque suene fatal." },
+          { m: "despierta", t: "Si me curo, esto se acaba." },
+          { m: "idle", t: "Piénsalo. Tú y yo solo existimos entre las diez de la noche y las siete de la mañana." },
+          { m: "despierta", t: "Todo lo que tenemos está construido encima de que yo no puedo dormir." },
+          { m: "idle", t: "Ocho años quejándome de esto. Ocho años. Y ahora resulta que era lo único que me traía aquí." },
+          { m: "despierta", t: "Y llevo dos días pensando en dormir peor a propósito. En serio. Lo he pensado de verdad." },
+          { m: "sleepy", t: "Y eso me da un miedo espantoso, porque es exactamente el tipo de cosa que hace la gente que está mal." },
+          { m: "idle", t: "Y yo no quiero estar mal. Yo quiero dormir." },
+          { m: "despierta", t: "Pero quiero esto más." },
+          { m: "sleepy", t: "…Y ya está. Ya lo he dicho. Son las cuatro y veinte y ya lo he dicho." },
+          { m: "idle", t: "Vale. Vamos a hacer una cosa, porque si me quedo aquí dándole vueltas amanece." },
+          { m: "sleepy", t: "Te voy a pedir lo más difícil que te he pedido nunca, y lo hago a propósito." },
+          { m: "idle", t: "Cinco días completos. Enteros. Entrenar, comer y dormir, los tres, cinco veces." },
+          { m: "despierta", t: "Y no los quiero para ver si puedes." },
+          { m: "sleepy", t: "Los quiero para saber que estás bien las noches que yo no aparezca." },
+          { m: "idle", t: "Porque van a existir esas noches. Cada vez más, espero." },
+          { m: "sleepy", t: "Y necesito que eso sea una buena noticia y no una que me dé miedo." },
+        ],
+        replies: [
+          { t: "Duerme. Yo sigo viniendo.", m: "idle",
+            r: [{ m: "despierta", t: "¿A qué?" },
+              { m: "idle", t: "Si yo estoy dormida, aquí no hay nada. Es un parque vacío a las tres de la mañana." },
+              { m: "sleepy", t: "…" }, { m: "idle", t: "Perdona. Eso ha sido injusto." },
+              { m: "sleepy", t: "Ya lo pienso. Dame un par de días y lo pienso bien." }] },
+          { t: "No dejes de dormir por mí.", m: "idle",
+            r: [{ m: "despierta", t: "No lo voy a hacer." },
+              { m: "idle", t: "Te lo prometo, no lo voy a hacer. Solo lo he pensado." },
+              { m: "sleepy", t: "Pero necesitaba decirte que lo he pensado, porque si no lo digo se queda dentro y se pone peor." },
+              { m: "idle", t: "Gilbert ya lo sabía. Pero Gilbert no me contesta." }] },
+          { t: "El miércoles me alegré por ti.", m: "happy",
+            r: [{ m: "despierta", t: "…" }, { m: "idle", t: "¿Cómo que te alegraste?" },
+              { m: "sleepy", t: "Estuviste aquí solo hasta las tres." }, { m: "idle", t: "…" },
+              { m: "sleepy", t: "Vale. Necesito sentarme." }] },
+        ],
+        setFlags: ["wendyCrisis"],
+        snap: () => ({ since: todayStr() }),
+        subs: [
+          { count: (g, s) => proteinSleepDaysSince(g, s.since), goal: 5 },
+          { count: (g, s) => (g.logs ? Object.entries(g.logs).filter(([d, l]) => d >= s.since && l.closed && l.gym).length : 0), goal: 5 },
+        ],
+        check: (g, s) => proteinSleepDaysSince(g, s.since) >= 5 &&
+          Object.entries(g.logs || {}).filter(([d, l]) => d >= s.since && l.closed && l.gym).length >= 5 },
+      /* CAPÍTULO 12 — Las diez y cuarenta. Resuelve la crisis sin tocar la ventana horaria:
+         Wendy no deja de ser nocturna, deja de necesitar estar rota para serlo. Segundo
+         objeto (reloj parado): sin asset todavía, se mantienen las líneas y se omite el
+         grantItem/reveal. */
+      { title: "Las diez y cuarenta", zone: "playa", timeWindow: { from: "22:00", to: "07:00" },
+        objective: "Duerme 3 noches cumpliendo tu objetivo de sueño y consigue una victoria.",
+        intro: [
+          { m: "happy", t: "Cinco días completos." },
+          { m: "idle", t: "Los miré todas las mañanas. Todas. Era lo primero que hacía al despertarme." },
+          { m: "sleepy", t: "Y estabas bien todos los días, así que funcionó." },
+          { m: "happy", t: "Las diez y cuarenta, por cierto." },
+          { m: "idle", t: "Las diez y cuarenta." },
+          { m: "happy", t: "¿Te has dado cuenta de lo que significa eso?" },
+          { m: "sleepy", t: "Que no llevo despierta desde ayer. Que no estoy aquí porque no consiga dormirme." },
+          { m: "idle", t: "He cenado, he recogido, me he puesto una chaqueta y he salido." },
+          { m: "happy", t: "Como una persona que queda con alguien." },
+          { m: "idle", t: "He tardado ocho años y once capítulos en descubrir que se podía salir de casa a las diez y media sin ningún motivo médico." },
+          { m: "sleepy", t: "Y me siento un poco tonta, la verdad." },
+          { m: "idle", t: "Todo este tiempo pensé que lo que nos unía era estar despiertos a la fuerza." },
+          { m: "happy", t: "Y resulta que lo que nos une es que los dos venimos." },
+          { m: "sleepy", t: "Eso funciona a cualquier hora. Incluso a las diez y cuarenta." },
+          { m: "idle", t: "…" },
+          { m: "sleepy", t: "Y sí, ya sé que sigue siendo de noche. No he descubierto el sol ni nada." },
+          { m: "happy", t: "Pero hay una diferencia enorme entre las tres de la mañana y las diez y cuarenta." },
+          { m: "idle", t: "A las tres estás aquí porque no puedes estar en otro sitio." },
+          { m: "happy", t: "A las diez y cuarenta estás aquí porque has elegido estar aquí." },
+          { m: "idle", t: "Y ya que estamos, te doy esto, que llevo dos semanas en el bolsillo con él." },
+          { m: "sleepy", t: "Es un reloj. Está parado. Lleva parado desde hace como cuatro años." },
+          { m: "happy", t: "Marca las once y cinco desde entonces, lo cual es bastante gracioso si lo piensas." },
+          { m: "idle", t: "Nunca lo arreglé porque nunca lo necesité. Yo siempre sé la hora." },
+          { m: "sleepy", t: "Y lo llevaba puesto por la broma. Un reloj parado acierta dos veces al día, que es más de lo que acierta mucha gente." },
+          { m: "happy", t: "Pero ya no me hace tanta gracia ser la que siempre sabe qué hora es." },
+          { m: "idle", t: "Así que te lo quedas tú. Y si alguna vez lo arreglas, no me lo cuentes." },
+          { m: "idle", t: "Bueno. Deberes, que son casi las once y me estoy volviendo una señora." },
+          { m: "happy", t: "Tres noches durmiendo lo tuyo y una victoria." },
+          { m: "sleepy", t: "Es poco. Es a propósito." },
+          { m: "idle", t: "Es que ya no te lo pido para comprobar nada. Ni para tener un motivo para verte." },
+          { m: "happy", t: "Te lo pido porque quiero que estés bien, y ya está, que es una cosa que se puede querer sin más." },
+          { m: "sleepy", t: "Me ha costado doce capítulos aprender a pedir algo así de sencillo." },
+        ],
+        replies: [
+          { t: "Podríamos vernos de día.", m: "idle",
+            r: [{ m: "sleepy", t: "…" }, { m: "idle", t: "Uf." },
+              { m: "happy", t: "Vamos a ir por partes, que acabo de conseguir salir a las diez y media." },
+              { m: "sleepy", t: "Pero anótalo. Anótalo en algún sitio." }] },
+          { t: "Las once y cinco es una buena hora.", m: "happy",
+            r: [{ m: "happy", t: "Es una hora perfecta." },
+              { m: "sleepy", t: "Es la hora a la que la gente normal se está durmiendo y a la que yo llevo ocho años despertándome del todo." },
+              { m: "idle", t: "Ese reloj lleva cuatro años burlándose de mí." }] },
+          { t: "¿Y Gilbert qué opina de todo esto?", m: "happy",
+            r: [{ m: "happy", t: "Gilbert está encantado." },
+              { m: "sleepy", t: "Lleva diecisiete años de guardia. Está deseando que le den la baja." },
+              { m: "idle", t: "…Sí, ya sé que es una almohada. Déjame." }] },
+        ],
+        setFlags: ["wendyEleccion"],
+        snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
+        subs: [
+          (g, s) => sleepDaysSince(g, s.since) >= 3,
+          (g, s) => (g.matchHistory || []).slice(s.matchCount).some((m) => m.res === "V"),
+        ],
+        check: (g, s) => sleepDaysSince(g, s.since) >= 3 &&
+          (g.matchHistory || []).slice(s.matchCount).some((m) => m.res === "V") },
+      /* FINAL — Buenas noches. El reloj se rompe: Wendy falla la hora por primera y única
+         vez, porque se había dormido. Pago de Gilbert («es imposible hacer dormir a ese
+         chico»). NO lleva final:true — la última etapa es el EPÍLOGO, y el reward se mueve
+         ahí (aquí no fires nunca: reward solo salta al ENTRAR en una etapa final:true). */
+      { title: "Buenas noches", zone: "parque", timeWindow: { from: "22:00", to: "07:00" },
+        objective: "Cierra 7 días de objetivos y alcanza una racha de 7 días.",
+        intro: [
+          { m: "sleepy", t: "…" },
+          { m: "sleepy", t: "Ah. Perdona. Me había quedado traspuesta en el banco." },
+          { m: "idle", t: "Son… la una y diez." },
+          { m: "idle", t: "…" },
+          { m: "sleepy", t: "¿Las doce menos veinte?" },
+          { m: "happy", t: "Me he equivocado." },
+          { m: "happy", t: "Me he equivocado por primera vez en ocho años y me acabas de ver hacerlo." },
+          { m: "idle", t: "Y no sé si estoy horrorizada o si es lo mejor que me ha pasado nunca." },
+          { m: "happy", t: "Tres noches y la victoria, por cierto. Lo miré antes de salir." },
+          { m: "idle", t: "…" },
+          { m: "idle", t: "Creo que ya lo entiendes." },
+          { m: "sleepy", t: "No tienes que quedarte despierto por mí. Nunca has tenido que hacerlo, en realidad." },
+          { m: "happy", t: "Si tienes sueño, duerme." },
+          { m: "idle", t: "Si tienes cosas pendientes, ya las harás mañana. Mañana existe. Es lo que más me ha costado aprender." },
+          { m: "sleepy", t: "Y si alguna noche necesitas avanzar una de ellas…" },
+          { m: "hug", t: "…puedes cerrar los ojos. Yo también lo haré." },
+          { m: "idle", t: "…" },
+          { m: "idle", t: "Te voy a contar una última cosa de Gilbert y luego lo dejo en paz para siempre." },
+          { m: "sleepy", t: "Le he dado la baja." },
+          { m: "happy", t: "En serio. Le he dicho que ya no hace falta que se quede despierto." },
+          { m: "idle", t: "Diecisiete años de guardia. Desde que mi madre le dio el turno." },
+          { m: "sleepy", t: "Y ya no hace falta, porque resulta que no había nada de lo que estar pendiente. Nunca lo hubo." },
+          { m: "idle", t: "Solo había una niña de seis años que necesitaba que alguien estuviera despierto con ella." },
+          { m: "happy", t: "Y ahora, cuando estoy despierta a las tres, no estoy de guardia." },
+          { m: "happy", t: "Estoy contigo, que es una cosa completamente distinta y muchísimo mejor." },
+          { m: "sleepy", t: "Así que Gilbert se puede dormir." },
+          { m: "idle", t: "…Aunque probablemente se quede despierto igual. Es imposible hacer dormir a ese chico." },
+          { m: "happy", t: "…Sí, ya sé que es una almohada." },
+          { m: "happy", t: "No lo hace menos difícil." },
+          { m: "idle", t: "Bueno. Última cosa que te pido con capítulo detrás." },
+          { m: "happy", t: "Una semana." },
+          { m: "sleepy", t: "Siete días. Siete días cerrados y siete días seguidos." },
+          { m: "idle", t: "Y no es por el número. Es porque quiero que hagas una semana entera de las que yo no he tenido nunca." },
+          { m: "sleepy", t: "Siete noches durmiendo, siete mañanas levantándote, siete días haciendo lo que tenías que hacer." },
+          { m: "happy", t: "Una semana normal. La cosa más difícil del mundo." },
+          { m: "idle", t: "Y cuando la tengas, ven y me lo cuentas." },
+          { m: "sleepy", t: "Yo estaré aquí. Antes que otras veces, probablemente." },
+          { m: "happy", t: "Buenas noches." },
+        ],
+        replies: [
+          { t: "Gracias por los sueños.", m: "happy",
+            r: [{ m: "idle", t: "No me des las gracias por dormir." },
+              { m: "happy", t: "Es literalmente lo único que hago sin esfuerzo, y ni siquiera eso es verdad." },
+              { m: "sleepy", t: "…De nada." }] },
+          { t: "Eran las doce menos veinte.", m: "idle",
+            r: [{ m: "happy", t: "Ya lo sé." }, { m: "idle", t: "Y me da igual. Que quede constancia de que me da igual." },
+              { m: "sleepy", t: "Bueno. No me da igual. Me tiene fatal. Pero es un fatal nuevo." }] },
+          { t: "Dile a Gilbert que buenas noches.", m: "happy",
+            r: [{ m: "sleepy", t: "…" }, { m: "hug", t: "Se lo digo." },
+              { m: "happy", t: "Ya está. Se lo he dicho." },
+              { m: "idle", t: "Ha sido muy bonito. No lo estropees diciendo nada más." }] },
+        ],
+        snap: () => ({ since: todayStr() }),
+        subs: [
+          { count: (g, s) => daysGoalsCompletedSince(g, s.since), goal: 7 },
+          { count: (g) => g.player.streak || 0, goal: 7 },
+        ],
+        check: (g, s) => daysGoalsCompletedSince(g, s.since) >= 7 && (g.player.streak || 0) >= 7 },
+      /* EPÍLOGO — Las diez y cinco (última etapa: final:true, sin objetivo propio). Objeto
+         de cierre (pin): sin asset todavía, se mantienen las líneas y se omite el
+         grantItem/reveal — ver cabecera y NPCS.wendy. El reward (+1 MEN) se mueve aquí desde
+         el FINAL, porque solo salta al ENTRAR en la etapa con final:true. */
+      { title: "Las diez y cinco", zone: "parque", timeWindow: { from: "22:00", to: "07:00" }, final: true,
+        intro: [
+          { m: "happy", t: "Siete días." },
+          { m: "idle", t: "Una semana entera. Normal. Aburridísima." },
+          { m: "sleepy", t: "Te odio un poquito, para que lo sepas. Es un odio con mucho cariño." },
+          { m: "happy", t: "Las diez y cinco." },
+          { m: "happy", t: "Las diez y cinco. Y he dormido siete horas anoche." },
+          { m: "idle", t: "Las dos cosas a la vez. Eso es lo que quería enseñarte." },
+          { m: "sleepy", t: "He dormido bien y he salido igual." },
+          { m: "idle", t: "No porque no pudiera dormir. No porque estuviera dando vueltas. No porque necesitara un sitio donde no pasara nada." },
+          { m: "happy", t: "He salido porque quería verte. Eso es todo. Es ridículamente simple y me ha costado un año." },
+          { m: "idle", t: "…" },
+          { m: "sleepy", t: "Sigo sin dormir bien muchas noches. Que quede claro, no quiero venderte un final falso." },
+          { m: "idle", t: "Hay semanas malas. Va a haber semanas malas siempre, probablemente." },
+          { m: "happy", t: "Pero ya no salgo huyendo de la cama. Salgo hacia aquí." },
+          { m: "sleepy", t: "Y esa preposición ha cambiado toda mi vida, lo cual es una frase espantosa que no pienso repetir." },
+          { m: "idle", t: "Una última cosa y ya te dejo dormir, que son las diez y cinco y eres una persona con horarios." },
+          { m: "sleepy", t: "Toma." },
+          { m: "idle", t: "Es un pin. Es pequeño y no vale nada y lo tengo desde hace años." },
+          { m: "happy", t: "Estaba en la caja donde guardo las cosas que no sé dónde poner." },
+          { m: "sleepy", t: "Y ahora ya sé dónde ponerlo." },
+          { m: "idle", t: "Significa que estuviste despierto conmigo cuando yo no sabía hacer otra cosa." },
+          { m: "happy", t: "Y que te quedaste igual cuando aprendí." },
+          { m: "idle", t: "Voy a estar aquí. Casi todas las noches, de diez a siete." },
+          { m: "happy", t: "Aunque cada vez más cerca de las diez y menos cerca de las siete, con un poco de suerte." },
+          { m: "sleepy", t: "Y si alguna noche necesitas que sueñe algo por ti, me lo dices y lo intento." },
+          { m: "idle", t: "Una vez al día. Ni una más, que sigue siendo dormir y dormir tiene un límite." },
+          { m: "happy", t: "Ya te lo dije el primer día: uno de los dos tiene que hacerlo bien." },
+          { m: "sleepy", t: "Resulta que podíamos ser los dos." },
+          { m: "happy", t: "Buenas noches." },
+        ],
+        replies: [
+          { t: "Sigo teniendo la linterna.", m: "happy",
+            r: [{ m: "happy", t: "Ya lo sé. La veo desde la ventana." },
+              { m: "sleepy", t: "Todas las noches, a la hora que sea." },
+              { m: "idle", t: "Y ya no me hace falta para saber que has llegado." },
+              { m: "happy", t: "Pero enciéndela igual." }] },
+          { t: "Arreglé el reloj.", m: "idle",
+            r: [{ m: "idle", t: "…" }, { m: "sleepy", t: "Te dije que no me lo contaras." },
+              { m: "happy", t: "…" }, { m: "idle", t: "¿Qué hora marca?" },
+              { m: "happy", t: "…Vale. Esa sí es una buena hora." }] },
+          { t: "Buenas noches, Wendy.", m: "happy",
+            r: [{ m: "sleepy", t: "…" }, { m: "happy", t: "Buenas noches." },
+              { m: "idle", t: "Y esta vez lo digo en serio, que suelo decirlo a las cuatro de la mañana y no cuenta." }] },
+        ],
+        setFlags: ["wendyStoryComplete", "wendyPinEarned"],
+        objective: null,
+        check: () => true,
+        reward: (g) => {
+          const stats = { ...g.player.stats };
+          stats.MEN = Math.min(99, stats.MEN + 1);
+          return { ...g, player: { ...g.player, stats } };
+        } },
+    ],
+  }],
+};
+
 /* registro único: desde la fusión de La Metrópolis dentro de La Ciudad ya no hace
    falta separar por mapa (todas las zonas conviven en el mismo SVG). */
-const STORIES = { ...toStories(QUESTS), elisa: ELISA_STORY, milly: MILLY_STORY, yuna: YUNA_STORY, lopez: LOPEZ_STORY, igor: IGOR_STORY, lisa: KARLA_STORY, beka: BEKA_STORY, nina: NINA_STORY, coco: COCO_STORY, vera: VERA_STORY, alexia: ALEXIA_STORY, milo: MILO_STORY };
+const STORIES = { ...toStories(QUESTS), elisa: ELISA_STORY, milly: MILLY_STORY, yuna: YUNA_STORY, lopez: LOPEZ_STORY, igor: IGOR_STORY, lisa: KARLA_STORY, beka: BEKA_STORY, nina: NINA_STORY, coco: COCO_STORY, vera: VERA_STORY, alexia: ALEXIA_STORY, milo: MILO_STORY, wendy: WENDY_STORY };
 
 /* ============================================================
    OBJETOS COLECCIONABLES · dos tipos: "consumable" (los usas, dan
@@ -9079,10 +9968,15 @@ function ZoneScreen({ zone, pendingNpc, onBack, onOpenPaper, game, onOpenSobre, 
   const isPlaya = zone.id === "playa" && !!game.ninaStoryComplete;
   const fishedToday = isPlaya && game.ninaFishDay === todayStr();
   const sobreToday = isCasino && game && game.sobreDay === todayStr();
+  /* variante nocturna del fondo (ver WENDY_STORY): parque y playa tienen una versión de
+     noche pintada aparte; se usa entre las 22:00 y las 07:00, la misma ventana horaria de
+     Wendy, para que la "gramática visual" del documento se cumpla sin crear zonas nuevas. */
+  const hasNightBg = zone.id === "parque" || zone.id === "playa";
+  const bgId = hasNightBg && inTimeWindow({ from: "22:00", to: "07:00" }) ? `${zone.id}_noche` : zone.id;
   return (
     <div className="zone-screen">
       {imgOk ? (
-        <img key={zone.id} src={`/images/zones/${zone.id}.webp`} alt="" className="zone-bg-img" onError={() => setImgOk(false)} />
+        <img key={bgId} src={`/images/zones/${bgId}.webp`} alt="" className="zone-bg-img" onError={() => setImgOk(false)} />
       ) : (
         <div className="zone-bg-fallback" style={{ background:
           `linear-gradient(160deg, ${npc ? npc.color : "#7A8065"}77, #16190F 78%)` }} />
@@ -11161,6 +12055,7 @@ export default function App() {
       if (!st || st.stage === -1) {
         if (!chapter.trigger(out)) return;
         const s0 = chapter.stages[0];
+        if (!inTimeWindow(s0.timeWindow)) return; /* ver WENDY_STORY: fuera de su ventana horaria, ni arranca */
         const state = { chapter: chapterIdx, stage: 0, snap: s0.snap ? s0.snap(out) : {}, startDay: todayStr() };
         out = enterStage(out, s0);
         out = queueStageScene(out, def, key, s0, state, s0.introBuild ? s0.introBuild(out) : null);
@@ -11169,6 +12064,7 @@ export default function App() {
       }
       if (st.done) return;
       const stage = chapter.stages[st.stage];
+      if (!inTimeWindow(stage.timeWindow)) return; /* ver WENDY_STORY: fuera de ventana, no avanza ni se reevalúa */
       const deadlineHit = stage.deadlineDays && dayDiff(st.startDay, todayStr()) > stage.deadlineDays;
       if (!stage.check(out, st.snap) && !deadlineHit) return;
       const failed = deadlineHit && !stage.check(out, st.snap);

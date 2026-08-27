@@ -299,6 +299,16 @@ function sanitizeGame(g) {
      incompatibles con el puesto fijo y el ciclo de días alternos. Se descartan las dos:
      refreshCocoVisit generará una visita nueva y correcta en el Centro Comercial. */
   if (out.cocoVisit && out.cocoVisit.zone !== "tienda") { delete out.cocoVisit; delete out.cocoNextVisitDay; }
+  /* Desatasco de una sola vez: si el jugador ya conoce a Coco y su historia sigue activa
+     (misión incompleta) pero un cocoVisit/cocoNextVisitDay desajustado de una partida
+     antigua la dejaba sin aparecer nunca — bloqueando para siempre una misión que
+     necesita verla —, se fuerza que HOY sea un día activo. Marcado con cocoUnstuckV1
+     para que sea un reinicio puntual y no rompa la alternancia normal día sí/día no en
+     cargas futuras. */
+  if (out.cocoMet && !out.cocoStoryComplete && !out.cocoUnstuckV1) {
+    out.cocoUnstuckV1 = true;
+    if (!(out.cocoVisit && out.cocoVisit.day === todayStr())) { delete out.cocoVisit; delete out.cocoNextVisitDay; }
+  }
   /* gym: crear estructura en partidas anteriores al módulo y compactar sesiones antiguas.
      restDefault nunca ha sido configurable por el jugador (no existe UI para cambiarlo), así
      que cualquier partida guardada con el antiguo valor de 90s (1:30) se migra al nuevo

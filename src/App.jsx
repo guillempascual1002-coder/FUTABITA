@@ -293,22 +293,9 @@ function sanitizeGame(g) {
     const valid = ls.kind === "xp" || ls.kind === "fichas" || (ls.kind === "item" && ITEMS[ls.itemId]);
     if (!valid) delete out.casinoLastSpin;
   }
-  /* Coco v2 (ver refreshCocoVisit): antes rotaba por Parque/Barrio cada 5 días. Una partida
-     guardada a mitad de aquel ciclo podía dejarla plantada en una zona que ya no le
-     corresponde, o con una "próxima visita" hasta 5 días por delante — ambas cosas
-     incompatibles con el puesto fijo y el ciclo de días alternos. Se descartan las dos:
-     refreshCocoVisit generará una visita nueva y correcta en el Centro Comercial. */
-  if (out.cocoVisit && out.cocoVisit.zone !== "tienda") { delete out.cocoVisit; delete out.cocoNextVisitDay; }
-  /* Desatasco de una sola vez: si el jugador ya conoce a Coco y su historia sigue activa
-     (misión incompleta) pero un cocoVisit/cocoNextVisitDay desajustado de una partida
-     antigua la dejaba sin aparecer nunca — bloqueando para siempre una misión que
-     necesita verla —, se fuerza que HOY sea un día activo. Marcado con cocoUnstuckV1
-     para que sea un reinicio puntual y no rompa la alternancia normal día sí/día no en
-     cargas futuras. */
-  if (out.cocoMet && !out.cocoStoryComplete && !out.cocoUnstuckV1) {
-    out.cocoUnstuckV1 = true;
-    if (!(out.cocoVisit && out.cocoVisit.day === todayStr())) { delete out.cocoVisit; delete out.cocoNextVisitDay; }
-  }
+  /* Coco está oculta (ver HIDDEN_NPCS más abajo, que limpia cocoVisit/cocoMet/etc. del
+     todo): las migraciones de su ciclo día sí/día no de versiones anteriores ya no hacen
+     falta, las cubre esa limpieza general. */
   /* gym: crear estructura en partidas anteriores al módulo y compactar sesiones antiguas.
      restDefault nunca ha sido configurable por el jugador (no existe UI para cambiarlo), así
      que cualquier partida guardada con el antiguo valor de 90s (1:30) se migra al nuevo
@@ -383,6 +370,28 @@ function sanitizeGame(g) {
   if (out.questPending && !out.storyPending) { out.storyPending = out.questPending; delete out.questPending; }
   if (out.stories) { const rest = { ...out.stories }; REMOVED_NPCS.forEach((k) => delete rest[k]); out.stories = rest; }
   if (out.storyPending) { const rest = { ...out.storyPending }; REMOVED_NPCS.forEach((k) => delete rest[k]); out.storyPending = rest; }
+  /* Personajes ocultos temporalmente por rework pendiente (ver comentario junto a STORIES,
+     "Personajes ocultos") — a diferencia de REMOVED_NPCS (borrados del roster para
+     siempre), estos SÍ van a volver, pero el jugador pidió expresamente que cada uno
+     reinicie su historia desde cero cuando se reactive. Así que aquí no solo se ocultan en
+     la UI (CARDS/ZONES/STORIES más arriba): se limpia cualquier progreso, mensaje pendiente
+     o flag suya que hubiera quedado en la partida, para que al reactivarla arranque de
+     verdad desde el prólogo y no desde donde se quedó. */
+  const HIDDEN_NPCS = ["milly", "lopez", "igor", "lisa", "nina", "coco", "alexia", "milo"];
+  if (out.npcQueue) out.npcQueue = out.npcQueue.filter((e) => !HIDDEN_NPCS.includes(e.npc));
+  if (out.stories) { const rest = { ...out.stories }; HIDDEN_NPCS.forEach((k) => delete rest[k]); out.stories = rest; }
+  if (out.storyPending) { const rest = { ...out.storyPending }; HIDDEN_NPCS.forEach((k) => delete rest[k]); out.storyPending = rest; }
+  if (out.pendingAppearances) out.pendingAppearances = out.pendingAppearances.filter((p) => !p || !HIDDEN_NPCS.includes(p.npc));
+  [
+    "metMilly", "millyPinEarned",
+    "lopezPinEarned",
+    "metIgor", "igorPinEarned",
+    "metLisa", "karlaPinEarned",
+    "ninaMet", "ninaStoryComplete",
+    "cocoMet", "cocoStoryComplete", "cocoVisit", "cocoNextVisitDay", "cocoGreetDay", "cocoUnstuckV1", "cocoLog",
+    "alexiaMet", "alexiaStoryComplete", "alexiaVisit", "alexiaNextVisitDay",
+    "miloMet", "miloPinEarned",
+  ].forEach((k) => delete out[k]);
   /* cuando la historia de un personaje se reestructura a fondo (p.ej. VERA_STORY, que pasó
      de varios capítulos a uno solo con 15 etapas), una partida con progreso guardado en el
      formato antiguo se queda con un chapter/stage que ya no resuelve a ninguna etapa real
@@ -1387,8 +1396,11 @@ const AMBIENT_IGOR = [
 ];
 
 /* nombre de personaje -> pool ambiental, para la rotación diaria (ver processNewDays) */
+/* lopez/lisa/igor quitados de la rotación (ver comentario "personajes ocultos" junto a
+   STORIES): sus pools de arriba se dejan definidos por si se reactivan más adelante, pero
+   ya no se eligen aquí para que no aparezcan mensajes ambientales suyos. */
 const AMBIENT_BY_CHAR = {
-  yuna: AMBIENT_YUNA, elisa: AMBIENT_ELISA, lopez: AMBIENT_LOPEZ, lisa: AMBIENT_KARLA, igor: AMBIENT_IGOR,
+  yuna: AMBIENT_YUNA, elisa: AMBIENT_ELISA,
 };
 
 /* goles a lo largo de TODA la carrera (todas las temporadas), para el hito del Centro de Alto Rendimiento */
@@ -1485,7 +1497,7 @@ const ZONES = [
   { id: "oficina", kind: "npc", npc: "elisa", label: "Oficina", icon: "🏢", x: 26.11, y: 6.63,
     pts: "52.25 87.74 55.66 137.44 204.76 129.61 204.76 76.16 52.25 87.74",
     unlocked: (g) => isZoneUnlocked(g, "oficina") },
-  { id: "ciudad-dep", kind: "npc", npc: ["lopez", "elisa", "milly", "beka", "milo", "vera"], label: "Ciudad Deportiva", icon: "🏟️", x: 68.40, y: 31.75,
+  { id: "ciudad-dep", kind: "npc", npc: ["elisa", "beka", "vera"], label: "Ciudad Deportiva", icon: "🏟️", x: 68.40, y: 31.75,
     pts: "226.89 245.01 214.21 284.33 257.1 333.35 437.36 333.35 437.36 247.57 226.89 245.01",
     unlocked: (g) => isZoneUnlocked(g, "ciudad-dep") },
   { id: "kiosco", kind: "paper", npc: "milly", label: "Kiosco", icon: "📰", x: 71.79, y: 44.20,
@@ -1495,59 +1507,53 @@ const ZONES = [
   /* npc: "yuna" — casa sigue siendo la pantalla de trofeos (HouseRoom) por defecto, pero
      ahora también admite una escena de personaje encima (ver ZoneScreen: isHome no excluye
      ya pendingNpc), para las escenas de intimidad emocional de su campaña en Casa del jugador */
-  { id: "casa", kind: "home", npc: ["yuna", "lopez", "igor", "lisa", "beka", "vera"], label: "Tu Casa", icon: "🏠", x: 24.20, y: 45.68,
+  { id: "casa", kind: "home", npc: ["yuna", "beka", "vera"], label: "Tu Casa", icon: "🏠", x: 24.20, y: 45.68,
     pts: "91.14 348.16 163.66 373.18 152.42 429.35 76.85 405.35 91.14 348.16",
     unlocked: (g) => isZoneUnlocked(g, "casa") },
   /* varios personajes comparten esta zona de calle: la burbuja muestra a quien tenga
      algo pendiente ahora mismo (ver EXTRA_NPCS y CityMap); en reposo, el puntito de siempre */
-  { id: "barrio", kind: "npc", npc: ["yuna", "elisa", "milly", "lopez", "igor", "beka", "vera"], label: "El Barrio", icon: "🌆", x: 57.78, y: 58.78,
+  { id: "barrio", kind: "npc", npc: ["yuna", "elisa", "beka", "vera"], label: "El Barrio", icon: "🌆", x: 57.78, y: 58.78,
     pts: "217.78 461.01 217.78 507.48 318.38 500 318.38 465.1 217.78 461.01",
     unlocked: (g) => isZoneUnlocked(g, "barrio") },
-  { id: "car", kind: "npc", npc: ["lopez", "lisa", "elisa", "igor", "beka"], label: "Centro de Alto Rendimiento", icon: "🏋️", x: 66.84, y: 18.18,
+  { id: "car", kind: "npc", npc: ["elisa", "beka"], label: "Centro de Alto Rendimiento", icon: "🏋️", x: 66.84, y: 18.18,
     pts: "229.95 164.5 229.95 222.03 387.91 223.74 383.14 153.52 229.95 164.5",
     unlocked: (g) => isZoneUnlocked(g, "car") },
-  { id: "prensa", kind: "npc", npc: ["milly", "lisa", "beka"], label: "Sala de Prensa", icon: "🎙️", x: 27.50, y: 33.16,
+  { id: "prensa", kind: "npc", npc: ["beka"], label: "Sala de Prensa", icon: "🎙️", x: 27.50, y: 33.16,
     pts: "131.91 245.01 187.66 293.52 168.25 358.89 91.14 337.44 98.29 259.31 131.91 245.01",
     unlocked: (g) => isZoneUnlocked(g, "prensa") },
   /* la presentación de Karla ya no depende de metFlag/intro (eso duplicaba el prólogo real
      de KARLA_STORY en cuanto se desbloqueara la zona, igual que le pasaba a Igor/restaurante
      y le pasó de verdad a Milly antes de detectarlo): su propia historia ya se encarga */
-  { id: "patro", kind: "npc", npc: ["lisa", "elisa", "milly", "vera"], label: "Zona de Patrocinadores", icon: "🏙️", x: 36.27, y: 83.07,
+  { id: "patro", kind: "npc", npc: ["elisa", "vera"], label: "Zona de Patrocinadores", icon: "🏙️", x: 36.27, y: 83.07,
     pts: "131.25 570.8 86.31 660.67 163.35 715.53 190.77 690.44 214.21 702.11 245.34 669.43 185.86 599.69 131.25 570.8",
     unlocked: (g) => isZoneUnlocked(g, "patro") },
-  { id: "cantera", kind: "npc", npc: "lopez", label: "Cantera", icon: "🎓", x: 88.18, y: 46.28,
+  { id: "cantera", kind: "npc", npc: [], label: "Cantera", icon: "🎓", x: 88.18, y: 46.28,
     pts: "377.1 345.61 437.36 343.57 426.63 442.12 363.83 442.12 377.1 345.61",
     unlocked: (g) => isZoneUnlocked(g, "cantera") },
-  { id: "tienda", kind: "npc", npc: ["coco", "yuna", "lopez", "vera"], label: "Centro Comercial", icon: "🛍️", x: 84.10, y: 65.63,
+  { id: "tienda", kind: "npc", npc: ["yuna", "vera"], label: "Centro Comercial", icon: "🛍️", x: 84.10, y: 65.63,
     pts: "342.38 511.57 346.97 559.57 424.08 552.42 420 507.48 342.38 511.57",
     unlocked: (g) => isZoneUnlocked(g, "tienda") },
-  { id: "estadio", kind: "npc", npc: ["lopez", "yuna", "elisa", "milly", "igor", "beka", "vera"], label: "Gran Estadio", icon: "🏆", x: 74.47, y: 89.16,
+  { id: "estadio", kind: "npc", npc: ["yuna", "elisa", "beka", "vera"], label: "Gran Estadio", icon: "🏆", x: 74.47, y: 89.16,
     pts: "384.07 634.12 295.02 657.52 262.89 677.69 290.06 764.25 384.07 764.25 431.07 715.53 384.07 634.12",
     unlocked: (g) => isZoneUnlocked(g, "estadio"), big: true },
-  /* "milo" va ANTES que "vera" en esta lista a propósito: zoneActiveNpc (ver más abajo)
-     muestra la burbuja del primer npc de la lista con algo pendiente, y como Vera tiene
-     líneas en TODAS las escenas de MILO_STORY (es la intérprete, ver addScene/b.from),
-     con el orden alfabético original la burbuja del Parque mostraba siempre a Vera durante
-     toda la campaña de Milo en vez de a él. No afecta a Vera cuando tiene una escena propia
-     sin Milo: milo solo "gana" cuando de verdad hay algo suyo pendiente. */
-  { id: "parque", kind: "npc", npc: ["elisa", "lisa", "milly", "yuna", "lopez", "beka", "milo", "vera", "wendy"], label: "Parque", icon: "🌳", x: 47.99, y: 42.84,
+  { id: "parque", kind: "npc", npc: ["elisa", "yuna", "beka", "vera", "wendy"], label: "Parque", icon: "🌳", x: 47.99, y: 42.84,
     pts: "204.76 310.38 181.53 393.1 289.27 402.29 204.76 310.38",
     unlocked: (g) => isZoneUnlocked(g, "parque") },
-  { id: "casino", kind: "npc", npc: ["elisa", "lisa", "vera"], label: "Casino", icon: "🎰", x: 63.79, y: 72.25,
+  { id: "casino", kind: "npc", npc: ["elisa", "vera"], label: "Casino", icon: "🎰", x: 63.79, y: 72.25,
     pts: "262.21 525.86 321.95 522.8 333.44 636.16 297.83 644.33 256.59 572.84 262.21 525.86",
     unlocked: (g) => isZoneUnlocked(g, "casino") },
-  { id: "enfermeria", kind: "npc", npc: ["elisa", "milly", "beka"], label: "Enfermería", icon: "🏥", x: 70.56, y: 8.09,
+  { id: "enfermeria", kind: "npc", npc: ["elisa", "beka"], label: "Enfermería", icon: "🏥", x: 70.56, y: 8.09,
     pts: "269.53 96.59 375.7 85.45 379.45 140.6 271.57 150.46 269.53 96.59",
     unlocked: (g) => isZoneUnlocked(g, "enfermeria") },
-  { id: "playa", kind: "npc", npc: ["elisa", "milly", "lopez", "lisa", "yuna", "igor", "nina", "vera", "wendy"], label: "Playa", icon: "🏖️", x: 18.88, y: 62.76,
+  { id: "playa", kind: "npc", npc: ["elisa", "yuna", "vera", "wendy"], label: "Playa", icon: "🏖️", x: 18.88, y: 62.76,
     pts: "76.85 417.61 148.34 442.12 135.57 514.12 96.25 602.97 31.4 583.57 76.85 417.61",
     unlocked: (g) => isZoneUnlocked(g, "playa") },
-  { id: "atico", kind: "npc", npc: ["elisa", "lisa", "alexia"], label: "Ático de Lujo", icon: "🌇", x: 34.48, y: 19.29,
+  { id: "atico", kind: "npc", npc: ["elisa"], label: "Ático de Lujo", icon: "🌇", x: 34.48, y: 19.29,
     pts: "55.66 150.46 206.12 142.03 208.17 229.52 194.21 273.78 55.66 150.46",
     unlocked: (g) => isZoneUnlocked(g, "atico") },
   /* la presentación de Igor ya no depende de metFlag/intro (eso duplicaba el prólogo real
      de IGOR_STORY en cuanto se desbloqueara la zona): su propia historia ya se encarga */
-  { id: "restaurante", kind: "npc", npc: ["igor", "elisa"], label: "Restaurante", icon: "🍽️", x: 51.41, y: 50.53,
+  { id: "restaurante", kind: "npc", npc: ["elisa"], label: "Restaurante", icon: "🍽️", x: 51.41, y: 50.53,
     pts: "295.06 414.55 314.29 442.12 171.83 437.01 179.49 402.29 295.06 414.55",
     unlocked: (g) => isZoneUnlocked(g, "restaurante") },
   /* ya no está en DEFAULT_UNLOCKED_ZONES: cuando se añadió no tenía ningún personaje ni
@@ -9844,7 +9850,14 @@ const WENDY_STORY = {
 
 /* registro único: desde la fusión de La Metrópolis dentro de La Ciudad ya no hace
    falta separar por mapa (todas las zonas conviven en el mismo SVG). */
-const STORIES = { ...toStories(QUESTS), elisa: ELISA_STORY, milly: MILLY_STORY, yuna: YUNA_STORY, lopez: LOPEZ_STORY, igor: IGOR_STORY, lisa: KARLA_STORY, beka: BEKA_STORY, nina: NINA_STORY, coco: COCO_STORY, vera: VERA_STORY, alexia: ALEXIA_STORY, milo: MILO_STORY, wendy: WENDY_STORY };
+/* Personajes ocultos (rework todavía pendiente o con fallos conocidos: Milly, López, Igor,
+   Karla/Lisa, Nina, Coco, Alexia, Milo): se quitan de STORIES para que checkStories nunca
+   arranque ni avance su historia, de CARDS (galería de "Yo") y de los npc[] de ZONES (para
+   que no aparezcan en el mapa ni en la rotación ambiental). Sus MILLY_STORY/LOPEZ_STORY/etc.
+   se dejan definidas tal cual más arriba, listas para reactivarse aquí en cuanto se
+   reescriban bien — el propio jugador pidió reiniciar cada una desde cero cuando llegue
+   ese momento, así que de momento no hace falta tocar ni borrar su contenido. */
+const STORIES = { ...toStories(QUESTS), elisa: ELISA_STORY, yuna: YUNA_STORY, beka: BEKA_STORY, vera: VERA_STORY, wendy: WENDY_STORY };
 
 /* ============================================================
    OBJETOS COLECCIONABLES · dos tipos: "consumable" (los usas, dan
@@ -10036,30 +10049,33 @@ const ITEM_GIVE_REACTIONS = {
 /* ya no hace falta un campo "variants": ahora todas las poses de un personaje (incluidas
    las que antes eran variantes por zona) viven directamente en su propio NPCS[x].arts,
    así que la carta las recoge solas (ver CardDetail) */
+/* Milly/López/Igor/Lisa/Nina/Coco/Alexia/Milo quitados de la galería (ver comentario junto
+   a STORIES, "personajes ocultos"): sus entradas se dejan comentadas aquí mismo en vez de
+   borradas, para poder devolverlas tal cual en cuanto se reactiven. */
 const CARDS = [
   { npc: "elisa", unlocked: () => true,
     bio: "Mánager y entrenadora. Dura en el despacho, blanda cuando cree que nadie mira. Siempre tiene un plan, aunque no siempre lo comparta." },
   { npc: "yuna", unlocked: (g) => !!g.yunaMet,
     bio: "Superfan del Barça con fama de tsundere. Sabe tus estadísticas mejor que tú, aunque jure que 'solo pasaba por aquí'." },
-  { npc: "lopez", unlocked: () => true,
-    bio: "Capitán del vestuario. El brazalete le queda grande a cualquiera, pero a él le queda perfecto." },
-  { npc: "milly", unlocked: (g) => !!g.metMilly,
-    bio: "Del Kiosco. Te trae el periódico en persona cada día, con más cotilleos de los que pediste." },
-  { npc: "lisa", unlocked: (g) => !!g.metLisa,
-    bio: "Futbolista profesional, gestiona patrocinios. Engreída de cara al público, exigente de puertas para adentro." },
-  { npc: "igor", unlocked: (g) => !!g.metIgor, bio: "Chef estrella del Restaurante. Trata la nutrición como táctica de fútbol, con datos curiosos siempre a mano." },
+  // { npc: "lopez", unlocked: () => true,
+  //   bio: "Capitán del vestuario. El brazalete le queda grande a cualquiera, pero a él le queda perfecto." },
+  // { npc: "milly", unlocked: (g) => !!g.metMilly,
+  //   bio: "Del Kiosco. Te trae el periódico en persona cada día, con más cotilleos de los que pediste." },
+  // { npc: "lisa", unlocked: (g) => !!g.metLisa,
+  //   bio: "Futbolista profesional, gestiona patrocinios. Engreída de cara al público, exigente de puertas para adentro." },
+  // { npc: "igor", unlocked: (g) => !!g.metIgor, bio: "Chef estrella del Restaurante. Trata la nutrición como táctica de fútbol, con datos curiosos siempre a mano." },
   { npc: "beka", unlocked: (g) => !!g.bekaMet,
     bio: "Futbolista de otro club. Rival directa, competitiva y algo macarra — aunque de noche, en la Discoteca, deja de competir durante unas horas." },
-  { npc: "nina", unlocked: (g) => !!g.ninaMet,
-    bio: "La pescadora de la Playa. Nunca tiene prisa — y poco a poco te enseña que tampoco hace falta tenerla siempre." },
-  { npc: "coco", unlocked: (g) => !!g.cocoMet,
-    bio: "La tendera del Centro Comercial. Pija, coqueta y muy buena negociante — atiende un día sí y otro no, y siempre compra lo que ya no quieres." },
+  // { npc: "nina", unlocked: (g) => !!g.ninaMet,
+  //   bio: "La pescadora de la Playa. Nunca tiene prisa — y poco a poco te enseña que tampoco hace falta tenerla siempre." },
+  // { npc: "coco", unlocked: (g) => !!g.cocoMet,
+  //   bio: "La tendera del Centro Comercial. Pija, coqueta y muy buena negociante — atiende un día sí y otro no, y siempre compra lo que ya no quieres." },
   { npc: "vera", unlocked: (g) => !!g.veraMet,
     bio: "Artista observadora, algo despistada. Busca inspiración en tu rutina y termina pintando momentos que merece la pena recordar." },
-  { npc: "alexia", unlocked: (g) => !!g.alexiaMet,
-    bio: "Relajada, segura y muy ligada a la música. Convierte distintos estados mentales en cassettes que dan un empujón temporal a tu entrenamiento." },
-  { npc: "milo", unlocked: (g) => !!g.miloMet,
-    bio: "Una criatura que vive escondida tras una roca del Parque. Le cuesta confiar, pero poco a poco deja de necesitar esconderse." },
+  // { npc: "alexia", unlocked: (g) => !!g.alexiaMet,
+  //   bio: "Relajada, segura y muy ligada a la música. Convierte distintos estados mentales en cassettes que dan un empujón temporal a tu entrenamiento." },
+  // { npc: "milo", unlocked: (g) => !!g.miloMet,
+  //   bio: "Una criatura que vive escondida tras una roca del Parque. Le cuesta confiar, pero poco a poco deja de necesitar esconderse." },
   { npc: "wendy", unlocked: (g) => !!g.wendyMet,
     bio: "La encuentras de madrugada en el Parque o la Playa. No duerme bien casi nunca, pero ha aprendido a no salir huyendo de la cama." },
 ];
@@ -13078,7 +13094,10 @@ export default function App() {
      y, si es la primera vez, encola su escena de presentación. Se llama tras cualquier
      acción que pueda mover el requisito: media, goles de carrera o ascenso de categoría. */
   const checkZoneUnlocks = (g) => {
-    let out = refreshAlexiaVisit(refreshCocoGreeting(refreshCocoVisit(g)));
+    /* Coco y Alexia ocultas (ver comentario junto a STORIES): sus visitas diarias/saludo se
+       desactivan aquí en vez de borrar refreshCocoVisit/refreshCocoGreeting/refreshAlexiaVisit,
+       para poder reengancharlas tal cual cuando se reactiven. */
+    let out = g;
     [...ZONES, ...EXTRA_NPCS].forEach((z) => {
       if (!z.metFlag || out[z.metFlag] || (out.introQueued && out.introQueued[z.metFlag]) || !z.unlocked(out)) return;
       /* el flag "ya lo conoces" no se marca aquí: se marca cuando el jugador lee la escena
@@ -13507,9 +13526,6 @@ export default function App() {
         const known = {
           yuna: !!out.yunaMet && isZoneUnlocked(out, HOME_ZONE.yuna),
           elisa: isZoneUnlocked(out, HOME_ZONE.elisa),
-          lopez: isZoneUnlocked(out, HOME_ZONE.lopez),
-          lisa: !!out.metLisa && isZoneUnlocked(out, HOME_ZONE.lisa),
-          igor: !!out.metIgor && isZoneUnlocked(out, HOME_ZONE.igor),
         };
         const names = Object.keys(AMBIENT_BY_CHAR).filter((k) => known[k] && !storyPending[k]);
         const shuffled = [...names].sort(() => Math.random() - 0.5);

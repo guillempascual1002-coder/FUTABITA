@@ -392,6 +392,11 @@ function sanitizeGame(g) {
     "alexiaMet", "alexiaStoryComplete", "alexiaVisit", "alexiaNextVisitDay",
     "miloMet", "miloPinEarned",
   ].forEach((k) => delete out[k]);
+  /* Centro Comercial: ahora aloja la tienda genérica siempre abierta (ver
+     refreshShopVisit/ShopPanel), así que se desbloquea para TODAS las partidas, no solo
+     las nuevas — el spread de DEFAULT_UNLOCKED_ZONES de más abajo solo cubre partidas sin
+     unlockedZones en absoluto. */
+  if (out.unlockedZones && !out.unlockedZones.includes("tienda")) out.unlockedZones = [...out.unlockedZones, "tienda"];
   /* cuando la historia de un personaje se reestructura a fondo (p.ej. VERA_STORY, que pasó
      de varios capítulos a uno solo con 15 etapas), una partida con progreso guardado en el
      formato antiguo se queda con un chapter/stage que ya no resuelve a ninguna etapa real
@@ -1478,7 +1483,9 @@ const CITY_MAP_VB = { x: 15, y: 60, w: 438, h: 720.3 };
    todavía (no se ha diseñado qué historia abre qué zona), así que solo
    Casa y Barrio están disponibles desde el principio y el resto se queda
    bloqueado hasta que el sistema de historias las abra más adelante. */
-const DEFAULT_UNLOCKED_ZONES = ["casa", "barrio"];
+/* "tienda" (Centro Comercial) desbloqueada desde el principio: aloja la tienda genérica
+   siempre abierta (ver refreshShopVisit/ShopPanel), independiente de Coco como personaje. */
+const DEFAULT_UNLOCKED_ZONES = ["casa", "barrio", "tienda"];
 const isZoneUnlocked = (g, zoneId) => (g.unlockedZones || DEFAULT_UNLOCKED_ZONES).includes(zoneId);
 const unlockZone = (g, zoneId) => {
   const cur = g.unlockedZones || DEFAULT_UNLOCKED_ZONES;
@@ -7096,9 +7103,30 @@ const refreshCocoVisit = (g) => {
   const products = ids.map((id) => ({ id, price: Math.floor(rnd(30, 61)), sold: false }));
   return { ...g, cocoVisit: { day: today, zone: COCO_ZONE, products }, cocoNextVisitDay: addDays(today, 2) };
 };
+/* Tienda genérica del Centro Comercial: independiente de Coco como personaje (que queda
+   oculta, ver "personajes ocultos" junto a STORIES) — usa game.shopVisit, un campo
+   separado de game.cocoVisit para no interferir con la limpieza de HIDDEN_NPCS en
+   sanitizeGame ni con una futura reactivación de Coco tal cual (refreshCocoVisit/
+   CocoShop de arriba se dejan intactos y sin usar). Abierta TODOS los días, sin ciclo de
+   descanso: 4 consumibles al azar (mismo pool y rango de precio 30-61 que ya usaba Coco)
+   más un quinto hueco aparte, siempre un cassette distinto cada día (mismo pool que
+   ALEXIA_CASSETTE_POOL — sin el ALL IN, que sigue siendo recompensa única de la historia
+   de Alexia), a 20-40 monedas. */
+const SHOP_ZONE = "tienda";
+const refreshShopVisit = (g) => {
+  const today = todayStr();
+  if (g.shopVisit && g.shopVisit.day === today) return g; /* mercancía de hoy ya generada: no rerollear nada */
+  const zoneDef = ZONES.find((z) => z.id === SHOP_ZONE);
+  if (!zoneDef || !zoneDef.unlocked(g)) return g.shopVisit ? { ...g, shopVisit: null } : g;
+  const ids = [...COCO_CONSUMABLES].sort(() => Math.random() - 0.5).slice(0, 4);
+  const products = ids.map((id) => ({ id, price: Math.floor(rnd(30, 61)), sold: false }));
+  const cassetteId = ALEXIA_CASSETTE_POOL[Math.floor(Math.random() * ALEXIA_CASSETTE_POOL.length)];
+  const cassette = { id: cassetteId, price: Math.floor(rnd(20, 41)), sold: false };
+  return { ...g, shopVisit: { day: today, zone: SHOP_ZONE, products, cassette } };
+};
 /* precio de venta al azar dentro del rango del pez (ver ITEMS[id].sellMin/sellMax) —
-   se roza una sola vez por apertura del panel VENDER (ver CocoShop), no en cada render,
-   para que el precio mostrado y el cobrado sean siempre el mismo número. */
+   se roza una sola vez por apertura del panel VENDER (ver CocoShop/ShopPanel), no en cada
+   render, para que el precio mostrado y el cobrado sean siempre el mismo número. */
 const rollSellPrice = (itemId) => {
   const it = ITEMS[itemId];
   if (!it || it.sellMin == null) return 0;
@@ -11106,9 +11134,10 @@ function Newspaper({ game, onRead }) {
    siempre hay periódico, así que en vez de cartel ofrece abrirlo.
    Fondo real: si existe /images/zones/{id}.webp se usa; si no (todavía no se ha
    subido), cae a un degradado de marcador de posición sin romper nada. */
-function ZoneScreen({ zone, pendingNpc, onBack, onOpenPaper, game, onOpenSobre, onFish, onBuyCoco, onSellCoco }) {
+function ZoneScreen({ zone, pendingNpc, onBack, onOpenPaper, game, onOpenSobre, onFish, onBuyCoco, onSellCoco, onBuyShop, onSellShop }) {
   const [imgOk, setImgOk] = useState(true);
   const [showCocoShop, setShowCocoShop] = useState(false);
+  const [showShop, setShowShop] = useState(false);
   const npc = pendingNpc ? NPCS[pendingNpc] : null;
   const showPaperPrompt = zone.kind === "paper" && !pendingNpc;
   const isHome = zone.kind === "home";
@@ -11116,8 +11145,13 @@ function ZoneScreen({ zone, pendingNpc, onBack, onOpenPaper, game, onOpenSobre, 
   /* Coco está "activa" en su zona durante toda la visita (ver zoneActiveNpc/zonePending),
      tenga o no una frase de historia pendiente ahora mismo — si la tiene, su diálogo
      normal (a nivel de App) se pinta encima y tapa este panel; si no, el jugador ve
-     directamente el acceso a la tienda. */
+     directamente el acceso a la tienda. Queda sin usar mientras Coco está oculta como
+     personaje (game.cocoVisit nunca se genera, ver checkZoneUnlocks), lista para
+     reactivarse tal cual. */
   const isCoco = !!(game.cocoVisit && game.cocoVisit.zone === zone.id);
+  /* tienda genérica del Centro Comercial (ver ShopPanel/refreshShopVisit): abierta todos
+     los días, sin personaje — no comparte estado con isCoco/game.cocoVisit. */
+  const isShop = !!(game.shopVisit && game.shopVisit.zone === zone.id);
   /* pesca libre: solo tras completar la campaña de Nina (ver NINA_STORY, FINAL/EPÍLOGO) */
   const isPlaya = zone.id === "playa" && !!game.ninaStoryComplete;
   const fishedToday = isPlaya && game.ninaFishDay === todayStr();
@@ -11138,7 +11172,7 @@ function ZoneScreen({ zone, pendingNpc, onBack, onOpenPaper, game, onOpenSobre, 
       <div className="zone-shade" />
       <button className="zone-back" onClick={onBack}>← Volver</button>
       <div className="zone-label">{zone.label}</div>
-      {!pendingNpc && !showPaperPrompt && !isHome && !isCasino && !isPlaya && !isCoco && (
+      {!pendingNpc && !showPaperPrompt && !isHome && !isCasino && !isPlaya && !isCoco && !isShop && (
         <div className="zone-empty-card">
           <div style={{ fontSize: 30, marginBottom: 6 }}>🏚️</div>
           Parece que no hay nadie por aquí ahora mismo.</div>)}
@@ -11184,6 +11218,18 @@ function ZoneScreen({ zone, pendingNpc, onBack, onOpenPaper, game, onOpenSobre, 
         </div>)}
       {showCocoShop && (
         <CocoShop game={game} onClose={() => setShowCocoShop(false)} onBuy={onBuyCoco} onSell={onSellCoco} />)}
+      {isShop && (
+        <div className="house-room">
+          <div className="house-card">
+            <div className="house-title">🛍️ Centro Comercial</div>
+            <div style={{ fontSize: 12.5, color: "#9a9e8e", marginBottom: 10 }}>
+              Abierto todos los días, con mercancía nueva cada mañana.</div>
+            <button className="btn-gold sm" style={{ width: "100%" }} onClick={() => setShowShop(true)}>
+              🛒 Ver tienda</button>
+          </div>
+        </div>)}
+      {showShop && (
+        <ShopPanel game={game} onClose={() => setShowShop(false)} onBuy={onBuyShop} onSell={onSellShop} />)}
     </div>);
 }
 
@@ -11267,6 +11313,136 @@ function CocoShop({ game, onClose, onBuy, onSell }) {
               <div className="item-lightbox-desc" style={{ fontWeight: 700 }}>+{it.xp} XP {it.stat} · 🪙 {slot.price}</div>
               <div style={{ display: "flex", gap: 8, width: "100%" }}>
                 <button className="btn-gold sm" style={{ flex: 1 }} disabled={(game.fichas || 0) < slot.price}
+                  onClick={() => { onBuy(confirmBuy); setConfirmBuy(null); }}>Comprar</button>
+                <button className="btn-ghost sm" style={{ flex: 1 }} onClick={() => setConfirmBuy(null)}>Cancelar</button>
+              </div>
+            </div>
+          </div>);
+      })()}
+      {confirmSell && (() => {
+        const it = ITEMS[confirmSell.id];
+        return (
+          <div className="overlay" style={{ background: "rgba(5,7,13,.88)", zIndex: 90 }}
+            onClick={(e) => { e.stopPropagation(); setConfirmSell(null); }}>
+            <div className="item-lightbox" onClick={(e) => e.stopPropagation()}>
+              {it.img ? <img src={it.img} alt={it.name} className="item-lightbox-img" /> : <span style={{ fontSize: 90 }}>{it.icon}</span>}
+              <div className="item-lightbox-name">{it.name} · tienes ×{confirmSell.qty}</div>
+              <div className="item-lightbox-desc" style={{ fontWeight: 700 }}>🪙 {confirmSell.price}</div>
+              <div style={{ display: "flex", gap: 8, width: "100%" }}>
+                <button className="btn-gold sm" style={{ flex: 1 }}
+                  onClick={() => { onSell(confirmSell.id, 1, confirmSell.price); setConfirmSell(null); }}>Vender 1</button>
+                <button className="btn-ghost sm" style={{ flex: 1 }} onClick={() => setConfirmSell(null)}>Cancelar</button>
+              </div>
+            </div>
+          </div>);
+      })()}
+    </div>);
+}
+
+/* Descripción corta del efecto de un objeto en la tienda genérica: XP+stat para
+   consumibles, boost+duración para cassettes — cada kind usa campos distintos en ITEMS
+   (xp/stat vs. boostStat/boostMult/boostDays), así que no vale la misma línea para los
+   dos (a diferencia de CocoShop, que solo mostraba consumibles). */
+const shopItemEffectLine = (it) => it.kind === "cassette"
+  ? `+${Math.round((it.boostMult - 1) * 100)}% XP ${it.boostStat === "ALL" ? "todos los stats" : it.boostStat} · ${it.boostDays} días`
+  : `+${it.xp} XP ${it.stat}`;
+/* Tienda genérica del Centro Comercial (ver refreshShopVisit/game.shopVisit): mismo
+   patrón visual y de confirmación que CocoShop, pero sin personaje ni diálogo, abierta
+   todos los días y con un quinto hueco aparte para el cassette del día. */
+function ShopPanel({ game, onClose, onBuy, onSell }) {
+  const [confirmBuy, setConfirmBuy] = useState(null); // índice de slot (0-3), o el sentinel "cassette"
+  const [sellMode, setSellMode] = useState(false);
+  const [sellPrices, setSellPrices] = useState(null);
+  const [confirmSell, setConfirmSell] = useState(null);
+  const visit = game.shopVisit;
+  if (!visit) return null;
+  const openSell = () => {
+    const prices = {};
+    Object.entries(game.inventory || {}).forEach(([id, qty]) => {
+      if (qty > 0 && ITEMS[id] && ITEMS[id].sellMin != null) prices[id] = rollSellPrice(id);
+    });
+    setSellPrices(prices);
+    setSellMode(true);
+  };
+  const confirmSlot = confirmBuy != null
+    ? (confirmBuy === "cassette" ? visit.cassette : visit.products[confirmBuy]) : null;
+  return (
+    <div className="overlay" style={{ background: "rgba(5,7,13,.75)", zIndex: 65, alignItems: "flex-end", padding: "0 0 16px" }} onClick={onClose}>
+      <div className="sheet" style={{ maxHeight: "78vh", overflowY: "auto", borderRadius: 22 }} onClick={(e) => e.stopPropagation()}>
+        <div className="ptitle" style={{ fontSize: 16, marginBottom: 14 }}>🛍️ TIENDA · 🪙 {game.fichas || 0}</div>
+        {!sellMode ? (
+          <>
+            {visit.products.map((p, i) => {
+              const it = ITEMS[p.id];
+              return (
+                <div key={i} className="panel" style={{ display: "flex", alignItems: "center", gap: 10, opacity: p.sold ? .5 : 1 }}>
+                  {it.img ? <img src={it.img} alt={it.name} className="item-ico-img" /> : <span style={{ fontSize: 22 }}>{it.icon}</span>}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, color: "#26291D" }}>{it.name}</div>
+                    <div style={{ fontSize: 10.5, color: "#6F7563" }}>{shopItemEffectLine(it)}</div>
+                  </div>
+                  {p.sold ? (
+                    <span style={{ fontSize: 11, color: "#9a9e8e", fontFamily: "'Oswald',sans-serif" }}>AGOTADO</span>
+                  ) : (
+                    <button className="btn-gold sm" onClick={() => setConfirmBuy(i)}>🪙 {p.price}</button>
+                  )}
+                </div>);
+            })}
+            <div style={{ fontSize: 11, color: "#9a9e8e", margin: "10px 0 4px", textTransform: "uppercase", letterSpacing: .4 }}>
+              Cassette del día</div>
+            {(() => {
+              const c = visit.cassette;
+              const it = ITEMS[c.id];
+              return (
+                <div className="panel" style={{ display: "flex", alignItems: "center", gap: 10, opacity: c.sold ? .5 : 1 }}>
+                  {it.img ? <img src={it.img} alt={it.name} className="item-ico-img" /> : <span style={{ fontSize: 22 }}>{it.icon}</span>}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, color: "#26291D" }}>{it.name}</div>
+                    <div style={{ fontSize: 10.5, color: "#6F7563" }}>{shopItemEffectLine(it)}</div>
+                  </div>
+                  {c.sold ? (
+                    <span style={{ fontSize: 11, color: "#9a9e8e", fontFamily: "'Oswald',sans-serif" }}>AGOTADO</span>
+                  ) : (
+                    <button className="btn-gold sm" onClick={() => setConfirmBuy("cassette")}>🪙 {c.price}</button>
+                  )}
+                </div>);
+            })()}
+            <button className="btn-ghost sm" style={{ width: "100%", marginTop: 4 }} onClick={openSell}>💰 Vender objetos</button>
+          </>
+        ) : (
+          <>
+            <button className="btn-ghost sm" style={{ marginBottom: 10 }} onClick={() => setSellMode(false)}>← Volver a comprar</button>
+            {Object.keys(sellPrices || {}).length === 0 && (
+              <div className="empty"><span className="em-ico">🎒</span>
+                No tienes nada que se pueda vender aquí ahora mismo.</div>)}
+            {Object.entries(sellPrices || {}).map(([id, price]) => {
+              const it = ITEMS[id];
+              const qty = (game.inventory || {})[id] || 0;
+              return (
+                <div key={id} className="panel" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  {it.img ? <img src={it.img} alt={it.name} className="item-ico-img" /> : <span style={{ fontSize: 22 }}>{it.icon}</span>}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, color: "#26291D" }}>{it.name}</div>
+                    <div style={{ fontSize: 10.5, color: "#6F7563" }}>Tienes ×{qty}</div>
+                  </div>
+                  <button className="btn-gold sm" onClick={() => setConfirmSell({ id, price, qty })}>🪙 {price}</button>
+                </div>);
+            })}
+          </>
+        )}
+      </div>
+      {confirmSlot && (() => {
+        const it = ITEMS[confirmSlot.id];
+        return (
+          <div className="overlay" style={{ background: "rgba(5,7,13,.88)", zIndex: 90 }}
+            onClick={(e) => { e.stopPropagation(); setConfirmBuy(null); }}>
+            <div className="item-lightbox" onClick={(e) => e.stopPropagation()}>
+              {it.img ? <img src={it.img} alt={it.name} className="item-lightbox-img" /> : <span style={{ fontSize: 90 }}>{it.icon}</span>}
+              <div className="item-lightbox-name">{it.name}</div>
+              <div className="item-lightbox-desc">{it.desc}</div>
+              <div className="item-lightbox-desc" style={{ fontWeight: 700 }}>{shopItemEffectLine(it)} · 🪙 {confirmSlot.price}</div>
+              <div style={{ display: "flex", gap: 8, width: "100%" }}>
+                <button className="btn-gold sm" style={{ flex: 1 }} disabled={(game.fichas || 0) < confirmSlot.price}
                   onClick={() => { onBuy(confirmBuy); setConfirmBuy(null); }}>Comprar</button>
                 <button className="btn-ghost sm" style={{ flex: 1 }} onClick={() => setConfirmBuy(null)}>Cancelar</button>
               </div>
@@ -13094,10 +13270,12 @@ export default function App() {
      y, si es la primera vez, encola su escena de presentación. Se llama tras cualquier
      acción que pueda mover el requisito: media, goles de carrera o ascenso de categoría. */
   const checkZoneUnlocks = (g) => {
-    /* Coco y Alexia ocultas (ver comentario junto a STORIES): sus visitas diarias/saludo se
-       desactivan aquí en vez de borrar refreshCocoVisit/refreshCocoGreeting/refreshAlexiaVisit,
-       para poder reengancharlas tal cual cuando se reactiven. */
-    let out = g;
+    /* Coco y Alexia ocultas como personajes (ver comentario junto a STORIES): sus visitas
+       diarias/saludo se desactivan aquí en vez de borrar refreshCocoVisit/
+       refreshCocoGreeting/refreshAlexiaVisit, para poder reengancharlas tal cual cuando se
+       reactiven. La tienda del Centro Comercial sigue abierta de todos modos, ahora como
+       comercio genérico sin personaje (ver refreshShopVisit). */
+    let out = refreshShopVisit(g);
     [...ZONES, ...EXTRA_NPCS].forEach((z) => {
       if (!z.metFlag || out[z.metFlag] || (out.introQueued && out.introQueued[z.metFlag]) || !z.unlocked(out)) return;
       /* el flag "ya lo conoces" no se marca aquí: se marca cuando el jugador lee la escena
@@ -13391,6 +13569,56 @@ export default function App() {
       let out = checkStories(checkZoneUnlocks({ ...g, inventory: inv, fichas: (g.fichas || 0) + total, cocoLog: log }));
       if (rareSold) out = addMsg(out, "Coco", "¡Vaya! No esperaba que trajeras algo así.", { mood: "sorprendida" });
       return out;
+    });
+    pushToast(`✅ Vendido: ${it.name} ×${qty} · 🪙 +${price * qty}`);
+    buzz(15);
+  };
+  /* compra en la tienda genérica del Centro Comercial (ver ShopPanel/game.shopVisit,
+     independiente de game.cocoVisit): mismo patrón anti-doble-click que buyFromCoco
+     (revalida contra el estado más reciente dentro del propio setGame). slotIdx es un
+     índice numérico (uno de los 4 consumibles) o el sentinel "cassette" (el quinto hueco
+     aparte). */
+  const buyFromShop = (slotIdx) => {
+    const visit = game.shopVisit;
+    if (!visit) return;
+    const slot = slotIdx === "cassette" ? visit.cassette : visit.products[slotIdx];
+    if (!slot || slot.sold) return;
+    if ((game.fichas || 0) < slot.price) { pushToast("No tienes fichas suficientes."); return; }
+    const it = ITEMS[slot.id];
+    setGame((g) => {
+      const v = g.shopVisit;
+      const s = v && (slotIdx === "cassette" ? v.cassette : v.products[slotIdx]);
+      if (!v || !s || s.sold || (g.fichas || 0) < s.price) return g;
+      const nextVisit = slotIdx === "cassette"
+        ? { ...v, cassette: { ...s, sold: true } }
+        : { ...v, products: v.products.map((p, i) => (i === slotIdx ? { ...p, sold: true } : p)) };
+      const inv = { ...(g.inventory || {}) };
+      inv[s.id] = (inv[s.id] || 0) + 1;
+      const log = [{ type: "buy", itemId: s.id, price: s.price, day: todayStr(), zone: v.zone },
+        ...(g.shopLog || [])].slice(0, 30);
+      return checkStories(checkZoneUnlocks({ ...g, fichas: g.fichas - s.price, inventory: inv,
+        shopVisit: nextVisit, shopLog: log }));
+    });
+    pushToast(`✅ Comprado: ${it.name} · 🪙 -${slot.price}`);
+    buzz(15);
+  };
+  /* vende en la tienda genérica: price ya viene rolado y confirmado desde ShopPanel (ver
+     rollSellPrice), así el número mostrado en la confirmación y el que se cobra son
+     siempre el mismo. */
+  const sellToShop = (itemId, qty, price) => {
+    if (!game.shopVisit) return;
+    if (((game.inventory || {})[itemId] || 0) < qty) return;
+    const it = ITEMS[itemId];
+    setGame((g) => {
+      const cur = (g.inventory || {})[itemId] || 0;
+      if (cur < qty) return g;
+      const inv = { ...g.inventory, [itemId]: cur - qty };
+      if (inv[itemId] <= 0) delete inv[itemId];
+      const total = price * qty;
+      const v = g.shopVisit;
+      const log = [{ type: "sell", itemId, price: total, day: todayStr(), zone: v ? v.zone : null },
+        ...(g.shopLog || [])].slice(0, 30);
+      return checkStories(checkZoneUnlocks({ ...g, inventory: inv, fichas: (g.fichas || 0) + total, shopLog: log }));
     });
     pushToast(`✅ Vendido: ${it.name} ×${qty} · 🪙 +${price * qty}`);
     buzz(15);
@@ -14075,7 +14303,7 @@ export default function App() {
       {tab === "chat" && visitedZoneObj && (
         <ZoneScreen zone={visitedZoneObj} pendingNpc={visitedActiveNpc} game={game}
           onBack={() => setVisitedZone(null)} onOpenPaper={() => setShowPaper(true)} onOpenSobre={openSobre} onFish={freeFish}
-          onBuyCoco={buyFromCoco} onSellCoco={sellToCoco} />)}
+          onBuyCoco={buyFromCoco} onSellCoco={sellToCoco} onBuyShop={buyFromShop} onSellShop={sellToShop} />)}
       {/* diálogo de personaje: overlay a nivel de App (fuera de .tab-in), aparece encima
           del fondo de la zona en cuanto hay alguien esperando ahí (visitedActiveNpc).
           Agrupar por sceneId (no por npc): una escena normal es de un solo personaje y esto

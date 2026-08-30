@@ -377,26 +377,54 @@ function sanitizeGame(g) {
      la UI (CARDS/ZONES/STORIES más arriba): se limpia cualquier progreso, mensaje pendiente
      o flag suya que hubiera quedado en la partida, para que al reactivarla arranque de
      verdad desde el prólogo y no desde donde se quedó. */
-  const HIDDEN_NPCS = ["milly", "lopez", "igor", "lisa", "nina", "coco", "alexia", "milo"];
+  const HIDDEN_NPCS = ["milly", "lopez", "igor", "lisa", "coco", "alexia", "milo"];
   if (out.npcQueue) out.npcQueue = out.npcQueue.filter((e) => !HIDDEN_NPCS.includes(e.npc));
   if (out.stories) { const rest = { ...out.stories }; HIDDEN_NPCS.forEach((k) => delete rest[k]); out.stories = rest; }
   if (out.storyPending) { const rest = { ...out.storyPending }; HIDDEN_NPCS.forEach((k) => delete rest[k]); out.storyPending = rest; }
   if (out.pendingAppearances) out.pendingAppearances = out.pendingAppearances.filter((p) => !p || !HIDDEN_NPCS.includes(p.npc));
   [
-    "metMilly", "millyPinEarned",
-    "lopezPinEarned",
-    "metIgor", "igorPinEarned",
-    "metLisa", "karlaPinEarned",
-    "ninaMet", "ninaStoryComplete",
-    "cocoMet", "cocoStoryComplete", "cocoVisit", "cocoNextVisitDay", "cocoGreetDay", "cocoUnstuckV1", "cocoLog",
-    "alexiaMet", "alexiaStoryComplete", "alexiaVisit", "alexiaNextVisitDay",
-    "miloMet", "miloPinEarned",
+    /* Milly */ "metMilly", "millyMet", "millyStoryStarted", "millyNotes", "millyEthics",
+    "millyKioskCrisis", "millyJournalist", "millyBigStory", "millyStoryComplete", "millyPinEarned", "millySecret",
+    /* López */ "lopezMet", "lopezLocker", "lopezStoryStarted", "lopezTeamPhoto", "lopezCaptainTalk",
+    "lopezArmband", "lopezTrust", "lopezOldClub", "lopezMentorTurn", "lopezLeader", "lopezStoryComplete", "lopezPinEarned",
+    /* Igor */ "metIgor", "igorMet", "igorStoryStarted", "igorRecipe", "igorKitchen", "igorSignatureDish",
+    "igorBurnout", "igorBeach", "igorBalance", "igorFriend", "igorApron", "igorStoryComplete", "igorPinEarned",
+    /* Karla/Lisa */ "metLisa", "karlaMet", "karlaStoryStarted", "karlaSponsor", "karlaPress",
+    "karlaFirstCampaign", "karlaVIP", "karlaCasino", "karlaPressure", "karlaPublicImage", "karlaPrivate",
+    "karlaChoiceStatus", "karlaChoiceSelf", "karlaBeach", "karlaTrust", "karlaStoryComplete", "karlaPinEarned", "lisaTilin",
+    /* Coco */ "cocoMet", "cocoStoryComplete", "cocoVisit", "cocoNextVisitDay", "cocoGreetDay", "cocoUnstuckV1", "cocoLog",
+    /* Alexia */ "alexiaMet", "alexiaStoryComplete", "alexiaVisit", "alexiaNextVisitDay",
+    /* Milo */ "miloMet", "miloFirstReveal", "miloSocial", "miloPastObject", "miloPastRevealed",
+    "miloConfident", "miloReady", "miloStoryComplete", "miloPinEarned",
   ].forEach((k) => delete out[k]);
+  /* Nina reactivada con su rework 3.0 (ver comentario junto a NINA_STORY): a diferencia de
+     los personajes que siguen ocultos (arriba), Nina SÍ vuelve a jugarse a partir de ahora
+     — pero el rework cambió tanto el guion como los propios flags/etapas, así que el
+     jugador pidió expresamente que su campaña arranque desde cero aunque la partida ya
+     tuviera progreso de la versión anterior. Reinicio de una sola vez (ninaResetV3 marca
+     que ya se hizo), no un borrado permanente en cada carga como el de HIDDEN_NPCS: a
+     partir de aquí su progreso nuevo se queda y se guarda con normalidad. */
+  if (!out.ninaResetV3) {
+    out.ninaResetV3 = true;
+    if (out.npcQueue) out.npcQueue = out.npcQueue.filter((e) => e.npc !== "nina");
+    if (out.stories) { const rest = { ...out.stories }; delete rest.nina; out.stories = rest; }
+    if (out.storyPending) { const rest = { ...out.storyPending }; delete rest.nina; out.storyPending = rest; }
+    if (out.pendingAppearances) out.pendingAppearances = out.pendingAppearances.filter((p) => !p || p.npc !== "nina");
+    [
+      "ninaMet", "ninaFishingUnlocked", "ninaFishingIntroDone", "ninaTrustUp", "ninaFishDay",
+      "ninaCrisis", "ninaPadre", "ninaPezLuna", "ninaPadreContacto",
+      "ninaStoryComplete", "ninaPinEarned",
+    ].forEach((k) => delete out[k]);
+  }
   /* Centro Comercial: ahora aloja la tienda genérica siempre abierta (ver
      refreshShopVisit/ShopPanel), así que se desbloquea para TODAS las partidas, no solo
      las nuevas — el spread de DEFAULT_UNLOCKED_ZONES de más abajo solo cubre partidas sin
      unlockedZones en absoluto. */
   if (out.unlockedZones && !out.unlockedZones.includes("tienda")) out.unlockedZones = [...out.unlockedZones, "tienda"];
+  /* Casino desbloqueado por defecto a petición del jugador, también en partidas ya
+     guardadas (el spread de DEFAULT_UNLOCKED_ZONES de más abajo solo cubre partidas sin
+     unlockedZones en absoluto). */
+  if (out.unlockedZones && !out.unlockedZones.includes("casino")) out.unlockedZones = [...out.unlockedZones, "casino"];
   /* cuando la historia de un personaje se reestructura a fondo (p.ej. VERA_STORY, que pasó
      de varios capítulos a uno solo con 15 etapas), una partida con progreso guardado en el
      formato antiguo se queda con un chapter/stage que ya no resuelve a ninguna etapa real
@@ -1484,8 +1512,10 @@ const CITY_MAP_VB = { x: 15, y: 60, w: 438, h: 720.3 };
    Casa y Barrio están disponibles desde el principio y el resto se queda
    bloqueado hasta que el sistema de historias las abra más adelante. */
 /* "tienda" (Centro Comercial) desbloqueada desde el principio: aloja la tienda genérica
-   siempre abierta (ver refreshShopVisit/ShopPanel), independiente de Coco como personaje. */
-const DEFAULT_UNLOCKED_ZONES = ["casa", "barrio", "tienda"];
+   siempre abierta (ver refreshShopVisit/ShopPanel), independiente de Coco como personaje.
+   "casino" desbloqueado por defecto a petición del jugador (acceso directo desde el
+   principio, sin depender de ninguna historia). */
+const DEFAULT_UNLOCKED_ZONES = ["casa", "barrio", "tienda", "casino"];
 const isZoneUnlocked = (g, zoneId) => (g.unlockedZones || DEFAULT_UNLOCKED_ZONES).includes(zoneId);
 const unlockZone = (g, zoneId) => {
   const cur = g.unlockedZones || DEFAULT_UNLOCKED_ZONES;
@@ -1519,7 +1549,7 @@ const ZONES = [
     unlocked: (g) => isZoneUnlocked(g, "casa") },
   /* varios personajes comparten esta zona de calle: la burbuja muestra a quien tenga
      algo pendiente ahora mismo (ver EXTRA_NPCS y CityMap); en reposo, el puntito de siempre */
-  { id: "barrio", kind: "npc", npc: ["yuna", "elisa", "beka", "vera"], label: "El Barrio", icon: "🌆", x: 57.78, y: 58.78,
+  { id: "barrio", kind: "npc", npc: ["yuna", "elisa", "beka", "vera", "nina"], label: "El Barrio", icon: "🌆", x: 57.78, y: 58.78,
     pts: "217.78 461.01 217.78 507.48 318.38 500 318.38 465.1 217.78 461.01",
     unlocked: (g) => isZoneUnlocked(g, "barrio") },
   { id: "car", kind: "npc", npc: ["elisa", "beka"], label: "Centro de Alto Rendimiento", icon: "🏋️", x: 66.84, y: 18.18,
@@ -1552,7 +1582,7 @@ const ZONES = [
   { id: "enfermeria", kind: "npc", npc: ["elisa", "beka"], label: "Enfermería", icon: "🏥", x: 70.56, y: 8.09,
     pts: "269.53 96.59 375.7 85.45 379.45 140.6 271.57 150.46 269.53 96.59",
     unlocked: (g) => isZoneUnlocked(g, "enfermeria") },
-  { id: "playa", kind: "npc", npc: ["elisa", "yuna", "vera", "wendy"], label: "Playa", icon: "🏖️", x: 18.88, y: 62.76,
+  { id: "playa", kind: "npc", npc: ["elisa", "yuna", "vera", "wendy", "nina"], label: "Playa", icon: "🏖️", x: 18.88, y: 62.76,
     pts: "76.85 417.61 148.34 442.12 135.57 514.12 96.25 602.97 31.4 583.57 76.85 417.61",
     unlocked: (g) => isZoneUnlocked(g, "playa") },
   { id: "atico", kind: "npc", npc: ["elisa"], label: "Ático de Lujo", icon: "🌇", x: 34.48, y: 19.29,
@@ -6654,410 +6684,897 @@ const BEKA_STORY = {
 
 
 /* ============================================================
-   NINA · octava campaña, la pescadora de la Playa. Prólogo + 15
-   capítulos + final + epílogo, misma arquitectura que el resto —
-   con una pieza nueva: varias etapas llevan una captura de pesca en
-   medio de la escena (ver stage.fish/introBefore/introAfter y
-   queueStageScene/FishingSequence). Sin outfits nuevos: solo los 5
-   moods del documento + "lanzandocaña" para la propia secuencia.
+   NINA · pescadora de la Playa, rework 3.0 (ver
+   FUTABITA_Nina_Rework_3.0.docx). Prólogo + 12 capítulos + Final +
+   Epílogo = 15 etapas, una sola cadena (chapters[0].stages), igual que
+   ELISA_STORY/BEKA_STORY/VERA_STORY. El sistema de pesca (stage.fish/
+   introBefore/introAfter/FishingSequence) NO se toca: los 10 peces, su
+   orden y sus rarezas son los mismos de siempre. Única extensión real
+   al motor: queueStageScene ahora también admite stage.replies en las
+   etapas con pesca (antes solo lo admitían las etapas sin captura) —
+   ver comentario junto a esa función. El resto es contenido nuevo.
 
-   Las capturas de la campaña son deterministas (el fishId de cada
-   etapa siempre es el mismo, nunca al azar) — la aleatoriedad solo
-   existe en la pesca libre posterior (ver freeFish/pickWeightedFish),
-   tal como pide el documento. */
+   Bloque D del documento ("reconocimiento y salida", fase 2 de cada
+   etapa): cuando reconoce algo que el jugador ACABA de cumplir (días
+   de un objetivo), no puede ir en la propia etapa — su fish se entrega
+   al ENTRAR en la etapa, antes de que esos días existan — así que ese
+   trozo se difiere al bloque A de la etapa siguiente, exactamente la
+   misma regla de checkStories que rige para el resto de personajes.
+   Cuando el bloque D es solo narración de "vamos a lanzar" sin
+   reconocer nada, se queda local, pegado a su propio fish.
+
+   Objeto: nina_pin (Epílogo) ya existe en ITEMS como carta kind:"card"
+   (ver comentario junto a esa lista: "cartas sin pin de historia
+   propio"). El documento pide revelado bloqueante a mitad de escena,
+   pero queueStageScene trata stage.fish y stage.midReveal como ramas
+   alternativas (no se pueden combinar en la misma etapa) — así que el
+   pin usa grantItem/reveal normal, servido junto con la confirmación
+   del cangrejo al final de la escena en vez de a mitad.
+
+   El documento propone un helper fishedSince(g, snap) basado en
+   g.fishLog, pero ese campo no existe en ningún sitio del motor — las
+   capturas solo tocan game.inventory (ver resolveFishing). El propio
+   documento ya avisa de que ese check es opcional ("si el motor ya
+   marca la etapa como completada al terminar la secuencia de pesca,
+   fishedSince sobra y se puede quitar de todos los checks"): con
+   stage.fish la captura se entrega SIEMPRE al ENTRAR en la etapa, antes
+   de que pase ningún día, así que para cuando el check de días se
+   cumple la pesca ya ha ocurrido sin falta — exactamente el mismo
+   patrón que ya usaba la implementación original (check solo sobre los
+   días, sin ninguna comprobación de pesca aparte). */
+
 const NINA_STORY = {
   npc: "nina",
   chapters: [{
     id: "cap1",
-    title: "La historia de Nina",
+    title: "Nina",
     trigger: () => true,
     stages: [
-      /* PRÓLOGO — La chica que nunca tiene prisa (rework de diálogos, ver
-         FUTABITA_Nina_Rework_Dialogos_para_Code.docx — no toca objetivos ni
-         comportamiento, solo sustituye el texto de las escenas) */
+      /* PRÓLOGO — La chica que nunca tiene prisa (sin pesca: la desbloquea al completarse).
+         Bloque D ("¿Has vuelto?...") se queda local, al final de esta misma etapa: no hay
+         una etapa siguiente con captura donde diferirlo antes del capítulo 1, y así lo hacía
+         ya la implementación original. */
       { title: "La chica que nunca tiene prisa", zone: "playa",
-        objective: "Completa un día de alimentación y sueño, y vuelve a hablar con Nina.",
+        objective: "Cumple tu objetivo de comida y de sueño el mismo día.",
         intro: [
           { m: "seria", t: "¿Tú eres el que viene a entrenar a esta hora?" },
-          { m: "happy", t: "Ya decía yo que esa cara de cansancio no podía ser de alguien que hubiera venido a tomar el sol." },
-          { m: "seria", t: "Tranquilo. No te estoy juzgando. Yo también he tenido días en los que parecía que dormir era una actividad opcional." },
-          { m: "happy", t: "La diferencia es que yo tengo una excusa. Me paso demasiado tiempo aquí." },
-          { m: "orgullosa", t: "Soy Nina. Pesco aquí casi todos los días." },
-          { m: "happy", t: "Y sí, antes de que preguntes, se me da bastante bien." },
+          { m: "happy", t: "Ya decía yo que esa cara no podía ser de alguien que hubiera venido a tomar el sol." },
+          { m: "seria", t: "Tranquilo, no te estoy juzgando. Yo también he tenido épocas en las que dormir parecía una actividad opcional." },
+          { m: "happy", t: "La diferencia es que yo tengo una excusa buenísima: me paso demasiado tiempo aquí." },
+          { m: "orgullosa", t: "Nina. Pesco casi todos los días, en ese saliente de ahí." },
+          { m: "happy", t: "Y sí, antes de que preguntes: se me da bastante bien." },
           { m: "seria", t: "Aunque los peces tienen la mala costumbre de no reconocer mis méritos." },
-          { m: "happy", t: "Puedes pasarte una hora mirando el agua y no ocurre absolutamente nada." },
-          { m: "seria", t: "Y, curiosamente, eso es parte de lo que me gusta." },
-          { m: "seria", t: "En el fútbol todo tiene que pasar rápido. Entrenas, juegas, mejoras, miras una estadística y ya estás pensando en la siguiente." },
+          { m: "seria", t: "…" },
+          { m: "seria", t: "Te voy a contar lo único interesante que sé, y luego ya haces lo que quieras." },
+          { m: "seria", t: "En el fútbol todo tiene que pasar rápido. Entrenas, juegas, mejoras, miras un número y ya estás pensando en el siguiente." },
           { m: "happy", t: "Aquí no." },
-          { m: "seria", t: "Aquí puedes lanzar la caña y esperar." },
-          { m: "seria", t: "No hay una barra que te diga cuánto falta. No hay un número que te diga si lo estás haciendo bien." },
-          { m: "happy", t: "Solo estás tú, el agua y la posibilidad de que algo pique." },
-          { m: "seria", t: "Si estás acostumbrado a querer resultados todo el rato, al principio desespera." },
-          { m: "happy", t: "Pero quizá por eso te vendría bien." },
+          { m: "seria", t: "Aquí lanzas y esperas. No hay una barra que te diga cuánto falta. No hay nada que te diga si lo estás haciendo bien." },
+          { m: "seria", t: "Puedes estar una hora mirando el agua y que no ocurra absolutamente nada." },
+          { m: "happy", t: "Y eso, curiosamente, es la parte que me gusta." },
+          { m: "seria", t: "Si estás acostumbrado a querer resultados todo el rato, al principio desespera bastante." },
+          { m: "happy", t: "Que es exactamente por lo que creo que te vendría bien." },
+          { m: "seria", t: "Así que vamos a hacer una prueba y es facilísima." },
+          { m: "seria", t: "Hoy no te voy a dejar tocar la caña." },
+          { m: "happy", t: "No es castigo. Es que la caña no es el problema." },
+          { m: "seria", t: "Come lo que tengas que comer y duerme lo que tengas que dormir. Un día. Uno entero." },
+          { m: "happy", t: "Ya sé que suena a que no tiene nada que ver con pescar." },
+          { m: "seria", t: "Tiene todo que ver. Aquí hay que estar despierto ocho horas sin hacer nada, y eso no lo aguanta alguien que ha dormido cuatro." },
+          { m: "happy", t: "Y si vuelves, la próxima vez veremos si de verdad tienes la paciencia que hace falta." },
           { m: "happy", t: "¿Has vuelto?" },
           { m: "orgullosa", t: "Bien. Entonces quizá sí tengas la paciencia necesaria." },
           { m: "happy", t: "No significa que vayas a pescar nada, ¿eh? Eso sería demasiado fácil." },
           { m: "seria", t: "Pero podemos intentarlo." },
         ],
+        replies: [
+          { t: "¿Y si no pica nada?", m: "idle",
+            r: [{ m: "happy", t: "Pues no pica nada." }, { m: "seria", t: "Eso pasa. Pasa muchísimo más de lo que la gente se imagina." },
+              { m: "happy", t: "Y aun así vuelves al día siguiente, que es lo raro de esto." }] },
+          { t: "¿Cuánto llevas pescando?", m: "idle",
+            r: [{ m: "seria", t: "Desde los siete años." }, { m: "happy", t: "Aunque los primeros no cuentan. Los primeros solo preguntaba cuándo iba a picar." },
+              { m: "seria", t: "Cada dos minutos. Sin exagerar." }, { m: "happy", t: "Alguien se reía mucho de mí por eso." }] },
+          { t: "No tengo paciencia.", m: "idle",
+            r: [{ m: "happy", t: "Nadie la tiene al principio." }, { m: "seria", t: "…" },
+              { m: "seria", t: "Y te voy a decir una cosa que igual entiendes más adelante: la paciencia se parece mucho a otra cosa." },
+              { m: "happy", t: "Pero eso lo hablamos otro día." }] },
+        ],
         setFlags: ["ninaMet"],
         snap: () => ({ since: todayStr() }),
-        check: (g, snap) => Object.entries(g.logs || {}).some(([d, l]) => d >= snap.since && l.closed &&
-          (l.prot || 0) >= g.player.goals.protein && l.sleep != null && l.sleep >= g.player.goals.sleepGoal) },
-      /* CAPÍTULO 1 — Primera caña (desbloqueo del sistema de pesca) */
+        subs: [
+          (g, s) => proteinSleepDaysSince(g, s.since) >= 1,
+        ],
+        check: (g, s) => proteinSleepDaysSince(g, s.since) >= 1,
+        progressGoal: 1 },
+      /* CAPÍTULO 1 — Primera caña (desbloqueo del sistema de pesca). Bloque D es aquí solo
+         narración de lanzar/esperar, sin reconocimiento de días (el objetivo es únicamente
+         "sal a pescar"): se queda local, justo antes de fish. */
       { title: "Primera caña", zone: "playa",
-        objective: "Captura una sardina.",
+        objective: "Sal a pescar con Nina.",
         introBefore: [
           { m: "happy", t: "Vale. Hoy sí." },
-          { m: "seria", t: "Si has venido hasta aquí después de cuidar un poco la alimentación y descansar, supongo que podemos darte una oportunidad." },
+          { m: "seria", t: "Si has venido hasta aquí después de comer decente y dormir, supongo que podemos darte una oportunidad." },
           { m: "happy", t: "No te emociones. La primera vez no vamos a hacer nada complicado." },
-          { m: "seria", t: "Quiero que entiendas una cosa antes de empezar." },
-          { m: "seria", t: "Pescar no consiste en lanzar la caña y conseguir un premio inmediatamente." },
-          { m: "happy", t: "Aunque admito que sería bastante cómodo." },
-          { m: "seria", t: "Vas a lanzar, vas a esperar y puede que no pase nada durante un rato." },
-          { m: "happy", t: "Y cuando pase algo, no intentes reaccionar como si estuvieras marcando un gol en el último minuto." },
-          { m: "seria", t: "Mira la caña. Escucha. Ten paciencia." },
+          { m: "seria", t: "Antes de tocar nada, una cosa." },
+          { m: "seria", t: "Pescar no consiste en lanzar la caña y que aparezca un premio." },
+          { m: "happy", t: "Aunque admito que sería comodísimo y que yo lo firmaba." },
+          { m: "seria", t: "Vas a lanzar, vas a esperar, y es muy posible que no pase nada durante un buen rato." },
+          { m: "seria", t: "Y cuando pase algo, no reacciones como si estuvieras marcando en el noventa." },
+          { m: "happy", t: "Te lo digo porque tienes toda la pinta de ser de los que tiran de la caña como si fuera una barra de pesas." },
+          { m: "seria", t: "…" },
+          { m: "seria", t: "Mira. La caña se sujeta así. No apretada. Apretada se te duerme la mano en diez minutos y luego no reaccionas." },
+          { m: "happy", t: "Suelta. Como si te diera un poco igual." },
+          { m: "seria", t: "Que es, por cierto, el estado mental exacto en el que hay que estar." },
+          { m: "happy", t: "Te va a costar. Se te nota en la espalda que llevas media hora esperando a que te diga qué hacer." },
+          { m: "seria", t: "Bueno. Lanza." },
+          { m: "happy", t: "Sin fuerza. La fuerza no sirve para nada aquí, es lo primero que hay que desaprender." },
+          { m: "seria", t: "Y ahora esperamos." },
+          { m: "seria", t: "Mira la caña. Escucha. No hables si no te apetece." },
           { m: "happy", t: "Y si sale algo, ya veremos qué has conseguido." },
+          { m: "seria", t: "Ahí. Ahí. No tires todavía." },
+          { m: "seria", t: "Espera… espera…" },
+          { m: "happy", t: "Ahora." },
+        ],
+        replies: [
+          { t: "¿Cuánto hay que esperar?", m: "idle",
+            r: [{ m: "happy", t: "Y ahí está la pregunta." }, { m: "seria", t: "No lo sé. Nadie lo sabe. Ese es el trato entero." },
+              { m: "happy", t: "Yo hacía esa pregunta cada dos minutos cuando tenía siete años." }, { m: "seria", t: "Me llevó unos cuantos años dejar de hacerla." }] },
+          { t: "¿Qué va a picar?", m: "idle",
+            r: [{ m: "seria", t: "Ni idea." }, { m: "happy", t: "Y no es que no te lo quiera decir. Es que de verdad no lo sé." },
+              { m: "seria", t: "Si alguien te dice que sabe lo que va a picar, está mintiendo o está vendiéndote algo." }] },
+          { t: "Vale. Callado y quieto.", m: "idle",
+            r: [{ m: "orgullosa", t: "…" }, { m: "happy", t: "Anda. Mira tú." }, { m: "seria", t: "A ver cuánto te dura." }] },
         ],
         fish: { id: "pez_sardina", rarity: "comun" },
         introAfter: [
           { m: "happy", t: "¡Ahí está!" },
           { m: "orgullosa", t: "Tu primera captura." },
           { m: "happy", t: "¿Ves? No ha sido tan difícil." },
-          { m: "seria", t: "Bueno... quizá he hablado demasiado pronto." },
+          { m: "seria", t: "Bueno… quizá he hablado demasiado pronto y he sonado condescendiente." },
           { m: "happy", t: "Pero guárdala. De verdad." },
-          { m: "seria", t: "Puede parecer una sardina cualquiera, pero hace un rato no tenías nada y ahora tienes algo que has conseguido tú." },
+          { m: "seria", t: "Puede parecer una sardina cualquiera, y de hecho lo es. Pero hace una hora no tenías nada y ahora tienes algo que has sacado tú." },
+          { m: "seria", t: "Y eso, aunque no lo parezca, es una cosa distinta a que te den algo." },
           { m: "happy", t: "La próxima vez veremos qué tal se te da volver a intentarlo." },
         ],
-        setFlags: ["ninaFishingUnlocked", "ninaFishingIntroDone"],
         snap: () => ({}), check: () => true },
-      /* CAPÍTULO 2 — Una captura también se come */
+      /* CAPÍTULO 2 — Una captura también se come. Bloque D propio (reconoce los 2 días de
+         proteína de ESTE capítulo) NO puede ir aquí — se entrega en la misma escena que la
+         captura, antes de que esos días existan — así que se difiere al bloque A del
+         capítulo 3, exactamente como hacía la implementación original. Aquí solo se queda
+         la parte de "vamos a lanzar" pegada a la captura. */
       { title: "Una captura también se come", zone: "playa",
-        objective: "Ya tienes la caballa. Cumple el objetivo de proteína durante 2 días.",
+        objective: "Cumple tu objetivo de proteína durante 2 días y sal a pescar.",
         introBefore: [
           { m: "seria", t: "¿Qué has hecho con la sardina?" },
           { m: "happy", t: "No me digas que la has guardado como si fuera un trofeo." },
-          { m: "seria", t: "Bueno... en realidad me parece bastante tierno." },
-          { m: "happy", t: "Pero también se puede comer." },
-          { m: "seria", t: "Y precisamente por eso quería hablar contigo." },
-          { m: "seria", t: "El otro día te dije que aquí acababas teniendo algo real delante de ti. Pues ahora quiero que empieces a pensar qué haces con eso después." },
-          { m: "seria", t: "Pescar puede ser una actividad, una forma de desconectar... pero si estás intentando ganar peso y ponerte más fuerte, también puedes aprovechar lo que consigues." },
-          { m: "happy", t: "No quiero convertir esto en otra lista de cosas que tienes que hacer bien." },
-          { m: "seria", t: "Solo quiero que empieces a cuidar un poco más lo que comes." },
-          { m: "seria", t: "Haz una cosa durante los próximos días. Intenta cumplir tu objetivo de proteína." },
-          { m: "happy", t: "No hace falta que te obsesiones. Solo quiero que veas qué pasa cuando eres constante." },
-          { m: "seria", t: "Y cuando vuelvas, volveremos a lanzar la caña." },
-          { m: "happy", t: "A ver si tenemos un poco más de suerte que la primera vez." },
+          { m: "seria", t: "…" },
+          { m: "happy", t: "Bueno. En realidad me parece bastante tierno y no lo voy a comentar más." },
+          { m: "seria", t: "Pero también se puede comer. Y de eso quería hablarte." },
+          { m: "seria", t: "El otro día te dije que aquí acabas teniendo algo real delante. Ahora quiero que pienses qué haces con ello después." },
+          { m: "seria", t: "Pescar puede ser una actividad, una forma de desconectar, un sitio donde no hacer nada." },
+          { m: "seria", t: "Pero si estás intentando ponerte más fuerte, también puedes aprovechar lo que sacas." },
+          { m: "happy", t: "No quiero convertir esto en otra lista de cosas que tienes que hacer bien. Ya tienes bastantes listas." },
+          { m: "seria", t: "…" },
+          { m: "seria", t: "Te cuento cómo lo veo yo, y no es un consejo, es solo cómo funciona mi cabeza." },
+          { m: "seria", t: "Cuando todo lo que ves son números, objetivos y cantidades, comer se convierte en una tarea más." },
+          { m: "happy", t: "Y las tareas se aplazan. Siempre. Es lo que hacen las tareas." },
+          { m: "seria", t: "Pero cuando has sacado tú algo del agua, aunque sea una sardina de nada, deja de ser «tengo que comer»." },
+          { m: "orgullosa", t: "Pasa a ser «he conseguido esto, a ver qué hago con ello»." },
+          { m: "happy", t: "Es el mismo plato y es una cosa completamente distinta." },
+          { m: "seria", t: "Haz una cosa estos días y no le des muchas vueltas." },
+          { m: "seria", t: "Cumple tu objetivo de proteína dos días." },
+          { m: "happy", t: "No hace falta que te obsesiones ni que lo hagas perfecto. Dos días." },
+          { m: "seria", t: "Solo quiero que veas qué pasa cuando haces la misma cosa dos veces seguidas." },
+          { m: "happy", t: "Y cuando vuelvas, volvemos a lanzar la caña." },
+          { m: "seria", t: "A ver si tenemos un poco más de suerte que la primera vez." },
+          { m: "seria", t: "Ahora vamos a ver si hoy tenemos la misma suerte con la caña." },
+          { m: "happy", t: "No sé qué va a picar. Eso es precisamente lo divertido." },
+        ],
+        replies: [
+          { t: "No sé cocinar.", m: "idle",
+            r: [{ m: "happy", t: "Nadie sabe. Se aprende con dos o tres desastres." }, { m: "seria", t: "Y además, si sale mal siempre puedes culpar al pez." },
+              { m: "happy", t: "Es una técnica culinaria muy avanzada y la uso constantemente." }] },
+          { t: "¿Tú te comes lo que pescas?", m: "idle",
+            r: [{ m: "seria", t: "Casi todo." }, { m: "happy", t: "Lo que no me como lo vendo, y con eso pago los anzuelos." },
+              { m: "seria", t: "Es un negocio pésimo. Pero es un negocio." }] },
+          { t: "Prefiero guardarla.", m: "idle",
+            r: [{ m: "orgullosa", t: "…" }, { m: "happy", t: "Vale." }, { m: "seria", t: "Guárdala, entonces. Yo también guardo alguna." },
+              { m: "happy", t: "No muchas. Solo las de días concretos." }] },
         ],
         fish: { id: "pez_caballa", rarity: "comun" },
         introAfter: [
           { m: "orgullosa", t: "Muy bien." },
-          { m: "happy", t: "Mira eso. Definitivamente hemos subido un poco el nivel." },
-          { m: "seria", t: "Y ahora ya sabes algo importante: no siempre puedes decidir qué vas a conseguir." },
+          { m: "happy", t: "Mira eso. Hemos subido de nivel sin pretenderlo." },
+          { m: "seria", t: "Y ahora ya sabes algo importante, aunque todavía no sepas que lo sabes." },
+          { m: "seria", t: "No puedes decidir qué vas a conseguir." },
           { m: "happy", t: "Puedes prepararte. Puedes esperar. Puedes volver." },
-          { m: "orgullosa", t: "Pero al final tienes que ver qué sale." },
+          { m: "orgullosa", t: "Pero al final tienes que ver qué sale, y eso no lo elige nadie." },
         ],
         snap: (g) => ({ since: todayStr() }),
-        progressCount: (g, snap) => proteinDaysSince(g, snap.since), progressGoal: 2,
-        check: (g, snap) => proteinDaysSince(g, snap.since) >= 2 },
-      /* CAPÍTULO 3 — Ya empiezas a entenderlo */
-      { title: "Ya empiezas a entenderlo", zone: "playa",
-        objective: "Ya tienes la lubina. Completa 2 días de alimentación.",
+        subs: [
+          (g, s) => proteinDaysSince(g, s.since) >= 2,
+        ],
+        check: (g, s) => proteinDaysSince(g, s.since) >= 2,
+        progressCount: (g, s) => proteinDaysSince(g, s.since), progressGoal: 2 },
+      /* CAPÍTULO 3 — Volver sin motivo. Empieza con el bloque D diferido del capítulo 2
+         (reconoce los 2 días de proteína), fusionado con el bloque A propio (reacciona a
+         la caballa). Su propio bloque D ("Has vuelto a cumplirlo"...) también es
+         reconocimiento y se difiere al capítulo 4. */
+      { title: "Volver sin motivo", zone: "playa",
+        objective: "Cumple tu objetivo de comida 2 días y sal a pescar.",
         introBefore: [
-          { m: "happy", t: "Mira quién ha vuelto." },
-          /* reconocimiento de los 2 días de proteína del capítulo anterior: va AQUÍ, al
-             empezar este capítulo, porque es el momento en que el jugador acaba de
-             cumplirlos. En el documento aparece dentro del capítulo 2, pero allí la
-             captura se entrega al ARRANCAR la etapa (ver queueStageScene), así que Nina
-             celebraba unos días que todavía no habían pasado. */
           { m: "happy", t: "¿Lo has conseguido?" },
           { m: "orgullosa", t: "Dos días. Bien." },
           { m: "seria", t: "¿Ves? No parecía gran cosa cuando te lo propuse." },
-          { m: "happy", t: "Pero estas cosas empiezan así. Un día, luego otro, y de repente ya forma parte de tu rutina." },
-          { m: "seria", t: "La otra vez te fuiste con una caballa y un par de días más de proteína cumplidos." },
-          { m: "happy", t: "No está mal para alguien que al principio parecía dispuesto a tirar de la caña como si fuera una barra de pesas." },
-          { m: "seria", t: "Pero hay una cosa que quiero que entiendas." },
+          { m: "happy", t: "Pero estas cosas empiezan así. Un día, luego otro, y de repente forma parte de lo que haces sin pensar." },
+          { m: "happy", t: "Mira quién ha vuelto." },
+          { m: "seria", t: "La otra vez te fuiste con una caballa y con dos días de proteína cumplidos." },
+          { m: "happy", t: "No está mal para alguien que la primera tarde sujetaba la caña como si fuera a levantarla." },
+          { m: "seria", t: "Hay una cosa que quiero que entiendas y es la más difícil de todas." },
           { m: "seria", t: "La primera captura puede ser suerte." },
-          { m: "happy", t: "La segunda también." },
-          { m: "seria", t: "Lo interesante es lo que haces después." },
-          { m: "seria", t: "Volver aunque no sepas qué va a pasar." },
-          { m: "happy", t: "Porque si vienes pensando únicamente en conseguir algo concreto, te vas a desesperar." },
-          { m: "seria", t: "Hoy quiero que hagamos otra salida." },
-          { m: "happy", t: "No porque yo sepa que vamos a sacar algo mejor." },
-          { m: "seria", t: "Porque quiero que empieces a acostumbrarte a este ritmo." },
-          { m: "happy", t: "Comes, descansas, vuelves, lanzas la caña... y ves qué pasa." },
+          { m: "happy", t: "La segunda también, no te ofendas." },
+          { m: "seria", t: "Lo que de verdad importa es lo tercero, y lo tercero no es una captura." },
+          { m: "seria", t: "Es volver sin saber qué va a pasar." },
+          { m: "seria", t: "…" },
+          { m: "happy", t: "Te lo explico con el peor ejemplo posible, que es el mío." },
+          { m: "seria", t: "Yo he venido aquí unos mil días. Mil, tirando por lo bajo." },
+          { m: "seria", t: "Y si te digo cuántos de esos mil días me llevé algo bueno, te vas a llevar una sorpresa desagradable." },
+          { m: "happy", t: "Muy pocos. Muchísimos menos de los que te imaginas." },
+          { m: "seria", t: "La mayoría son días de nada. Vengo, me siento, se me duerme una pierna, me vuelvo a casa." },
+          { m: "seria", t: "Y aun así vuelvo al día siguiente." },
+          { m: "happy", t: "Que dicho así suena a problema. Y a lo mejor lo es." },
+          { m: "seria", t: "Pero es la única cosa que hago sin fallar desde hace años." },
+          { m: "seria", t: "Así que hoy vamos a salir otra vez." },
+          { m: "happy", t: "No porque yo sepa que vamos a sacar algo mejor. Ya sabes que no lo sé." },
+          { m: "seria", t: "Porque quiero que te acostumbres a este ritmo." },
+          { m: "seria", t: "Comes, descansas, vuelves, lanzas la caña, y ves qué pasa." },
+          { m: "happy", t: "Dos días de comida decente. Y luego te vienes." },
+          { m: "seria", t: "Sin esperar nada. Ese es el ejercicio entero." },
+          { m: "seria", t: "Vamos a probar suerte otra vez." },
+          { m: "happy", t: "No te prometo nada. Nunca lo hago." },
+          { m: "seria", t: "Solo quiero ver qué nos encontramos hoy." },
+        ],
+        replies: [
+          { t: "Yo no podría venir mil días.", m: "idle",
+            r: [{ m: "seria", t: "Sí que podrías." }, { m: "happy", t: "Lo que no podrías es venir mil días esperando que pase algo." },
+              { m: "seria", t: "Que es distinto, y es lo que casi todo el mundo hace mal." }] },
+          { t: "¿Y los días de nada?", m: "idle",
+            r: [{ m: "seria", t: "Son la mayoría." }, { m: "happy", t: "Y son mis favoritos, aunque quede fatal decirlo." },
+              { m: "seria", t: "Los días de captura te acuerdas del pez. Los días de nada te acuerdas de lo demás." }] },
+          { t: "Yo también he vuelto sin motivo.", m: "idle",
+            r: [{ m: "orgullosa", t: "…" }, { m: "happy", t: "Ya." }, { m: "seria", t: "Eso lo he notado." }, { m: "happy", t: "No lo digas mucho, que se me sube." }] },
         ],
         fish: { id: "pez_lubina", rarity: "poco_comun" },
         introAfter: [
           { m: "orgullosa", t: "Esa ya tiene otra pinta." },
           { m: "happy", t: "No está nada mal." },
-          { m: "seria", t: "Y fíjate en que cada vez tienes menos prisa por saber qué va a salir." },
-          { m: "happy", t: "Eso sí que es progreso." },
+          { m: "seria", t: "Pero fíjate en una cosa que no tiene que ver con el pez." },
+          { m: "seria", t: "Hoy no me has preguntado ni una vez cuánto faltaba." },
+          { m: "happy", t: "Ni una." },
+          { m: "orgullosa", t: "Eso sí que es progreso. Lo otro es un animal que ha tenido un mal día." },
         ],
         snap: (g) => ({ since: todayStr() }),
-        progressCount: (g, snap) => daysGoalsCompletedSince(g, snap.since), progressGoal: 2,
-        check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 2 },
-      /* CAPÍTULO 4 — Lo que llevas a casa */
+        subs: [
+          (g, s) => daysGoalsCompletedSince(g, s.since) >= 2,
+        ],
+        check: (g, s) => daysGoalsCompletedSince(g, s.since) >= 2,
+        progressCount: (g, s) => daysGoalsCompletedSince(g, s.since), progressGoal: 2 },
+      /* CAPÍTULO 4 — Lo que llevas a casa. Bloque A fusionado con el bloque D diferido del
+         capítulo 3. Su propio bloque D también se difiere, al capítulo 5. */
       { title: "Lo que llevas a casa", zone: "playa",
-        objective: "Ya tienes la dorada. Completa 3 días de alimentación.",
+        objective: "Cumple tu objetivo de comida durante 3 días y sal a pescar.",
         introBefore: [
-          /* reconocimiento de los días del capítulo anterior (mismo motivo que en el 3) */
           { m: "happy", t: "Has vuelto a cumplirlo." },
-          { m: "orgullosa", t: "Empiezas a tener cierta constancia." },
+          { m: "orgullosa", t: "Empiezas a tener cierta constancia, que es una palabra que no uso a la ligera." },
           { m: "seria", t: "¿Nunca te ha pasado que entrenas muchísimo y luego llegas a casa sin ganas de preparar nada?" },
-          { m: "happy", t: "A mí sí." },
-          { m: "seria", t: "Y por eso aprendí a valorar algo muy sencillo: tener algo en casa que te apetezca comer." },
-          { m: "seria", t: "Porque cuando todo lo que ves son números, objetivos y cantidades, comer puede convertirse en otra tarea." },
-          { m: "happy", t: "Pero cuando has pescado tú algo, aunque sea una captura pequeña, cambia." },
-          { m: "seria", t: "Ya no es solo 'tengo que comer'." },
-          { m: "happy", t: "Es 'he conseguido esto, ahora voy a ver qué hago con ello'." },
-          { m: "seria", t: "Quiero que empieces a verlo así." },
-          { m: "happy", t: "Además, si sale mal, siempre puedes culpar al pez." },
-          { m: "happy", t: "Es una técnica culinaria muy avanzada." },
-          { m: "seria", t: "Durante unos días cuida un poco tu alimentación y vuelve a salir conmigo." },
-          { m: "happy", t: "No sé qué encontraremos, pero quizá tengamos una captura que merezca una buena comida." },
+          { m: "happy", t: "A mí sí. Constantemente." },
+          { m: "seria", t: "La lubina, por cierto. ¿Te la comiste?" },
+          { m: "happy", t: "…Vale. Ya. No pregunto más." },
+          { m: "seria", t: "Te cuento una cosa que aprendí tarde y mal." },
+          { m: "seria", t: "Durante bastante tiempo yo comía lo que hubiera. Lo que fuera, de pie, a la hora que cayera." },
+          { m: "happy", t: "Y no por dejadez, ojo. Por eficiencia. Yo estaba muy convencida de que era eficiencia." },
+          { m: "seria", t: "Y un día me di cuenta de que llegaba aquí sin fuerzas para aguantar una tarde entera." },
+          { m: "seria", t: "A pescar. Que es la actividad menos exigente del planeta." },
+          { m: "happy", t: "Eso fue un golpe considerable al ego." },
+          { m: "seria", t: "…" },
+          { m: "seria", t: "Y lo que lo arregló no fue una dieta ni un plan ni nada parecido." },
+          { m: "orgullosa", t: "Fue tener algo en casa que me apeteciera comer." },
+          { m: "seria", t: "Eso es todo. Suena ridículo y es todo." },
+          { m: "happy", t: "Cuando abres la nevera y hay algo que tú has sacado del agua, no estás cumpliendo un objetivo." },
+          { m: "seria", t: "Estás terminando una cosa que empezaste hace tres días en esta playa." },
+          { m: "happy", t: "Y eso engancha mucho más que cualquier número." },
+          { m: "seria", t: "Estos días cuida un poco lo que comes. Tres días." },
+          { m: "happy", t: "Uno más que la última vez, sí. Me estoy poniendo pesada y soy consciente." },
+          { m: "seria", t: "Y luego vuelves y salimos otra vez." },
+          { m: "happy", t: "No sé qué encontraremos." },
+          { m: "seria", t: "Pero si hay suerte, a lo mejor sacamos algo que merezca una comida de verdad." },
+          { m: "happy", t: "Y entonces la próxima vez ya no tienes excusa para cenar de pie." },
+          { m: "seria", t: "Ahora vamos a ver qué nos regala el agua." },
+          { m: "happy", t: "Puede que no sea nada especial." },
+          { m: "seria", t: "O puede que hoy tengamos suerte." },
+        ],
+        replies: [
+          { t: "¿Y si no me gusta el pescado?", m: "idle",
+            r: [{ m: "happy", t: "Entonces lo estás cocinando mal." }, { m: "seria", t: "…" }, { m: "happy", t: "Vale, eso ha sido muy arrogante." },
+              { m: "seria", t: "Pero es verdad el noventa por ciento de las veces." }] },
+          { t: "¿Comes bien ahora?", m: "idle",
+            r: [{ m: "seria", t: "Mejor." }, { m: "happy", t: "No bien. Mejor." }, { m: "seria", t: "Y he tardado años, así que no te agobies si tú tardas unas semanas." }] },
+          { t: "Enséñame a cocinarlo.", m: "idle",
+            r: [{ m: "orgullosa", t: "…" }, { m: "happy", t: "Anda. Vale." }, { m: "seria", t: "Otro día. En serio, otro día. Me lo apunto." },
+              { m: "happy", t: "Y no se me olvida, que conste." }] },
         ],
         fish: { id: "pez_dorada", rarity: "poco_comun" },
         introAfter: [
-          { m: "orgullosa", t: "Esta sí que merece una buena comida." },
-          { m: "seria", t: "Y recuerda algo: no necesitas comer perfecto." },
-          { m: "seria", t: "Solo necesitas empezar a cuidar un poco más lo que haces cada día." },
-          { m: "happy", t: "Si haces eso durante suficiente tiempo, empiezas a notar la diferencia." },
+          { m: "orgullosa", t: "Esta sí que merece una comida en condiciones." },
+          { m: "happy", t: "Y no la guardes. Esta te la comes. Es una orden." },
+          { m: "seria", t: "Y recuerda una cosa: no necesitas comer perfecto." },
+          { m: "seria", t: "Solo necesitas cuidar un poco más lo que haces cada día." },
+          { m: "happy", t: "Si haces eso el tiempo suficiente, un día te das cuenta de que ya no te cuesta." },
+          { m: "seria", t: "Y ese día no te enteras de que ha pasado. Nunca te enteras." },
         ],
         snap: (g) => ({ since: todayStr() }),
-        progressCount: (g, snap) => daysGoalsCompletedSince(g, snap.since), progressGoal: 3,
-        check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3 },
-      /* CAPÍTULO 5 — El silencio */
+        subs: [
+          (g, s) => daysGoalsCompletedSince(g, s.since) >= 3,
+        ],
+        check: (g, s) => daysGoalsCompletedSince(g, s.since) >= 3,
+        progressCount: (g, s) => daysGoalsCompletedSince(g, s.since), progressGoal: 3 },
+      /* CAPÍTULO 5 — El silencio. Bloque A fusionado con el bloque D diferido del capítulo 4. */
       { title: "El silencio", zone: "playa",
-        objective: "Ya tienes la trucha. Mantén una racha de 3 días.",
+        objective: "Cumple tu objetivo de comida y de sueño durante 3 días.",
         introBefore: [
-          /* reconocimiento de los 3 días del capítulo anterior (mismo motivo que en el 3) */
           { m: "happy", t: "Tres días. Bien." },
-          { m: "seria", t: "Ya estás haciendo algo que al principio parecía pesado sin darle tantas vueltas." },
+          { m: "seria", t: "Y ya lo estás haciendo sin darle tantas vueltas, que es la parte que importa." },
           { m: "seria", t: "Hoy no quiero hablar demasiado." },
-          { m: "happy", t: "No pongas esa cara. No estoy enfadada." },
-          { m: "seria", t: "Solo quiero que escuches." },
-          { m: "seria", t: "El agua. El viento. La caña." },
-          { m: "seria", t: "Después de pasar tanto tiempo viendo gente correr detrás de algo, a veces viene bien quedarse quieto." },
+          { m: "happy", t: "No pongas esa cara, no estoy enfadada ni ha pasado nada." },
+          { m: "seria", t: "Solo quiero que escuches un rato." },
+          { m: "seria", t: "El agua. El viento. La caña cuando roza la piedra." },
+          { m: "seria", t: "…" },
+          { m: "seria", t: "Después de pasar tanto tiempo viendo a gente correr detrás de algo, a veces viene bien quedarse quieto." },
           { m: "happy", t: "Aunque sean cinco minutos." },
-          { m: "seria", t: "Últimamente has estado cumpliendo tus objetivos y volviendo a pescar." },
-          { m: "happy", t: "Y creo que ya empiezas a entender por qué me gusta esto." },
-          { m: "seria", t: "No sabes cuándo va a picar." },
-          { m: "seria", t: "No sabes qué vas a sacar." },
+          { m: "seria", t: "…" },
+          { m: "seria", t: "Voy a decirte una cosa y luego nos callamos los dos." },
+          { m: "seria", t: "Llevo semanas viéndote cumplir objetivos y volver aquí. Y creo que ya empiezas a entender por qué me gusta esto." },
+          { m: "seria", t: "No sabes cuándo va a picar. No sabes qué vas a sacar." },
           { m: "happy", t: "Solo puedes estar preparado y esperar." },
-          { m: "seria", t: "Quiero que hagas lo mismo durante los próximos días." },
+          { m: "seria", t: "Y hay una diferencia enorme entre esperar y estar esperando algo." },
+          { m: "seria", t: "La primera es estar aquí. La segunda es estar en otro sitio con el cuerpo aquí." },
+          { m: "happy", t: "Yo llevo años intentando hacer la primera y se me da regular." },
+          { m: "seria", t: "…" },
+          { m: "seria", t: "Ya está. Ya he hablado bastante. Cállate un rato conmigo." },
+          { m: "seria", t: "Quiero que hagas lo mismo estos días." },
           { m: "seria", t: "Come, descansa y no te obsesiones con hacerlo todo perfecto." },
+          { m: "happy", t: "Tres días seguidos, las dos cosas. Comida y sueño." },
+          { m: "seria", t: "Seguidos, sí. Ahí está la gracia." },
           { m: "happy", t: "Después vuelve." },
-          { m: "seria", t: "Nos sentaremos aquí y veremos qué decide hacer el agua." },
+          { m: "seria", t: "Nos sentamos aquí y vemos qué decide hacer el agua." },
+        ],
+        replies: [
+          { t: "…", m: "idle",
+            r: [{ m: "orgullosa", t: "…" }, { m: "happy", t: "Bien." }, { m: "seria", t: "Eso ha estado muy bien." }] },
+          { t: "¿En qué piensas cuando no hablas?", m: "idle",
+            r: [{ m: "seria", t: "En nada. De verdad." }, { m: "happy", t: "Bueno… a veces en gente." }, { m: "seria", t: "Pero eso ya es hacer trampa, así que intento no hacerlo." }] },
+          { t: "Me cuesta estar quieto.", m: "idle",
+            r: [{ m: "happy", t: "Ya lo veo. Llevas dos minutos moviendo el pie." }, { m: "seria", t: "No pasa nada. A mí también me pasaba." },
+              { m: "seria", t: "Lo único que funciona es no intentar arreglarlo. Se va solo." }] },
         ],
         fish: { id: "pez_trucha", rarity: "raro" },
         introAfter: [
           { m: "orgullosa", t: "Bien." },
           { m: "happy", t: "No has intentado forzarla." },
-          { m: "seria", t: "Eso es más importante de lo que parece." },
-          { m: "happy", t: "Al principio querías que todo ocurriera rápido." },
+          { m: "seria", t: "Eso es bastante más importante de lo que parece." },
+          { m: "happy", t: "Al principio querías que todo ocurriera rápido. Se te notaba en las manos." },
           { m: "seria", t: "Ahora estás empezando a dejar que las cosas ocurran." },
+          { m: "seria", t: "…Que es una frase que digo mucho y que se me da bastante peor de lo que parece." },
         ],
-        snap: () => ({}),
-        progressCount: (g) => g.player.streak || 0, progressGoal: 3,
-        check: (g) => (g.player.streak || 0) >= 3 },
-      /* CAPÍTULO 6 — Algo grande */
+        snap: (g) => ({ since: todayStr() }),
+        subs: [
+          (g, s) => proteinSleepDaysSince(g, s.since) >= 3,
+        ],
+        check: (g, s) => proteinSleepDaysSince(g, s.since) >= 3,
+        progressCount: (g, s) => proteinSleepDaysSince(g, s.since), progressGoal: 3 },
+      /* CAPÍTULO 6 — Algo grande. Bloque A fusionado con el bloque D diferido del capítulo 5.
+         Bloque D propio ("¿Preparado?") es solo previo al lanzamiento, sin reconocimiento:
+         se queda local, antes del atún. */
       { title: "Algo grande", zone: "playa",
-        objective: "Ya tienes el atún. Consigue el objetivo de proteína durante 3 días.",
+        objective: "Cumple tu objetivo de proteína durante 3 días y sal a pescar.",
         introBefore: [
-          { m: "happy", t: "Hoy te he traído hasta aquí porque quiero probar algo." },
-          { m: "seria", t: "Hasta ahora hemos tenido capturas pequeñas, algunas mejores que otras." },
-          { m: "happy", t: "Y no sabemos nunca qué va a aparecer." },
+          { m: "seria", t: "Tres días. Los tres, y seguidos." },
+          { m: "seria", t: "No has intentado adelantarlos ni juntarlos ni hacer trampa con las horas." },
+          { m: "happy", t: "Sé perfectamente que se puede hacer trampa con las horas, por cierto." },
+          { m: "happy", t: "Hoy te he traído hasta este lado porque quiero probar una cosa." },
+          { m: "seria", t: "Y antes de nada: tres días seguidos, comida y sueño. No lo he comentado el otro día y debería haberlo hecho." },
+          { m: "orgullosa", t: "Estuvo bien. Estuvo muy bien." },
+          { m: "seria", t: "Hasta ahora hemos tenido capturas pequeñas. Algunas mejores que otras, ninguna espectacular." },
+          { m: "happy", t: "Y no sabemos nunca qué va a aparecer, eso no ha cambiado ni va a cambiar." },
           { m: "seria", t: "Pero llega un momento en el que empiezas a preguntarte qué habrá más lejos." },
-          { m: "happy", t: "Y eso es justo lo que me pasa a mí." },
-          { m: "seria", t: "Hay días en los que la playa está tranquila y otros en los que parece que todo lo que hay debajo del agua se ha puesto de acuerdo para fastidiarte." },
+          { m: "happy", t: "Y eso es justo lo que me está pasando a mí desde hace unas semanas." },
+          { m: "seria", t: "…" },
+          { m: "seria", t: "Aquí el fondo cae de golpe. A cuarenta metros de la orilla hay una pared y se va a treinta de profundidad." },
+          { m: "happy", t: "Y ahí abajo hay cosas que yo no he visto nunca." },
+          { m: "seria", t: "Hay días en los que la playa está tranquila y no pasa nada. Y hay días en los que parece que todo lo que hay debajo se ha puesto de acuerdo para fastidiarte." },
           { m: "happy", t: "Hoy vamos a comprobar de qué tipo es." },
-          { m: "seria", t: "No sé qué vamos a sacar." },
-          { m: "happy", t: "Puede que sea algo normal." },
-          { m: "seria", t: "Puede que sea algo grande." },
-          { m: "happy", t: "Y si tienes suerte, quizá sea una captura que recuerdes." },
+          { m: "seria", t: "No sé qué vamos a sacar. Puede que nada." },
+          { m: "happy", t: "Puede que algo normal." },
+          { m: "seria", t: "Puede que algo grande." },
+          { m: "happy", t: "Y si tienes suerte, quizá sea una captura que recuerdes dentro de unos años." },
+          { m: "seria", t: "Pero antes de eso, lo de siempre, que aquí no hay atajos." },
+          { m: "seria", t: "Tres días de proteína. Los tres." },
+          { m: "happy", t: "Y no es capricho mío ni una regla que me he inventado." },
+          { m: "seria", t: "Si vamos a estar cinco horas aquí y algo grande pica al final, quiero que tengas brazos." },
+          { m: "happy", t: "He visto a gente perder capturas por estar reventada, y es de las cosas más tristes que hay." },
+          { m: "seria", t: "Así que come. Y vuelve." },
           { m: "happy", t: "¿Preparado?" },
           { m: "seria", t: "Entonces no pienses demasiado." },
           { m: "happy", t: "Lanza y espera." },
+        ],
+        replies: [
+          { t: "¿Cuál es la mayor que has sacado?", m: "idle",
+            r: [{ m: "seria", t: "Una lubina de tres kilos y pico." }, { m: "happy", t: "Que suena a poco y no lo es, para que conste." },
+              { m: "seria", t: "Tardé cuarenta minutos y acabé con las manos temblando." }, { m: "happy", t: "Y no se lo conté a nadie, que es lo raro de aquel día." }] },
+          { t: "¿Y si se rompe la caña?", m: "idle",
+            r: [{ m: "happy", t: "Se rompe." }, { m: "seria", t: "Y se compra otra, que es lo que pasa con las cañas." }, { m: "happy", t: "Es la parte barata del asunto, créeme." }] },
+          { t: "Vamos.", m: "idle",
+            r: [{ m: "orgullosa", t: "…" }, { m: "happy", t: "Vale. Sin discutir. Me gusta." }, { m: "seria", t: "Trae agua. Esto puede ser largo." }] },
         ],
         fish: { id: "pez_atun", rarity: "raro" },
         introAfter: [
           { m: "sorprendida", t: "¡¿Eso estaba ahí abajo?!" },
           { m: "happy", t: "Vale. Vale. No voy a decir nada." },
-          { m: "orgullosa", t: "Bueno... sí. Estoy impresionada." },
+          { m: "orgullosa", t: "Bueno… sí. Estoy impresionada y no me cuesta admitirlo." },
           { m: "seria", t: "¿Ves por qué no me gusta prometerte lo que va a salir?" },
-          { m: "happy", t: "Porque cuando algo así aparece, la sorpresa es mucho mejor." },
+          { m: "happy", t: "Porque cuando aparece algo así, la sorpresa es muchísimo mejor que cualquier promesa." },
+          { m: "seria", t: "…Y porque si te lo prometo y no sale, la culpa es mía." },
+          { m: "happy", t: "Que también es un motivo, aunque quede menos bonito." },
         ],
         snap: (g) => ({ since: todayStr() }),
-        progressCount: (g, snap) => proteinDaysSince(g, snap.since), progressGoal: 3,
-        check: (g, snap) => proteinDaysSince(g, snap.since) >= 3 },
-      /* CAPÍTULO 7 — El pez espada */
+        subs: [
+          (g, s) => proteinDaysSince(g, s.since) >= 3,
+        ],
+        check: (g, s) => proteinDaysSince(g, s.since) >= 3,
+        progressCount: (g, s) => proteinDaysSince(g, s.since), progressGoal: 3 },
+      /* CAPÍTULO 7 — El pez espada. Bloque D propio ("¿Listo?") es solo previo al
+         lanzamiento: se queda local. No hay reconocimiento de días que diferir aquí porque
+         el capítulo 6 tampoco lo llevaba (ver nota del documento). */
       { title: "El pez espada", zone: "playa",
-        objective: "Ya tienes el pez espada. Completa 3 días de objetivos de alimentación.",
+        objective: "Cumple tu objetivo de comida durante 3 días y sal a pescar.",
         introBefore: [
+          { m: "seria", t: "Sigo pensando en el atún, para que lo sepas." },
+          { m: "happy", t: "Le hice una foto y la he mirado unas cuantas veces esta semana." },
+          { m: "orgullosa", t: "Bastantes veces." },
           { m: "seria", t: "Hay una diferencia entre pescar algo grande y pescar algo que parece diseñado para hacerte quedar mal." },
-          { m: "happy", t: "El pez espada entra en la segunda categoría." },
-          { m: "seria", t: "Y después de lo que sacamos la última vez, no quiero que te confíes." },
-          { m: "happy", t: "Que hayas pescado un atún no significa que ahora seas invencible." },
-          { m: "seria", t: "De hecho, cuanto más grande puede ser la captura, más importante es tener paciencia." },
-          { m: "seria", t: "Así que vamos a seguir con la rutina." },
-          { m: "happy", t: "Cuida la alimentación, descansa y vuelve cuando estés listo." },
-          { m: "seria", t: "Luego lanzamos la caña y dejamos que el agua decida." },
-          { m: "happy", t: "Si notas que tiembla demasiado, respira." },
-          { m: "happy", t: "Y si sale algo enorme, intenta no gritar." },
-          { m: "happy", t: "Yo grité la primera vez." },
+          { m: "happy", t: "El pez espada entra en la segunda categoría, y con honores." },
+          { m: "seria", t: "Y después de lo del otro día, no quiero que te confíes." },
+          { m: "happy", t: "Que hayas sacado un atún no significa que ahora seas invencible. Significa que un día tuviste una tarde muy buena." },
+          { m: "seria", t: "…" },
+          { m: "seria", t: "Te explico por qué, que no es para desanimarte." },
+          { m: "seria", t: "Una captura grande no tira más fuerte. Tira más tiempo." },
+          { m: "happy", t: "Eso es lo que no espera nadie." },
+          { m: "seria", t: "Los primeros dos minutos son emocionantes. Los siguientes veinte son un trabajo." },
+          { m: "seria", t: "Y ahí es donde la gente lo pierde todo: no por falta de fuerza, sino porque se cansa de estar concentrada." },
+          { m: "happy", t: "Cuanto más grande puede ser la captura, más importante es tener paciencia. Es exactamente al revés de lo que parece." },
+          { m: "seria", t: "…" },
+          { m: "happy", t: "Ah, y si sale algo enorme, intenta no gritar." },
+          { m: "seria", t: "Yo grité la primera vez. Grité muchísimo." },
+          { m: "happy", t: "Y había gente. Eso es lo peor. Había gente." },
+          { m: "seria", t: "Así que seguimos con la rutina, que es lo único que funciona." },
+          { m: "seria", t: "Tres días cuidando la comida. Y descansa, aunque eso no te lo pida en la misión." },
+          { m: "happy", t: "Y vuelve cuando estés listo, no cuando te sientas obligado. Esos dos días son distintos y se nota en la caña." },
+          { m: "seria", t: "Luego lanzamos y dejamos que el agua decida." },
+          { m: "happy", t: "Si notas que tiembla demasiado, respira. Eso es todo el consejo técnico que tengo." },
           { m: "seria", t: "¿Listo?" },
           { m: "happy", t: "Entonces vamos." },
+          { m: "seria", t: "Y acuérdate: no es fuerza. Es tiempo." },
+        ],
+        replies: [
+          { t: "¿Veinte minutos de verdad?", m: "idle",
+            r: [{ m: "seria", t: "A veces más." }, { m: "happy", t: "El récord de aquí es de un señor que estuvo una hora y diez y lo perdió al final." },
+              { m: "seria", t: "Se sentó en la arena y no dijo nada durante un rato largo." }, { m: "happy", t: "Le llevé un café. Fue lo único que se me ocurrió." }] },
+          { t: "¿Gritaste mucho?", m: "idle",
+            r: [{ m: "happy", t: "Muchísimo." }, { m: "seria", t: "Y no era ni siquiera un pez grande. Era mediano tirando a pequeño." },
+              { m: "happy", t: "Tenía nueve años, en mi defensa." }, { m: "seria", t: "Y alguien se rió tanto que casi se cae al agua." }] },
+          { t: "Prefiero perderlo a no intentarlo.", m: "idle",
+            r: [{ m: "orgullosa", t: "…" }, { m: "seria", t: "Apúntate esa frase." }, { m: "happy", t: "Y recuérdamela algún día, que a mí se me olvida bastante." }] },
         ],
         fish: { id: "pez_espada", rarity: "epico" },
         introAfter: [
-          { m: "sorprendida", t: "..." },
+          { m: "sorprendida", t: "…" },
           { m: "happy", t: "Retiro oficialmente lo de que eres principiante." },
-          { m: "orgullosa", t: "Eso ha sido muy bueno." },
+          { m: "orgullosa", t: "Eso ha sido muy bueno. Y no lo digo por educación." },
+          { m: "seria", t: "Aguantaste cuando dejó de ser divertido, que es la parte que no se entrena." },
           { m: "seria", t: "Y ahora entiendes por qué nunca te digo qué vas a sacar." },
           { m: "happy", t: "Porque ni yo lo sé." },
         ],
         snap: (g) => ({ since: todayStr() }),
-        progressCount: (g, snap) => daysGoalsCompletedSince(g, snap.since), progressGoal: 3,
-        check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 3 },
-      /* CAPÍTULO 8 — Una idea terrible */
+        subs: [
+          (g, s) => daysGoalsCompletedSince(g, s.since) >= 3,
+        ],
+        check: (g, s) => daysGoalsCompletedSince(g, s.since) >= 3,
+        progressCount: (g, s) => daysGoalsCompletedSince(g, s.since), progressGoal: 3 },
+      /* CAPÍTULO 8 — Una idea terrible. Bloque D propio ("Cuatro días. Si has llegado hasta
+         aquí...") es una reafirmación retórica de la misión que se acaba de pedir, no un
+         reconocimiento de algo ya cumplido — se queda local. El capítulo 9 no lo recoge
+         (cambia totalmente de escena y de tono, al amanecer). */
       { title: "Una idea terrible", zone: "playa",
-        objective: "Ya tienes el tiburón. Cumple 4 días de alimentación.",
+        objective: "Cumple tu objetivo de comida durante 4 días y sal a pescar.",
         introBefore: [
           { m: "happy", t: "Tengo una idea." },
-          { m: "seria", t: "Antes de que preguntes, sí, probablemente sea mala." },
-          { m: "happy", t: "Pero ya que hemos llegado hasta aquí..." },
-          { m: "seria", t: "Hemos pasado de una sardina a algo que casi parecía querer arrancarte la caña de las manos." },
-          { m: "happy", t: "Y todavía sigues volviendo." },
-          { m: "seria", t: "Eso me gusta." },
-          { m: "happy", t: "Porque significa que ya no vienes solo por conseguir una recompensa." },
-          { m: "seria", t: "Así que quiero que probemos una salida diferente." },
-          { m: "happy", t: "No sé qué vamos a encontrar." },
+          { m: "seria", t: "Antes de que preguntes: sí, probablemente sea mala." },
+          { m: "happy", t: "Pero ya que hemos llegado hasta aquí…" },
+          { m: "seria", t: "Hemos pasado de una sardina a algo que casi te arranca la caña de las manos." },
+          { m: "happy", t: "Y tú sigues volviendo, que es lo que de verdad me llama la atención." },
+          { m: "seria", t: "Porque significa que ya no vienes solo por conseguir una recompensa." },
+          { m: "orgullosa", t: "Eso no lo consigue casi nadie. Y menos en unas semanas." },
+          { m: "seria", t: "…" },
+          { m: "seria", t: "Así que quiero que probemos una salida distinta." },
+          { m: "happy", t: "Distinta quiere decir mala idea, para que nos entendamos." },
+          { m: "seria", t: "No sé qué vamos a encontrar. Nunca lo sé, ya lo sabes." },
           { m: "seria", t: "Pero me gustaría intentar algo que normalmente no querrías ver acercándose a ti." },
-          { m: "happy", t: "Y sí. Estoy hablando de un tiburón." },
-          { m: "seria", t: "No te preocupes. Si todo sale mal, yo correré primero." },
+          { m: "happy", t: "Y sí. Estoy hablando de lo que estás pensando." },
+          { m: "seria", t: "…" },
+          { m: "happy", t: "No te preocupes. Si todo sale mal, yo correré primero." },
+          { m: "seria", t: "Lo digo completamente en serio, por cierto. No es un chiste." },
+          { m: "happy", t: "Llevo diez años aquí y sigo sin ser valiente. Soy constante, que no es lo mismo." },
+          { m: "seria", t: "Pero antes, cuatro días. Cuatro." },
+          { m: "happy", t: "Sí, he subido otra vez. Y esta vez sí es capricho." },
+          { m: "seria", t: "Cuida lo que haces fuera de esta playa y luego vuelve conmigo." },
+          { m: "seria", t: "Lo demás no lo podemos controlar y no merece la pena intentarlo." },
           { m: "happy", t: "Cuatro días." },
-          { m: "seria", t: "Si has llegado hasta aquí, ya sabes lo que significa." },
-          { m: "happy", t: "Cuida lo que haces fuera de la playa y luego vuelve conmigo." },
-          { m: "seria", t: "Lo demás no lo podemos controlar." },
+          { m: "seria", t: "Si has llegado hasta aquí, ya sabes lo que significa y no hace falta que lo diga." },
+          { m: "happy", t: "Venga. Lanza." },
+          { m: "seria", t: "Y no te acerques al agua más de lo necesario." },
+        ],
+        replies: [
+          { t: "¿Esto es legal?", m: "idle",
+            r: [{ m: "happy", t: "…" }, { m: "seria", t: "Vamos a lanzar la caña y ya está." }, { m: "happy", t: "Siguiente pregunta." }] },
+          { t: "¿Por qué hoy?", m: "idle",
+            r: [{ m: "seria", t: "…" }, { m: "happy", t: "No sé. Me apetecía hacer algo distinto." }, { m: "seria", t: "Llevo demasiado tiempo haciendo exactamente lo mismo todos los días." },
+              { m: "happy", t: "Y eso, dicho en voz alta, suena peor de lo que pensaba." }] },
+          { t: "Corro yo primero.", m: "idle",
+            r: [{ m: "happy", t: "Trato hecho." }, { m: "orgullosa", t: "Y que conste que no pienso ayudarte." }] },
         ],
         fish: { id: "pez_tiburon", rarity: "legendario" },
         introAfter: [
-          { m: "sorprendida", t: "..." },
+          { m: "sorprendida", t: "…" },
           { m: "happy", t: "Creo que acabo de perder cinco años de vida." },
-          { m: "orgullosa", t: "Pero ha valido la pena." },
+          { m: "orgullosa", t: "Pero ha valido la pena. Ha valido muchísimo la pena." },
           { m: "seria", t: "Aunque te juro que la próxima vez elegimos algo más tranquilo." },
+          { m: "happy", t: "…" },
+          { m: "seria", t: "Voy a hacerle una foto. Quieto ahí." },
+          { m: "happy", t: "…Ya está." },
+          { m: "seria", t: "Vete a casa. Yo me quedo un rato." },
         ],
         snap: (g) => ({ since: todayStr() }),
-        progressCount: (g, snap) => daysGoalsCompletedSince(g, snap.since), progressGoal: 4,
-        check: (g, snap) => daysGoalsCompletedSince(g, snap.since) >= 4 },
-      /* CAPÍTULO 9 — El pez que nunca olvidó (sin captura: prepara la del capítulo 10) */
-      { title: "El pez que nunca olvidó", zone: "playa",
-        objective: "Completa 4 días de alimentación y sueño.",
+        subs: [
+          (g, s) => daysGoalsCompletedSince(g, s.since) >= 4,
+        ],
+        check: (g, s) => daysGoalsCompletedSince(g, s.since) >= 4,
+        progressCount: (g, s) => daysGoalsCompletedSince(g, s.since), progressGoal: 4 },
+      /* CAPÍTULO 9 — La próxima vez (SIN PESCA, capítulo nuevo del rework: la detonación).
+         Amanecer, con la caña sin montar. Bloque A reacciona al tiburón del capítulo
+         anterior, ya leído y cerrado, así que no hay problema de orden con checkStories. */
+      { title: "La próxima vez", zone: "playa",
+        objective: "Cierra 4 días seguidos de objetivos.",
         intro: [
-          { m: "seria", t: "Hay algo que nunca te he contado." },
-          { m: "seria", t: "Cuando empecé a pescar, venía con mi padre." },
-          { m: "happy", t: "Yo no sabía absolutamente nada." },
-          { m: "happy", t: "Solo quería lanzar la caña y sacar algo enorme." },
-          { m: "seria", t: "Él se reía porque me pasaba el día preguntando cuándo iba a picar." },
-          { m: "seria", t: "Un día vimos un pez luna." },
-          { m: "seria", t: "No conseguimos sacarlo." },
-          { m: "happy", t: "Ni siquiera estuvimos cerca." },
-          { m: "seria", t: "Pero recuerdo perfectamente aquel momento." },
-          { m: "seria", t: "El agua, la caña, mi padre riéndose y yo convencida de que la próxima vez lo conseguiría." },
-          { m: "happy", t: "La próxima vez nunca llegó." },
-          { m: "seria", t: "Y con los años me di cuenta de que quizá no era realmente el pez lo que recordaba." },
-          { m: "seria", t: "Era estar allí con él." },
-          { m: "orgullosa", t: "Por eso quiero intentarlo otra vez." },
-          { m: "seria", t: "No porque crea que esta vez vaya a salir." },
-          { m: "happy", t: "Ya sabes que nunca sabemos qué va a picar." },
-          { m: "seria", t: "Pero quiero volver a sentarme aquí y ver qué pasa." },
-          { m: "seria", t: "Si quieres acompañarme, primero haz lo de siempre." },
-          { m: "happy", t: "Come, descansa, cuídate un poco y vuelve." },
-          { m: "orgullosa", t: "Luego tendremos nuestra salida." },
-          { m: "seria", t: "Ya está." },
-          { m: "happy", t: "No hay mucho más que preparar." },
-          { m: "seria", t: "Mañana volveremos a lanzar la caña." },
-          { m: "happy", t: "Y esta vez no voy a decirte que va a salir nada." },
-          { m: "seria", t: "Solo quiero estar aquí cuando ocurra." },
+          { m: "lejos", t: "Has venido pronto." },
+          { m: "seria", t: "Yo llevo aquí desde las seis." },
+          { m: "lejos", t: "…" },
+          { m: "seria", t: "No he montado la caña. Llevo dos horas y media aquí y no he montado la caña." },
+          { m: "seria", t: "El otro día, cuando te fuiste, me quedé con la foto en la mano." },
+          { m: "lejos", t: "La captura más grande que he visto en diez años en esta playa. Y encima la sacaste tú, que llevabas dos meses." },
+          { m: "happy", t: "Eso último me fastidió un poco, por cierto. Lo digo por honestidad." },
+          { m: "seria", t: "…" },
+          { m: "lejos", t: "Cogí el teléfono para mandársela a mi padre." },
+          { m: "lejos", t: "Lo tenía abierto. El chat, la foto seleccionada, el dedo encima." },
+          { m: "seria", t: "Y lo cerré." },
+          { m: "lejos", t: "Y llevo una semana intentando entender por qué." },
+          { m: "seria", t: "…" },
+          { m: "seria", t: "Te voy a decir una cosa que llevo años sin decirle a nadie." },
+          { m: "lejos", t: "Yo no soy paciente." },
+          { m: "seria", t: "Soy lenta. Son dos cosas distintas y se parecen muchísimo por fuera." },
+          { m: "lejos", t: "La paciencia es esperar sabiendo que va a llegar el momento." },
+          { m: "seria", t: "Lo mío es aplazar y llamarlo paciencia porque queda mejor." },
+          { m: "lejos", t: "…" },
+          { m: "seria", t: "«La próxima vez.» ¿Sabes cuántas veces te he dicho eso desde que nos conocemos?" },
+          { m: "seria", t: "Las he contado esta semana. Volví atrás y las conté." },
+          { m: "lejos", t: "Es lo único que sé decir." },
+          { m: "seria", t: "Y llevo nueve años diciéndomelo a mí misma con una persona que vive a cuarenta minutos de aquí." },
+          { m: "seria", t: "Bueno. No te he hecho venir para esto. O sí, pero no solo." },
+          { m: "seria", t: "Quiero pedirte una cosa distinta a las de siempre." },
+          { m: "lejos", t: "Cuatro días. Seguidos. Los cuatro." },
+          { m: "seria", t: "Y no me vale que hagas tres, te saltes uno y hagas dos más." },
+          { m: "seria", t: "Seguidos. Sin aplazar ninguno." },
+          { m: "happy", t: "Ya sé que es exactamente lo mismo que te he pedido otras veces, con otra palabra." },
+          { m: "lejos", t: "Pero esta semana necesito ver a alguien no aplazar nada." },
+          { m: "seria", t: "Aunque sea con la comida. Aunque sea una tontería." },
+          { m: "seria", t: "Necesito verlo, ¿vale?" },
         ],
-        setFlags: ["ninaTrustUp"],
-        snap: (g) => ({ since: todayStr() }),
-        progressCount: (g, snap) => proteinSleepDaysSince(g, snap.since), progressGoal: 4,
-        check: (g, snap) => proteinSleepDaysSince(g, snap.since) >= 4 },
-      /* CAPÍTULO 10 — El pez luna (captura emocional de la campaña) */
+        replies: [
+          { t: "¿Nueve años?", m: "idle",
+            r: [{ m: "lejos", t: "Nueve." }, { m: "seria", t: "Y no ha pasado nada. Eso es lo peor de todo." },
+              { m: "seria", t: "No nos peleamos. No hubo nada que arreglar." }, { m: "lejos", t: "Simplemente fue no pasando. Un domingo, y otro, y otro." }] },
+          { t: "Mándale la foto.", m: "idle",
+            r: [{ m: "lejos", t: "…" }, { m: "seria", t: "No es tan fácil." }, { m: "seria", t: "Si le mando la foto tengo que explicar por qué no le he mandado ninguna en nueve años." },
+              { m: "lejos", t: "Y esa conversación me da un miedo que no te puedes imaginar." }] },
+          { t: "Tú me enseñaste a volver.", m: "idle",
+            r: [{ m: "lejos", t: "…" }, { m: "seria", t: "Ya." }, { m: "seria", t: "Es bastante ridículo, ¿no?" },
+              { m: "happy", t: "Enseñarle a alguien a hacer una cosa que tú llevas nueve años sin hacer." }] },
+        ],
+        setFlags: ["ninaCrisis"],
+        snap: () => ({ since: todayStr() }),
+        subs: [
+          (g) => (g.player.streak || 0) >= 4,
+        ],
+        check: (g) => (g.player.streak || 0) >= 4,
+        progressCount: (g) => Math.min(g.player.streak || 0, 4), progressGoal: 4 },
+      /* CAPÍTULO 10 — El pez que nunca olvidó (SIN PESCA, capítulo nuevo). Única escena
+         fuera de la playa: barrio, andando. */
+      { title: "El pez que nunca olvidó", zone: "barrio",
+        objective: "Cumple tu objetivo de comida y de sueño durante 4 días.",
+        intro: [
+          { m: "seria", t: "Cuatro días seguidos." },
+          { m: "lejos", t: "Los miré todas las mañanas. Uno por uno." },
+          { m: "seria", t: "Y me ayudó, aunque no sepa explicarte cómo." },
+          { m: "happy", t: "Hoy vamos andando. No me apetece estar sentada." },
+          { m: "seria", t: "Te cuento lo del principio, ya que estamos." },
+          { m: "seria", t: "Cuando empecé a pescar venía con mi padre. Siete años. Todos los domingos." },
+          { m: "happy", t: "Yo no sabía absolutamente nada. Solo quería lanzar la caña y sacar algo enorme." },
+          { m: "seria", t: "Y preguntaba cuándo iba a picar cada dos minutos. Literalmente cada dos minutos." },
+          { m: "happy", t: "Él se reía. No se enfadaba nunca, se reía." },
+          { m: "seria", t: "…" },
+          { m: "seria", t: "Un domingo vimos un pez luna." },
+          { m: "lejos", t: "No conseguimos sacarlo. Ni nos acercamos, para ser honesta." },
+          { m: "seria", t: "Estuvo cuarenta minutos y se fue, y yo me puse a llorar en la arena como una idiota." },
+          { m: "happy", t: "Y él me dijo: «bueno, la próxima vez»." },
+          { m: "seria", t: "…" },
+          { m: "lejos", t: "La próxima vez nunca llegó." },
+          { m: "seria", t: "No porque pasara nada. Ese es el detalle que la gente nunca entiende cuando lo cuento." },
+          { m: "seria", t: "Yo empecé a venir sola. Él empezó a trabajar los domingos. Luego dejó de trabajar los domingos y yo ya venía sola por costumbre." },
+          { m: "lejos", t: "Y un día calculé cuánto hacía y me salieron nueve años." },
+          { m: "seria", t: "…" },
+          { m: "seria", t: "Con el tiempo me di cuenta de que a lo mejor no era el pez lo que recordaba." },
+          { m: "lejos", t: "Era estar allí con él." },
+          { m: "seria", t: "Y llevo diez años viniendo aquí a intentar sacar un pez que en realidad no quiero." },
+          { m: "happy", t: "Que es, si lo piensas, una forma bastante cara de echar de menos a alguien." },
+          { m: "seria", t: "Total. Que quiero volver a intentarlo. El pez, digo." },
+          { m: "seria", t: "No porque crea que esta vez va a salir. Ya sabes que nunca sabemos qué va a picar." },
+          { m: "lejos", t: "Es que si voy a hacer las cosas, quiero hacerlas ahora y no cuando me apetezca." },
+          { m: "seria", t: "Y esa es la primera vez en nueve años que digo una frase así." },
+          { m: "happy", t: "Si quieres acompañarme, haz lo de siempre: come, descansa, cuídate un poco y vuelve." },
+          { m: "seria", t: "Cuatro días, comida y sueño. Y luego salimos." },
+          { m: "lejos", t: "Y esta vez no te voy a decir que va a salir nada." },
+          { m: "seria", t: "Solo quiero estar ahí cuando ocurra lo que sea que ocurra." },
+        ],
+        replies: [
+          { t: "¿Sigue pescando?", m: "idle",
+            r: [{ m: "seria", t: "No lo sé." }, { m: "lejos", t: "…" }, { m: "seria", t: "Eso es lo que peor llevo. Que no lo sé." },
+              { m: "happy", t: "Antes lo sabía todo de él. Ahora no sé ni si sigue teniendo la caña." }] },
+          { t: "Guardas capturas de días concretos.", m: "idle",
+            r: [{ m: "lejos", t: "…" }, { m: "seria", t: "Te acuerdas de eso." }, { m: "seria", t: "Sí. Tengo una caballa congelada desde hace seis años." },
+              { m: "happy", t: "Es asqueroso y no la voy a tirar, así que no me lo digas." }, { m: "seria", t: "Es del último domingo que vinimos juntos." }] },
+          { t: "Llámale.", m: "idle",
+            r: [{ m: "lejos", t: "…" }, { m: "seria", t: "Ya." }, { m: "seria", t: "Es lo que me diría cualquiera y es lo correcto y lo sé." },
+              { m: "lejos", t: "Dame unos días. No es un «la próxima vez». Es unos días." }, { m: "happy", t: "…Escúchame diferenciar las dos cosas. Estoy mejorando." }] },
+        ],
+        setFlags: ["ninaPadre"],
+        snap: () => ({ since: todayStr() }),
+        subs: [
+          (g, s) => proteinSleepDaysSince(g, s.since) >= 4,
+        ],
+        check: (g, s) => proteinSleepDaysSince(g, s.since) >= 4,
+        progressCount: (g, s) => proteinSleepDaysSince(g, s.since), progressGoal: 4 },
+      /* CAPÍTULO 11 — El pez luna. Sin condición de días (la preparación ya se hizo en el
+         capítulo 10): la misión es solo salir a pescar. Bloque D es narración en tiempo
+         real de la captura, se queda local. */
       { title: "El pez luna", zone: "playa",
-        objective: "Captura un pez luna.",
+        objective: "Sal a pescar con Nina.",
         introBefore: [
+          { m: "seria", t: "Ya está." },
+          { m: "happy", t: "No hay mucho más que preparar, la verdad." },
+          { m: "lejos", t: "He traído la caña de siempre. No la buena. La de siempre." },
+          { m: "seria", t: "Es la que usaba con siete años. Sigue funcionando." },
           { m: "seria", t: "Hoy no quiero que pienses en ganar." },
-          { m: "seria", t: "Ni en mejorar." },
-          { m: "seria", t: "Ni siquiera en la captura." },
+          { m: "seria", t: "Ni en mejorar. Ni siquiera en la captura." },
           { m: "happy", t: "Solo quiero que estés aquí." },
-          { m: "seria", t: "Hemos pasado por unas cuantas salidas desde que apareciste por primera vez." },
+          { m: "seria", t: "…" },
+          { m: "seria", t: "Hemos hecho unas cuantas salidas desde que apareciste con esa cara de no haber dormido." },
           { m: "happy", t: "Y mira dónde estamos." },
-          { m: "seria", t: "Cuando pique, no tengas prisa." },
-          { m: "seria", t: "Déjalo tirar." },
-          { m: "seria", t: "Espera." },
-          { m: "happy", t: "Confía en lo que has aprendido." },
-          { m: "seria", t: "Y pase lo que pase, no te preocupes si no sale." },
-          { m: "seria", t: "No necesito que esta vez termine como yo quiero." },
-          { m: "happy", t: "Solo quiero vivir el momento." },
+          { m: "seria", t: "Cuando pique, si pica, no tengas prisa. Déjalo tirar. Espera." },
+          { m: "happy", t: "Confía en lo que has aprendido, que es más de lo que crees." },
+          { m: "seria", t: "…" },
+          { m: "lejos", t: "Y pase lo que pase, no te preocupes si no sale." },
+          { m: "seria", t: "No necesito que esto termine como yo quiero. Ya no." },
+          { m: "lejos", t: "Llevé diez años necesitándolo y esta semana he dejado de necesitarlo, que es un momento rarísimo para dejar de necesitar algo." },
+          { m: "happy", t: "Solo quiero estar aquí un rato." },
+          { m: "seria", t: "Vale. Lanza." },
+          { m: "seria", t: "Y ahora esperamos." },
+          { m: "happy", t: "Como siempre. Como el primer día." },
+          { m: "lejos", t: "…" },
+          { m: "seria", t: "Está picando." },
+          { m: "seria", t: "No tires. No tires todavía." },
+          { m: "lejos", t: "Déjalo. Déjalo trabajar." },
+        ],
+        replies: [
+          { t: "¿Le has llamado?", m: "idle",
+            r: [{ m: "lejos", t: "…" }, { m: "seria", t: "Todavía no." }, { m: "happy", t: "Pero he mirado el número. Lo he mirado tres veces." },
+              { m: "seria", t: "Que para mí es prácticamente haber llamado." }] },
+          { t: "Lanza tú.", m: "idle",
+            r: [{ m: "lejos", t: "…" }, { m: "seria", t: "No." }, { m: "seria", t: "Lanza tú. En serio." }, { m: "happy", t: "Llevo diez años lanzando yo y no ha funcionado nunca." }] },
+          { t: "Estoy aquí.", m: "idle",
+            r: [{ m: "orgullosa", t: "…" }, { m: "seria", t: "Ya lo sé." }, { m: "happy", t: "Anda, calla y mira el agua." }] },
         ],
         fish: { id: "pez_luna", rarity: "legendario" },
+        setFlags: ["ninaPezLuna"],
         introAfter: [
-          { m: "sorprendida", t: "..." },
+          { m: "sorprendida", t: "…" },
           { m: "sorprendida", t: "Lo has conseguido." },
-          { m: "seria", t: "Después de tantos años..." },
+          { m: "seria", t: "Después de tantos años…" },
           { m: "orgullosa", t: "Pensaba que cuando llegara este momento iba a gritar." },
-          { m: "happy", t: "Y resulta que solo quiero quedarme aquí un rato." },
-          { m: "seria", t: "Creo que llevaba mucho tiempo pensando que necesitaba conseguir este pez." },
-          { m: "happy", t: "Y ahora que está aquí, me doy cuenta de que lo que echaba de menos era todo lo demás." },
+          { m: "happy", t: "Y resulta que solo quiero quedarme aquí sentada un rato." },
+          { m: "seria", t: "…" },
+          { m: "seria", t: "Llevaba mucho tiempo pensando que necesitaba este pez." },
+          { m: "lejos", t: "Y ahora que está aquí me doy cuenta de que lo que echaba de menos era todo lo demás." },
           { m: "orgullosa", t: "Gracias por hacerlo conmigo." },
+          { m: "happy", t: "…Y ahora hazle una foto, que voy a necesitarla." },
         ],
         snap: () => ({}), check: () => true },
-      /* FINAL — Ya sabes pescar (sin captura propia) */
-      { title: "Ya sabes pescar", zone: "playa",
-        objective: "Sin objetivo adicional.",
+      /* CAPÍTULO 12 — El domingo (SIN PESCA, capítulo nuevo: la resolución del arco). */
+      { title: "El domingo", zone: "playa",
+        objective: "Cierra 6 días de objetivos.",
         intro: [
-          { m: "happy", t: "Bueno." },
-          { m: "orgullosa", t: "Oficialmente ya no puedo llamarte principiante." },
-          { m: "happy", t: "Aunque tampoco voy a llamarte experto. No quiero que se te suba a la cabeza." },
-          { m: "seria", t: "¿Sabes qué es curioso?" },
-          { m: "seria", t: "Cuando empezaste, querías sacar algo de aquí." },
-          { m: "happy", t: "Una captura, una recompensa, algo que pudieras guardar." },
-          { m: "seria", t: "Y poco a poco empezaste a entender que la parte importante estaba antes de que apareciera el pez." },
-          { m: "seria", t: "Esperar. Volver. Comer. Descansar. Intentarlo otra vez." },
-          { m: "happy", t: "Supongo que eso también cuenta como mejorar." },
-          { m: "orgullosa", t: "Y ahora tienes un montón de pescado que vender cuando abramos la tienda." },
-          { m: "happy", t: "Así que tampoco hemos perdido el tiempo." },
+          { m: "happy", t: "Se la mandé." },
+          { m: "seria", t: "La foto. Se la mandé el mismo día, esa noche, sin pensarlo mucho." },
+          { m: "lejos", t: "Y estuve tres horas mirando el teléfono como una adolescente." },
+          { m: "seria", t: "Contestó a las dos de la mañana." },
+          { m: "happy", t: "Dos palabras. «No jodas»." },
+          { m: "seria", t: "Nueve años y me contesta «no jodas»." },
+          { m: "happy", t: "Y me eché a llorar en la cocina, que es un sitio ridículo para llorar." },
+          { m: "seria", t: "…" },
+          { m: "seria", t: "Luego hablamos. Como cuarenta minutos, a las dos de la mañana, los dos con voz de sueño." },
+          { m: "lejos", t: "Y no hablamos de los nueve años. Ni una vez. Yo tenía preparadas tres explicaciones distintas y no hizo falta ninguna." },
+          { m: "seria", t: "Hablamos del pez. Del sitio. De si el saliente sigue igual." },
+          { m: "happy", t: "Me preguntó si seguía preguntando cuándo iba a picar." },
+          { m: "seria", t: "Y le dije que ya no. Y se quedó callado un rato." },
+          { m: "lejos", t: "…" },
+          { m: "seria", t: "Viene el domingo." },
+          { m: "happy", t: "El domingo. Este. Dentro de cinco días." },
+          { m: "seria", t: "Y no he dicho «la próxima vez» ni una sola vez en toda la conversación." },
+          { m: "lejos", t: "Me di cuenta después, al colgar. Fue lo primero que pensé." },
+          { m: "orgullosa", t: "Nueve años y lo único que hacía falta era decir una fecha en vez de una frase." },
+          { m: "seria", t: "Bueno. Y ahora te pido lo último gordo, y esta vez tiene un motivo tonto." },
+          { m: "happy", t: "Seis días. Seis días cerrados." },
+          { m: "seria", t: "Porque yo tengo que hacer seis domingos seguidos para creerme que esto no era solo uno." },
+          { m: "lejos", t: "Seis. Los he contado. Es lo que me parece que hace falta para que deje de ser una excepción." },
+          { m: "happy", t: "Así que hazme seis días tú y yo hago seis domingos." },
+          { m: "seria", t: "Y luego nos lo contamos." },
         ],
-        snap: () => ({}), check: () => true },
-      /* EPÍLOGO — ¿Eso es un pez? (última etapa: final:true, captura de cangrejo +
-         marca ninaStoryComplete y desbloquea la pesca libre al entrar aquí) */
+        replies: [
+          { t: "¿Estás nerviosa?", m: "idle",
+            r: [{ m: "lejos", t: "Muchísimo." }, { m: "happy", t: "Llevo tres días limpiando cañas que no usa nadie." }, { m: "seria", t: "He limpiado la misma caña dos veces. Dos." }] },
+          { t: "Voy contigo si quieres.", m: "idle",
+            r: [{ m: "lejos", t: "…" }, { m: "seria", t: "No." }, { m: "happy", t: "Gracias. En serio, gracias." },
+              { m: "seria", t: "Pero ese domingo es nuestro. El siguiente ya te apuntas si quieres." }, { m: "orgullosa", t: "Y quiero que te apuntes, que conste." }] },
+          { t: "«No jodas» es buena señal.", m: "idle",
+            r: [{ m: "happy", t: "Es la mejor señal del mundo." }, { m: "seria", t: "Si me hubiera contestado algo bonito me habría preocupado muchísimo." },
+              { m: "happy", t: "«No jodas» significa que sigue siendo él." }] },
+        ],
+        setFlags: ["ninaPadreContacto"],
+        snap: (g) => ({ since: todayStr() }),
+        subs: [
+          (g, s) => daysGoalsCompletedSince(g, s.since) >= 6,
+        ],
+        check: (g, s) => daysGoalsCompletedSince(g, s.since) >= 6,
+        progressCount: (g, s) => daysGoalsCompletedSince(g, s.since), progressGoal: 6 },
+      /* FINAL — Ya sabes pescar (SIN PESCA). NO lleva final:true: la última etapa es el
+         EPÍLOGO. Desbloquea la pesca libre diaria al completarse (ver refreshFreeFish más
+         abajo en App, gatillado por ninaStoryComplete). */
+      { title: "Ya sabes pescar", zone: "playa",
+        objective: "Cierra 7 días de objetivos.",
+        intro: [
+          { m: "orgullosa", t: "Seis días." },
+          { m: "happy", t: "Y yo llevo dos domingos. Dos de seis, voy perdiendo." },
+          { m: "seria", t: "Pero voy." },
+          { m: "orgullosa", t: "Oficialmente ya no puedo llamarte principiante." },
+          { m: "happy", t: "Tampoco te voy a llamar experto. No quiero que se te suba y encima me hagas la competencia." },
+          { m: "seria", t: "…" },
+          { m: "seria", t: "¿Sabes qué es lo curioso de todo esto?" },
+          { m: "seria", t: "Cuando empezaste, querías sacar algo de aquí. Una captura, una recompensa, algo que guardar." },
+          { m: "happy", t: "Se te notaba en las manos. Apretabas la caña como si se fuera a escapar." },
+          { m: "seria", t: "Y poco a poco entendiste que la parte importante estaba antes de que apareciera el pez." },
+          { m: "seria", t: "Esperar. Volver. Comer. Descansar. Intentarlo otra vez." },
+          { m: "happy", t: "Supongo que eso también cuenta como mejorar, aunque no salga en ningún número tuyo." },
+          { m: "seria", t: "…" },
+          { m: "seria", t: "Y te voy a decir una cosa, ya que estamos poniéndonos serios." },
+          { m: "lejos", t: "Yo llevaba diez años enseñando una cosa que no hacía." },
+          { m: "seria", t: "Y tú llevas dos meses haciéndola sin que nadie te lo agradeciera." },
+          { m: "orgullosa", t: "Así que gracias. Y no te acostumbres, que esto no lo voy a repetir." },
+          { m: "seria", t: "Última cosa, y luego ya vienes cuando quieras y no cuando yo te diga." },
+          { m: "happy", t: "Una semana. Siete días cerrados." },
+          { m: "seria", t: "No por nada especial. Es que una semana entera es la unidad más pequeña que significa algo." },
+          { m: "happy", t: "Un día es un día. Tres días es una racha. Una semana ya es cómo vives." },
+          { m: "seria", t: "Y cuando la tengas, ven." },
+          { m: "orgullosa", t: "Y ya tienes un montón de pescado que vender cuando abramos la tienda, así que tampoco hemos perdido el tiempo." },
+          { m: "happy", t: "El domingo que viene, por cierto. Si te apetece venir. Los dos vamos a estar aquí." },
+        ],
+        replies: [
+          { t: "¿Qué tal el domingo?", m: "idle",
+            r: [{ m: "happy", t: "Bien." }, { m: "seria", t: "No sacamos nada. Cinco horas y nada." }, { m: "orgullosa", t: "Fue el mejor día que he tenido en años." },
+              { m: "happy", t: "Los días de nada, ya te lo dije." }] },
+          { t: "Me enseñaste a esperar.", m: "idle",
+            r: [{ m: "seria", t: "Te enseñé a estar aquí." }, { m: "happy", t: "Esperar lo hace cualquiera. Estar aquí no." }] },
+          { t: "Todavía me debes una clase de cocina.", m: "idle",
+            r: [{ m: "happy", t: "…" }, { m: "orgullosa", t: "Te acuerdas." }, { m: "seria", t: "Vale. La semana que viene. Y no lo voy a aplazar." },
+              { m: "happy", t: "Fíjate qué frase acabo de decir." }] },
+        ],
+        snap: (g) => ({ since: todayStr() }),
+        subs: [
+          (g, s) => daysGoalsCompletedSince(g, s.since) >= 7,
+        ],
+        check: (g, s) => daysGoalsCompletedSince(g, s.since) >= 7,
+        progressCount: (g, s) => daysGoalsCompletedSince(g, s.since), progressGoal: 7 },
+      /* EPÍLOGO — ¿Eso es un pez? (última etapa: final:true). Dos entregas en la misma
+         escena: el pin (nina_pin, ya existe como carta kind:"card") y el cangrejo por la
+         secuencia de pesca normal. El documento pide un revelado bloqueante a mitad de
+         escena para el pin (como Vera/Yuna/Beka), pero el motor no admite mezclar
+         stage.midReveal con stage.fish en la misma etapa (queueStageScene trata "fish" y
+         "midReveal" como ramas alternativas, no combinables) — así que el pin usa el
+         grantItem/reveal normal, que se entrega en cuanto se lee la última línea de
+         introAfter (justo tras confirmar la captura del cangrejo): las dos entregas siguen
+         ocurriendo en la misma escena, solo que ambas al final en vez de una a mitad. */
       { title: "¿Eso es un pez?", zone: "playa", final: true,
+        objective: null,
         introBefore: [
-          { m: "happy", t: "Hoy no hay objetivos." },
-          { m: "happy", t: "Ni peces legendarios. Ni retos." },
+          { m: "happy", t: "Una semana entera." },
+          { m: "orgullosa", t: "Y yo cuatro domingos de seis. Sigo perdiendo y me da exactamente igual." },
+          { m: "seria", t: "Hoy no hay objetivos." },
+          { m: "happy", t: "Ni peces legendarios. Ni retos. Ni misiones." },
           { m: "seria", t: "Solo vamos a pescar." },
-          { m: "happy", t: "Ya sabes cómo funciona." },
-          { m: "seria", t: "Lanzamos la caña, esperamos y vemos qué decide hacer el agua." },
+          { m: "happy", t: "Ya sabes cómo funciona: lanzamos la caña, esperamos y vemos qué decide hacer el agua." },
+          { m: "seria", t: "…" },
+          { m: "seria", t: "Ah, y una cosa. Mi padre pregunta por ti." },
+          { m: "happy", t: "Le conté lo del tiburón y no se lo creyó. Tuve que enseñarle la foto." },
+          { m: "orgullosa", t: "Y luego dijo que a él nunca le había picado nada así en cuarenta años." },
+          { m: "happy", t: "Estuvo de mal humor el resto de la tarde. Fue precioso." },
+          { m: "seria", t: "Toma esto antes de que se me olvide otra vez." },
+          { m: "happy", t: "Es un pin. Es pequeño, es feo y no vale nada." },
+          { m: "seria", t: "Es de un club de pesca del pueblo al que llevé cuatro años sin ir." },
+          { m: "lejos", t: "Volví el mes pasado. Y hay una señora de setenta años que pesca mejor que yo y que me lo recordó durante hora y media." },
+          { m: "happy", t: "Así que ese pin es de un sitio al que he vuelto. Me parecía que pegaba." },
+          { m: "orgullosa", t: "Y no lo pierdas, que solo dan uno por persona y ya he gastado el mío." },
+          { m: "seria", t: "Venga. Lanza." },
+          { m: "happy", t: "Y esta vez no hay nada en juego, que es como mejor se pesca." },
+          { m: "seria", t: "Ahí hay algo." },
+          { m: "happy", t: "Y no tira. Eso es raro." },
+          { m: "seria", t: "Sube." },
+        ],
+        replies: [
+          { t: "Dile a tu padre que lo siento.", m: "idle",
+            r: [{ m: "happy", t: "Ni se te ocurra." }, { m: "seria", t: "Que sufra. Lleva cuarenta años diciéndome que la paciencia se recompensa." },
+              { m: "orgullosa", t: "Y viene un chaval en dos meses y le saca un tiburón." }, { m: "happy", t: "Es lo mejor que me ha pasado nunca." }] },
+          { t: "¿Cuándo es el próximo domingo?", m: "idle",
+            r: [{ m: "seria", t: "Dentro de tres días." }, { m: "happy", t: "Y el siguiente dentro de diez. Y el otro dentro de diecisiete." },
+              { m: "orgullosa", t: "Me los sé todos. Los tengo apuntados." }, { m: "seria", t: "…Ya no digo «la próxima vez». Digo fechas. Me está costando mucho menos de lo que pensaba." }] },
+          { t: "Gracias, Nina.", m: "idle",
+            r: [{ m: "seria", t: "…" }, { m: "happy", t: "Anda, lanza." }, { m: "orgullosa", t: "…De nada." }] },
         ],
         fish: { id: "cangrejo", rarity: "especial" },
+        grantItem: "nina_pin", reveal: "nina_pin",
         introAfter: [
-          { m: "sorprendida", t: "..." },
+          { m: "sorprendida", t: "…" },
           { m: "happy", t: "Eso no es un pez." },
+          { m: "seria", t: "Eso es, con toda seguridad, un cangrejo." },
           { m: "happy", t: "Pero técnicamente ha mordido el anzuelo." },
-          { m: "orgullosa", t: "Lo voy a contar como una captura." },
+          { m: "orgullosa", t: "Lo voy a contar como una captura y no acepto discusión." },
+          { m: "happy", t: "…Y se lo voy a enseñar a mi padre el domingo." },
+          { m: "seria", t: "Va a ser el mejor momento de mi año." },
         ],
-        setFlags: ["ninaStoryComplete"],
+        setFlags: ["ninaStoryComplete", "ninaPinEarned"],
+        check: () => true,
         reward: (g) => {
           const stats = { ...g.player.stats };
-          stats.NUT = Math.min(99, stats.NUT + 1);
+          stats.MEN = Math.min(99, stats.MEN + 1);
           return { ...g, player: { ...g.player, stats } };
         } },
     ],
   }],
 };
-
 /* ============================================================
    COCO · la tendera del Centro Comercial (ver
    FUTABITA_Coco_Rework_v2_Centro_Comercial.docx). Su etapa de comerciante
@@ -9885,7 +10402,7 @@ const WENDY_STORY = {
    se dejan definidas tal cual más arriba, listas para reactivarse aquí en cuanto se
    reescriban bien — el propio jugador pidió reiniciar cada una desde cero cuando llegue
    ese momento, así que de momento no hace falta tocar ni borrar su contenido. */
-const STORIES = { ...toStories(QUESTS), elisa: ELISA_STORY, yuna: YUNA_STORY, beka: BEKA_STORY, vera: VERA_STORY, wendy: WENDY_STORY };
+const STORIES = { ...toStories(QUESTS), elisa: ELISA_STORY, yuna: YUNA_STORY, beka: BEKA_STORY, vera: VERA_STORY, wendy: WENDY_STORY, nina: NINA_STORY };
 
 /* ============================================================
    OBJETOS COLECCIONABLES · dos tipos: "consumable" (los usas, dan
@@ -10041,7 +10558,7 @@ const CARD_POOL = Object.keys(ITEMS).filter((id) => ITEMS[id].kind === "card");
 const CARD_STORY_FLAG = {
   elisa_pin: "elisaPinEarned", milly_pin: "millyPinEarned", yuna_pin: "yunaPinEarned",
   lopez_pin: "lopezPinEarned", igor_pin: "igorPinEarned", karla_pin: "karlaPinEarned", beka_pin: "bekaPinEarned",
-  milo_pin: "miloPinEarned", wendy_pin: "wendyPinEarned",
+  milo_pin: "miloPinEarned", wendy_pin: "wendyPinEarned", nina_pin: "ninaPinEarned",
 };
 const isCardDiscovered = (g, cardId) =>
   !!(CARD_STORY_FLAG[cardId] && g[CARD_STORY_FLAG[cardId]]) || !!(g.cardsDiscovered && g.cardsDiscovered[cardId]);
@@ -10094,8 +10611,8 @@ const CARDS = [
   // { npc: "igor", unlocked: (g) => !!g.metIgor, bio: "Chef estrella del Restaurante. Trata la nutrición como táctica de fútbol, con datos curiosos siempre a mano." },
   { npc: "beka", unlocked: (g) => !!g.bekaMet,
     bio: "Futbolista de otro club. Rival directa, competitiva y algo macarra — aunque de noche, en la Discoteca, deja de competir durante unas horas." },
-  // { npc: "nina", unlocked: (g) => !!g.ninaMet,
-  //   bio: "La pescadora de la Playa. Nunca tiene prisa — y poco a poco te enseña que tampoco hace falta tenerla siempre." },
+  { npc: "nina", unlocked: (g) => !!g.ninaMet,
+    bio: "La pescadora de la Playa. Nunca tiene prisa — y poco a poco te enseña que tampoco hace falta tenerla siempre." },
   // { npc: "coco", unlocked: (g) => !!g.cocoMet,
   //   bio: "La tendera del Centro Comercial. Pija, coqueta y muy buena negociante — atiende un día sí y otro no, y siempre compra lo que ya no quieres." },
   { npc: "vera", unlocked: (g) => !!g.veraMet,
@@ -13325,9 +13842,16 @@ export default function App() {
          tirar las frases de antes: Nina aparecía lanzando la caña sin haber dicho nada. */
       const sceneId = Date.now() + Math.random();
       out = reserveQueueRoom(out, before.length + 1);
-      out = addScene(out, npcName, before, { zone, sceneId, preReserved: true });
+      /* respuestas del jugador (ver NINA_STORY 3.0): el documento las coloca a mitad de
+         escena, antes del bloque de misión, pero el motor solo admite replies al final de
+         una escena leída (igual que en el resto de personajes, ver ELISA/VERA_STORY) — así
+         que van aquí, al cierre de introBefore (después de pedir la misión), no tras la
+         captura. Elegir una no afecta a la entrada de pesca que sigue: son dos elementos
+         de cola independientes que comparten sceneId solo para la reserva de hueco. */
+      out = addScene(out, npcName, before, { zone, sceneId, preReserved: true, replies: stageObj.replies });
       out = addMsg(out, npcName, "", { mood: "lanzandocaña", kind: "fishing", zone, sceneId, skipEvict: true,
-        fish: stageObj.fish, afterBeats: after, applyOnRead: { story: { key, state }, flags: stageObj.setFlags,
+        fish: stageObj.fish, afterBeats: after,
+        applyOnRead: { story: { key, state }, flags: stageObj.setFlags,
           grantItem: stageObj.grantItem, reveal: stageObj.reveal } });
       return out;
     }

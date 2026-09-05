@@ -285,6 +285,11 @@ function sanitizeGame(g) {
     }
   }
   if (out.savedMeals) out.savedMeals = out.savedMeals.filter((m) => m && Number.isFinite(m.kcal) && Number.isFinite(m.prot));
+  /* RP (reputación) sustituye a las fichas como moneda de la tienda (ver
+     REPUTACION_RULES/finishMatch/confirmSigning): partidas guardadas de antes de este
+     cambio conservan su saldo tal cual, solo cambia de nombre — nadie pierde lo ahorrado. */
+  if (out.reputacion == null) { out.reputacion = out.fichas || 0; }
+  if ("fichas" in out) delete out.fichas;
   /* partidas de antes de que la ruleta tuviera "kind" (o con un item ya no existente
      en ITEMS) podían dejar un casinoLastSpin que rompía CUALQUIER pantalla de zona,
      no solo el Casino: se descarta si no tiene una forma reconocible */
@@ -1041,7 +1046,14 @@ const NPCS = {
      asset para "despierta" (capítulo 11, la crisis) todavía, así que cae al fallback normal
      de npc.arts[npc.def] = idle — la escena funciona igual, solo pierde el contraste visual
      que pedía el documento. Añadir wendy_despierta.webp aquí en cuanto exista el asset. */
+  /* artScale: sus cuatro ilustraciones están encuadradas mucho más cerca del borde que
+     las del resto del reparto (el pelo y el peluche llegan a tocar los bordes del lienzo),
+     así que a igual max-height/max-width que las demás se veían recortadas por los lados
+     y por arriba. No es un recorte de CSS — el lienzo es el mismo 1024x1536 de siempre —
+     es que el dibujo ocupa más marco. Se compensa achicando su render un 20% (ver
+     NpcDialogue) para que quede al mismo tamaño aparente que las demás. */
   wendy: { name: "Wendy", color: "#5B4B9E", voice: "/audio/vozchica01.mp3", icon: "/images/wendy/wendy_icon.webp",
+    artScale: 0.8,
     arts: { idle: "/images/wendy/wendy_idle.webp", sleepy: "/images/wendy/wendy_sleepy.webp",
       happy: "/images/wendy/wendy_happy.webp", hug: "/images/wendy/wendy_hug.webp" }, def: "idle" },
   lopez: { name: "López", color: "#D65A2E", voice: "/audio/vozchico02.mp3", icon: "/images/lopez/lopez_icon.webp",
@@ -1168,6 +1180,24 @@ const NPCS = {
   milo: { name: "Milo", color: "#4E8B57", voice: "/audio/vozchico01.mp3", icon: "/images/milo/milo_icon.webp",
     arts: { escondido: "/images/milo/milo_escondido.webp", shy: "/images/milo/milo_shy.webp",
       idle: "/images/milo/milo_idle.webp", happy: "/images/milo/milo_happy.webp" }, def: "idle" },
+};
+/* personajes con rework pendiente (ver comentario junto a STORIES/HIDDEN_NPCS en
+   sanitizeGame): la Mensajería de futOS usa esta misma lista para no listar un chat
+   de nadie que no deba aparecer todavía. Copia aparte porque sanitizeGame define la
+   suya en un scope anterior a NPCS y no conviene reordenar ese código para compartirla. */
+const HIDDEN_NPCS = ["milly", "lopez", "igor", "lisa", "coco", "alexia", "milo"];
+/* historial de chat por personaje (ver futOS/Mensajes): a diferencia de npcQueue (cola de
+   "por leer", que se vacía al consumirse), chatLog conserva lo ya leído para la bandeja de
+   entrada — tanto las frases del npc como las respuestas elegidas por el jugador, en orden
+   de lectura real. Tope de 50 por personaje (a petición del jugador): se recorta por el
+   principio, así el hilo siempre conserva los mensajes más recientes. */
+const CHAT_LOG_CAP = 50;
+const logChat = (g, npc, from, text) => {
+  if (!npc || !text) return g;
+  const log = { ...(g.chatLog || {}) };
+  const arr = [...(log[npc] || []), { from, text }];
+  log[npc] = arr.length > CHAT_LOG_CAP ? arr.slice(arr.length - CHAT_LOG_CAP) : arr;
+  return { ...g, chatLog: log };
 };
 /* el sender siempre es el nombre real del personaje ahora (la zona ya no crea una
    identidad de sender distinta: es contexto de la escena, ver campo "zone" en addMsg/addScene) */
@@ -1500,7 +1530,6 @@ const mealsLoggedCount = (g) => Object.values(g.logs || {}).reduce((a, l) => a +
 /* mapa único: La Metrópolis se fusionó dentro de La Ciudad (mismo SVG, mismo lienzo
    480x822.74), así que el viewBox recortado ahora cubre las 18 zonas de golpe en vez
    de repartirlas en dos mapas independientes. */
-const CITY_MAP_VB = { x: 15, y: 60, w: 438, h: 720.3 };
 /* ============================================================
    DESBLOQUEO DE ZONAS · ya NO depende de estadísticas ni progreso del
    jugador (OVR, goles, temporada, hábitos, comidas...). Esas estadísticas
@@ -1522,8 +1551,8 @@ const unlockZone = (g, zoneId) => {
   if (cur.includes(zoneId)) return g;
   return { ...g, unlockedZones: [...cur, zoneId] };
 };
-const ZONE_LOCKED_MSG = "Esta zona todavía no está disponible.";
-/* mapa único (ver comentario junto a CITY_MAP_VB): las 11 zonas que ya vivían en La
+/* mapa único (ya no se renderiza como mapa, ver futOS, pero las zonas siguen vivas como
+   metadato de sabor para stage.zone/alsoUnlock — ver enterStage): las 11 zonas que ya vivían en La
    Ciudad conservan sus coordenadas (el SVG fusionado no las movió), y las 6 zonas que
    antes eran de La Metrópolis (parque/casino/enfermeria/playa/atico/restaurante) se
    añaden aquí con sus posiciones nuevas dentro del mismo lienzo — mismos id que ya
@@ -1606,32 +1635,6 @@ const ZONES = [
    explícita (varios personajes están asignados a más de una zona ahora que la zona es
    contexto de escena y no una identidad de npc distinta, ver NPCS más arriba) */
 const HOME_ZONE = { elisa: "oficina", lopez: "ciudad-dep", milly: "kiosco", yuna: "barrio", lisa: "patro", igor: "restaurante", beka: "barrio", nina: "playa", vera: "parque", coco: "tienda", alexia: "atico", milo: "parque", wendy: "parque" };
-/* una zona puede tener uno o varios personajes asignados (p.ej. El Barrio) */
-const zoneNpcList = (z) => (Array.isArray(z.npc) ? z.npc : z.npc ? [z.npc] : []);
-/* una entrada de npcQueue cuenta para una zona si su "zone" explícito coincide, o si no
-   lleva zone y esta es la home zone del personaje (compat con escenas sin contexto de zona) */
-const entryMatchesZone = (e, zoneId) => e.zone ? e.zone === zoneId : HOME_ZONE[e.npc] === zoneId;
-/* quién de esa zona tiene algo pendiente que contar AHORA MISMO (null si nadie).
-   Coco tiene puesto fijo en el Centro Comercial pero solo está un día sí y otro no (ver
-   game.cocoVisit/refreshCocoVisit): los días que está, aparece como "activa" aquí igual
-   que cualquier personaje con una escena pendiente, tenga o no diálogo de historia en la
-   cola ahora mismo — así su tienda se ve en el mapa durante todo el día activo, no solo
-   el rato en que hay una frase nueva que leer. */
-const zoneActiveNpc = (z, npcQueue, game) => {
-  if (game && game.cocoVisit && game.cocoVisit.zone === z.id) return "coco";
-  return zoneNpcList(z).find((n) => npcQueue.some((e) => e.npc === n && entryMatchesZone(e, z.id))) || null;
-};
-const zonePending = (z, game) => {
-  const npcQueue = game.npcQueue || [];
-  if (game.cocoVisit && game.cocoVisit.zone === z.id) return true;
-  if (z.kind === "paper") return (!!game.paper && game.paperRead !== todayStr()) || (z.npc && npcQueue.some((e) => e.npc === z.npc && entryMatchesZone(e, z.id)));
-  return zoneNpcList(z).some((n) => npcQueue.some((e) => e.npc === n && entryMatchesZone(e, z.id)));
-};
-
-/* Personajes que comparten burbuja con una zona ya existente en vez de tener la suya propia
-   (de momento, El Barrio). Mismo mecanismo que ZONES.metFlag/intro, pero sin polígono ni
-   posición: solo se presentan la primera vez que se cumple su condición. */
-const EXTRA_NPCS = [];
 
 /* ============================================================
    MISIONES · vacías a propósito (ver comentario más abajo).
@@ -1870,7 +1873,7 @@ const ELISA_STORY = {
         grantItem: "elisa_libreta", reveal: "elisa_libreta",
         snap: () => ({ since: todayStr() }),
         subs: [
-          (g, s) => daysGoalsCompletedSince(g, s.since) >= 1,
+          { count: (g, s) => daysGoalsCompletedSince(g, s.since), goal: 1 },
           (g, s) => Object.entries(g.logs || {}).some(([d, l]) => d >= s.since && l.closed && l.gym),
         ],
         check: (g, s) => daysGoalsCompletedSince(g, s.since) >= 1 &&
@@ -2006,8 +2009,8 @@ const ELISA_STORY = {
         ],
         snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
         subs: [
-          (g, s) => proteinDaysSince(g, s.since) >= 4,
-          (g, s) => proteinSleepDaysSince(g, s.since) >= 3,
+          { count: (g, s) => proteinDaysSince(g, s.since), goal: 4 },
+          { count: (g, s) => proteinSleepDaysSince(g, s.since), goal: 3 },
           (g, s) => (g.matchHistory || []).slice(s.matchCount).some((m) => m.res === "V"),
         ],
         check: (g, s) => proteinDaysSince(g, s.since) >= 4 && proteinSleepDaysSince(g, s.since) >= 3 &&
@@ -2144,7 +2147,7 @@ const ELISA_STORY = {
         setFlags: ["elisaPersonal"],
         snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
         subs: [
-          (g, s) => daysGoalsCompletedSince(g, s.since) >= 1,
+          { count: (g, s) => daysGoalsCompletedSince(g, s.since), goal: 1 },
           (g, s) => (g.matchHistory || []).slice(s.matchCount).some((m) => m.res === "V"),
         ],
         check: (g, s) => daysGoalsCompletedSince(g, s.since) >= 1 &&
@@ -5833,7 +5836,7 @@ const BEKA_STORY = {
         ],
         snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length, bestRating: g.bestRating || 0 }),
         subs: [
-          (g, s) => daysGoalsCompletedSince(g, s.since) >= 3,
+          { count: (g, s) => daysGoalsCompletedSince(g, s.since), goal: 3 },
           (g, s) => (g.matchHistory || []).slice(s.matchCount).some((m) => (m.rating || 0) >= s.bestRating),
         ],
         check: (g, s) => daysGoalsCompletedSince(g, s.since) >= 3 &&
@@ -6008,7 +6011,7 @@ const BEKA_STORY = {
         snap: () => ({ since: todayStr() }),
         subs: [
           (g) => (g.player.streak || 0) >= 3,
-          (g, s) => daysGoalsCompletedSince(g, s.since) >= 3,
+          { count: (g, s) => daysGoalsCompletedSince(g, s.since), goal: 3 },
         ],
         check: (g, s) => (g.player.streak || 0) >= 3 && daysGoalsCompletedSince(g, s.since) >= 3 },
       /* CAPÍTULO 6 — El sitio donde no me dejaron entrar. Reescrito por completo: siembra
@@ -6065,7 +6068,7 @@ const BEKA_STORY = {
         snap: (g) => ({ since: todayStr(), ovr: calcOVR(g.player.stats) }),
         subs: [
           (g, s) => calcOVR(g.player.stats) > s.ovr,
-          (g, s) => daysGoalsCompletedSince(g, s.since) >= 4,
+          { count: (g, s) => daysGoalsCompletedSince(g, s.since), goal: 4 },
         ],
         check: (g, s) => calcOVR(g.player.stats) > s.ovr && daysGoalsCompletedSince(g, s.since) >= 4 },
       /* CAPÍTULO 7 — La gente empieza a mirar. Escena de dos zonas (prensa → discoteca): el
@@ -6171,7 +6174,7 @@ const BEKA_STORY = {
         setFlags: ["bekaClose"],
         snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
         subs: [
-          (g, s) => daysGoalsCompletedSince(g, s.since) >= 2,
+          { count: (g, s) => daysGoalsCompletedSince(g, s.since), goal: 2 },
           (g, s) => (g.matchHistory || []).slice(s.matchCount).some((m) => m.res === "V"),
         ],
         check: (g, s) => daysGoalsCompletedSince(g, s.since) >= 2 &&
@@ -6521,7 +6524,7 @@ const BEKA_STORY = {
         ],
         snap: () => ({ since: todayStr() }),
         subs: [
-          (g, s) => daysGoalsCompletedSince(g, s.since) >= 5,
+          { count: (g, s) => daysGoalsCompletedSince(g, s.since), goal: 5 },
         ],
         check: (g, s) => daysGoalsCompletedSince(g, s.since) >= 5 },
       /* CAPÍTULO 15 — Una última vez. El duelo final: el objetivo es solo superar la
@@ -6780,7 +6783,7 @@ const NINA_STORY = {
         setFlags: ["ninaMet"],
         snap: () => ({ since: todayStr() }),
         subs: [
-          (g, s) => proteinSleepDaysSince(g, s.since) >= 1,
+          { count: (g, s) => proteinSleepDaysSince(g, s.since), goal: 1 },
         ],
         check: (g, s) => proteinSleepDaysSince(g, s.since) >= 1,
         progressGoal: 1 },
@@ -6890,7 +6893,7 @@ const NINA_STORY = {
         ],
         snap: (g) => ({ since: todayStr() }),
         subs: [
-          (g, s) => proteinDaysSince(g, s.since) >= 2,
+          { count: (g, s) => proteinDaysSince(g, s.since), goal: 2 },
         ],
         check: (g, s) => proteinDaysSince(g, s.since) >= 2,
         progressCount: (g, s) => proteinDaysSince(g, s.since), progressGoal: 2 },
@@ -6953,7 +6956,7 @@ const NINA_STORY = {
         ],
         snap: (g) => ({ since: todayStr() }),
         subs: [
-          (g, s) => daysGoalsCompletedSince(g, s.since) >= 2,
+          { count: (g, s) => daysGoalsCompletedSince(g, s.since), goal: 2 },
         ],
         check: (g, s) => daysGoalsCompletedSince(g, s.since) >= 2,
         progressCount: (g, s) => daysGoalsCompletedSince(g, s.since), progressGoal: 2 },
@@ -7012,7 +7015,7 @@ const NINA_STORY = {
         ],
         snap: (g) => ({ since: todayStr() }),
         subs: [
-          (g, s) => daysGoalsCompletedSince(g, s.since) >= 3,
+          { count: (g, s) => daysGoalsCompletedSince(g, s.since), goal: 3 },
         ],
         check: (g, s) => daysGoalsCompletedSince(g, s.since) >= 3,
         progressCount: (g, s) => daysGoalsCompletedSince(g, s.since), progressGoal: 3 },
@@ -7066,7 +7069,7 @@ const NINA_STORY = {
         ],
         snap: (g) => ({ since: todayStr() }),
         subs: [
-          (g, s) => proteinSleepDaysSince(g, s.since) >= 3,
+          { count: (g, s) => proteinSleepDaysSince(g, s.since), goal: 3 },
         ],
         check: (g, s) => proteinSleepDaysSince(g, s.since) >= 3,
         progressCount: (g, s) => proteinSleepDaysSince(g, s.since), progressGoal: 3 },
@@ -7126,7 +7129,7 @@ const NINA_STORY = {
         ],
         snap: (g) => ({ since: todayStr() }),
         subs: [
-          (g, s) => proteinDaysSince(g, s.since) >= 3,
+          { count: (g, s) => proteinDaysSince(g, s.since), goal: 3 },
         ],
         check: (g, s) => proteinDaysSince(g, s.since) >= 3,
         progressCount: (g, s) => proteinDaysSince(g, s.since), progressGoal: 3 },
@@ -7184,7 +7187,7 @@ const NINA_STORY = {
         ],
         snap: (g) => ({ since: todayStr() }),
         subs: [
-          (g, s) => daysGoalsCompletedSince(g, s.since) >= 3,
+          { count: (g, s) => daysGoalsCompletedSince(g, s.since), goal: 3 },
         ],
         check: (g, s) => daysGoalsCompletedSince(g, s.since) >= 3,
         progressCount: (g, s) => daysGoalsCompletedSince(g, s.since), progressGoal: 3 },
@@ -7243,7 +7246,7 @@ const NINA_STORY = {
         ],
         snap: (g) => ({ since: todayStr() }),
         subs: [
-          (g, s) => daysGoalsCompletedSince(g, s.since) >= 4,
+          { count: (g, s) => daysGoalsCompletedSince(g, s.since), goal: 4 },
         ],
         check: (g, s) => daysGoalsCompletedSince(g, s.since) >= 4,
         progressCount: (g, s) => daysGoalsCompletedSince(g, s.since), progressGoal: 4 },
@@ -7356,7 +7359,7 @@ const NINA_STORY = {
         setFlags: ["ninaPadre"],
         snap: () => ({ since: todayStr() }),
         subs: [
-          (g, s) => proteinSleepDaysSince(g, s.since) >= 4,
+          { count: (g, s) => proteinSleepDaysSince(g, s.since), goal: 4 },
         ],
         check: (g, s) => proteinSleepDaysSince(g, s.since) >= 4,
         progressCount: (g, s) => proteinSleepDaysSince(g, s.since), progressGoal: 4 },
@@ -7458,7 +7461,7 @@ const NINA_STORY = {
         setFlags: ["ninaPadreContacto"],
         snap: (g) => ({ since: todayStr() }),
         subs: [
-          (g, s) => daysGoalsCompletedSince(g, s.since) >= 6,
+          { count: (g, s) => daysGoalsCompletedSince(g, s.since), goal: 6 },
         ],
         check: (g, s) => daysGoalsCompletedSince(g, s.since) >= 6,
         progressCount: (g, s) => daysGoalsCompletedSince(g, s.since), progressGoal: 6 },
@@ -7505,7 +7508,7 @@ const NINA_STORY = {
         ],
         snap: (g) => ({ since: todayStr() }),
         subs: [
-          (g, s) => daysGoalsCompletedSince(g, s.since) >= 7,
+          { count: (g, s) => daysGoalsCompletedSince(g, s.since), goal: 7 },
         ],
         check: (g, s) => daysGoalsCompletedSince(g, s.since) >= 7,
         progressCount: (g, s) => daysGoalsCompletedSince(g, s.since), progressGoal: 7 },
@@ -7684,8 +7687,8 @@ const COCO_STORY = {
           { m: "happy", t: "Si quieres hacer negocios conmigo, primero tendrás que demostrarme que tienes algo de dinero." },
         ],
         setFlags: ["cocoMet"],
-        snap: (g) => ({ fichas: g.fichas || 0 }),
-        check: (g, snap) => (g.fichas || 0) >= snap.fichas + 20 },
+        snap: (g) => ({ reputacion: g.reputacion || 0 }),
+        check: (g, snap) => (g.reputacion || 0) >= snap.reputacion + 20 },
       /* CAPÍTULO 1 — Primera compra */
       { title: "Primera compra", zone: "tienda",
         objective: "Compra un consumible a Coco.",
@@ -8036,7 +8039,7 @@ const VERA_STORY = {
           snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
           subs: [
             (g, s) => newMatches(g, s).some((m) => m.res === "V"),
-            (g, s) => daysGoalsCompletedSince(g, s.since) >= 1,
+            { count: (g, s) => daysGoalsCompletedSince(g, s.since), goal: 1 },
           ],
           check: (g, s) => newMatches(g, s).some((m) => m.res === "V") && daysGoalsCompletedSince(g, s.since) >= 1,
           progressGoal: 1 },
@@ -8091,7 +8094,7 @@ const VERA_STORY = {
           setFlags: ["veraOficio"],
           snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
           subs: [
-            (g, s) => daysGoalsCompletedSince(g, s.since) >= 2,
+            { count: (g, s) => daysGoalsCompletedSince(g, s.since), goal: 2 },
             (g, s) => newMatches(g, s).some((m) => m.res === "V"),
           ],
           check: (g, s) => daysGoalsCompletedSince(g, s.since) >= 2 && newMatches(g, s).some((m) => m.res === "V"),
@@ -8147,7 +8150,7 @@ const VERA_STORY = {
           setFlags: ["veraEstudio"],
           snap: () => ({ since: todayStr() }),
           subs: [
-            (g, s) => daysGoalsCompletedSince(g, s.since) >= 3,
+            { count: (g, s) => daysGoalsCompletedSince(g, s.since), goal: 3 },
           ],
           check: (g, s) => daysGoalsCompletedSince(g, s.since) >= 3,
           progressCount: (g, s) => daysGoalsCompletedSince(g, s.since), progressGoal: 3 },
@@ -8198,7 +8201,7 @@ const VERA_STORY = {
           snap: (g) => ({ since: todayStr(), ovr: calcOVR(g.player.stats) }),
           subs: [
             (g, s) => calcOVR(g.player.stats) > s.ovr,
-            (g, s) => daysGoalsCompletedSince(g, s.since) >= 3,
+            { count: (g, s) => daysGoalsCompletedSince(g, s.since), goal: 3 },
           ],
           check: (g, s) => calcOVR(g.player.stats) > s.ovr && daysGoalsCompletedSince(g, s.since) >= 3,
           progressCount: (g, s) => daysGoalsCompletedSince(g, s.since), progressGoal: 3 },
@@ -8251,7 +8254,7 @@ const VERA_STORY = {
           snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
           subs: [
             (g, s) => newMatches(g, s).some((m) => (m.rating || 0) >= 7.0),
-            (g, s) => daysGoalsCompletedSince(g, s.since) >= 2,
+            { count: (g, s) => daysGoalsCompletedSince(g, s.since), goal: 2 },
           ],
           check: (g, s) => newMatches(g, s).some((m) => (m.rating || 0) >= 7.0) && daysGoalsCompletedSince(g, s.since) >= 2,
           progressCount: (g, s) => daysGoalsCompletedSince(g, s.since), progressGoal: 2 },
@@ -8416,7 +8419,7 @@ const VERA_STORY = {
           setFlags: ["veraMilo"],
           snap: () => ({ since: todayStr() }),
           subs: [
-            (g, s) => daysGoalsCompletedSince(g, s.since) >= 4,
+            { count: (g, s) => daysGoalsCompletedSince(g, s.since), goal: 4 },
           ],
           check: (g, s) => daysGoalsCompletedSince(g, s.since) >= 4,
           progressCount: (g, s) => daysGoalsCompletedSince(g, s.since), progressGoal: 4 },
@@ -8526,7 +8529,7 @@ const VERA_STORY = {
           setFlags: ["veraRuth"],
           snap: () => ({ since: todayStr() }),
           subs: [
-            (g, s) => proteinSleepDaysSince(g, s.since) >= 3,
+            { count: (g, s) => proteinSleepDaysSince(g, s.since), goal: 3 },
             (g, s) => Object.entries(g.logs || {}).filter(([d, l]) => d >= s.since && l.closed && l.gym).length >= 3,
           ],
           check: (g, s) => proteinSleepDaysSince(g, s.since) >= 3 &&
@@ -8582,7 +8585,7 @@ const VERA_STORY = {
           setFlags: ["veraPregunta"],
           snap: () => ({ since: todayStr() }),
           subs: [
-            (g, s) => daysGoalsCompletedSince(g, s.since) >= 5,
+            { count: (g, s) => daysGoalsCompletedSince(g, s.since), goal: 5 },
           ],
           check: (g, s) => daysGoalsCompletedSince(g, s.since) >= 5,
           progressCount: (g, s) => daysGoalsCompletedSince(g, s.since), progressGoal: 5 },
@@ -9600,7 +9603,7 @@ const WENDY_STORY = {
         setFlags: ["wendyMet"],
         snap: () => ({ since: todayStr() }),
         subs: [
-          (g, s) => sleepDaysSince(g, s.since) >= 1,
+          { count: (g, s) => sleepDaysSince(g, s.since), goal: 1 },
         ],
         check: (g, s) => sleepDaysSince(g, s.since) >= 1 },
       /* CAPÍTULO 1 — Gilbert. Único capítulo donde se explica su origen. */
@@ -9654,7 +9657,7 @@ const WENDY_STORY = {
         setFlags: ["wendyGilbert"],
         snap: () => ({ since: todayStr() }),
         subs: [
-          (g, s) => sleepDaysSince(g, s.since) >= 2,
+          { count: (g, s) => sleepDaysSince(g, s.since), goal: 2 },
         ],
         check: (g, s) => sleepDaysSince(g, s.since) >= 2 },
       /* CAPÍTULO 2 — El primer sueño. SOÑAR uso 1 de 4: acredita una unidad de esta misma
@@ -9755,7 +9758,7 @@ const WENDY_STORY = {
         ],
         snap: () => ({ since: todayStr() }),
         subs: [
-          (g, s) => daysGoalsCompletedSince(g, s.since) >= 3,
+          { count: (g, s) => daysGoalsCompletedSince(g, s.since), goal: 3 },
         ],
         check: (g, s) => daysGoalsCompletedSince(g, s.since) >= 3 },
       /* CAPÍTULO 4 — Las cosas que solo pasan de noche. Primer objeto (linterna): asset ya
@@ -9813,7 +9816,7 @@ const WENDY_STORY = {
         ],
         snap: (g) => ({ since: todayStr() }),
         subs: [
-          (g, s) => sleepDaysSince(g, s.since) >= 2,
+          { count: (g, s) => sleepDaysSince(g, s.since), goal: 2 },
           (g) => (g.player.streak || 0) >= 3,
         ],
         check: (g, s) => sleepDaysSince(g, s.since) >= 2 && (g.player.streak || 0) >= 3 },
@@ -9917,7 +9920,7 @@ const WENDY_STORY = {
         setFlags: ["wendyEspera"],
         snap: () => ({ since: todayStr() }),
         subs: [
-          (g, s) => daysGoalsCompletedSince(g, s.since) >= 4,
+          { count: (g, s) => daysGoalsCompletedSince(g, s.since), goal: 4 },
         ],
         check: (g, s) => daysGoalsCompletedSince(g, s.since) >= 4 },
       /* CAPÍTULO 7 — Tercer sueño. SOÑAR uso 3 de 4 (5 noches + 2 días = 7 unidades). CAMBIO
@@ -10022,7 +10025,7 @@ const WENDY_STORY = {
         ],
         snap: () => ({ since: todayStr() }),
         subs: [
-          (g, s) => sleepDaysSince(g, s.since) >= 5,
+          { count: (g, s) => sleepDaysSince(g, s.since), goal: 5 },
         ],
         check: (g, s) => sleepDaysSince(g, s.since) >= 5 },
       /* CAPÍTULO 9 — Cuarto sueño. SOÑAR uso 4 de 4, desbloquea el modo infinito (flag real
@@ -10259,7 +10262,7 @@ const WENDY_STORY = {
         setFlags: ["wendyEleccion"],
         snap: (g) => ({ since: todayStr(), matchCount: (g.matchHistory || []).length }),
         subs: [
-          (g, s) => sleepDaysSince(g, s.since) >= 3,
+          { count: (g, s) => sleepDaysSince(g, s.since), goal: 3 },
           (g, s) => (g.matchHistory || []).slice(s.matchCount).some((m) => m.res === "V"),
         ],
         check: (g, s) => sleepDaysSince(g, s.since) >= 3 &&
@@ -10736,6 +10739,32 @@ const NEWS = [
   { sec: "HUMOR", h: "La marmota del entrenamiento", b: "El rondo de los martes vuelve a terminar en la misma discusión de siempre: si tocó la línea o no tocó la línea. Nadie lo sabrá jamás. Nadie dejará de discutirlo." },
 ];
 
+/* ============================================================
+   FABRIZIO LOZANO · el periodista de fichajes de Redes (ver REDES_ACCOUNTS/
+   redesAccountFor en RedesApp): cubre traspasos, rumores y jugadores, tanto del mundo
+   en general (relleno de ambiente, sin variables) como del propio protagonista (con
+   variables de flavorCtx, igual que NEWS). buildPaper le reserva SIEMPRE un artículo al
+   día además de los cuatro de NEWS, así su cuenta nunca se queda vacía. Sin w: es
+   contenido de mundo, siempre elegible; con w: usa las mismas COND que NEWS. */
+const FABRIZIO_POOL = [
+  /* ---- rumores de fuera, puro ambiente, no involucran al jugador ---- */
+  { h: "🚨 Renovación cerrada en Segunda RFEF", b: "Un centrocampista muy seguido en la categoría renueva hasta 2027. Acuerdo total entre las partes, solo queda el anuncio oficial del club. Aquí lo teníais primero." },
+  { h: "Movimiento en el mercado regional", b: "Lateral formado en cantera podría salir cedido este mismo mes. Hay más de un equipo preguntando. Nada firmado todavía — sigo la pista." },
+  { h: "El líder de Tercera dice que no vende", b: "Preguntan por el portero del equipo que manda en la clasificación. Respuesta del club: 'aquí no se mueve nadie'. La respuesta de siempre, vaya." },
+  { h: "Delantero libre, primeros contactos", b: "Tras rescindir con su anterior equipo, un delantero libre negocia con un recién ascendido. Avanzado pero no cerrado. En cuanto haya algo más, lo cuento." },
+  { h: "🔵 Nombre a seguir", b: "Un agente de la zona me confirma interés real por un juvenil de cantera regional. Todavía no suena a lo grande, pero apunten el nombre." },
+  { h: "Se mueve más de lo que parece", b: "En Tercera Federación el mercado de invierno siempre da más sorpresas de las que la gente espera. Hay nombres que pronto vais a conocer." },
+  { h: "Central para reforzar la zaga", b: "Un club de la categoría prepara una oferta para reforzar la defensa de cara al verano. Todavía en fase de sondeo — nada oficial." },
+  /* ---- sobre el propio jugador, con condiciones (ver COND/flavorCtx) ---- */
+  { w: "good", h: "📈 Ojeadores en la grada", b: "Me cuentan que hay ojeadores de categoría superior siguiendo de cerca a {player} ({club}). Nada oficial todavía, pero el nombre empieza a sonar en despachos." },
+  { w: "hot", h: "🚨 Esto puede sonar fuerte", b: "Fuentes cercanas a {player} confirman contactos exploratorios con un club de categoría superior. Nada avanzado, pero el interés es real. Seguimos de cerca." },
+  { w: "scorer", h: "Nombre que empieza a repetirse", b: "Con {goals} goles esta temporada, {player} ya aparece en más de un informe de ojeadores de {league}. Apunten el nombre, en serio." },
+  { w: "derbiSoon", h: "Antes del derbi, la pregunta de siempre", b: "Con el derbi ante el {derbiRival} a la vuelta de la esquina, me preguntan mucho por la situación de {player}. De momento nada — pero si se mueve algo, lo sabréis aquí primero." },
+  { w: "seasonStart", h: "Un nombre a vigilar esta temporada", b: "Arranca {league} y ya hay ojos puestos en {player}, del {club}. Toca verlo sobre el césped semana a semana." },
+  { w: "seasonEnd", h: "Primeras llamadas serias", b: "Con la temporada llegando a su recta final, el entorno de {player} empieza a recibir contactos de verdad. Nada cerrado. Información propia, como siempre." },
+  { w: "kgUp", h: "Otros clubes preguntan por el método", b: "El cambio físico de {player} en el {club} no ha pasado desapercibido: preparadores de otros equipos preguntan por el método. Interés real, aunque de momento no en forma de oferta." },
+];
+
 /* Monta la edición del día (portada, secciones y contra) sobre el estado dado.
    Se usa al abrir la app y también justo al fichar, para que el primer día
    no te encuentres un periódico en blanco. */
@@ -10753,8 +10782,13 @@ function buildPaper(out) {
     if (e) arts.push(e);
   };
   grab("PORTADA"); grab(pick(["RUMORES", "VESTUARIO"])); grab("LA LIGA"); grab("HUMOR");
+  /* Fabrizio siempre tiene algo que contar: se elige aparte de NEWS, de su propio pool
+     (ver FABRIZIO_POOL), así su cuenta nunca se queda vacía un día entero. */
+  const okFab = FABRIZIO_POOL.filter((n) => !n.w || (COND[n.w] && COND[n.w](c)));
+  const fab = okFab.length ? okFab[Math.floor(Math.random() * okFab.length)] : null;
   out.paper = { ...out.paper, built: true, articles: [
     ...arts.map((n) => ({ id: Math.random(), sec: n.sec, h: fillTpl(n.h, c), b: fillTpl(n.b, c) })),
+    ...(fab ? [{ id: Math.random(), sec: "FICHAJES", h: fillTpl(fab.h, c), b: fillTpl(fab.b, c) }] : []),
     ...out.paper.articles] };
   return out;
 }
@@ -10823,6 +10857,18 @@ function Crest({ c1, c2, name, size = 40, img, imgScale = 1 }) {
         color: "#fff", textShadow: "0 1px 3px rgba(0,0,0,.8)" }}>{initials}</span>
     </div>
   );
+}
+
+/* RP (reputación): moneda de la tienda, ganada jugando (ver finishMatch/confirmSigning),
+   no comprada ni ganada al azar en el Casino. Icono optimizado a WebP (200x200, q82) desde
+   el PNG original de 3.6MB que subió el jugador. "size" en px, pensado para ir inline junto
+   a un número de precio o de saldo, igual que antes iba el emoji 🪙. */
+function RPIcon({ size = 14 }) {
+  return <img src="/images/redes/rp_icon.webp" alt="RP" style={{ width: size, height: size,
+    objectFit: "contain", verticalAlign: -2, marginRight: 3 }} />;
+}
+function RP({ n, size = 14 }) {
+  return <span style={{ display: "inline-flex", alignItems: "center" }}><RPIcon size={size} />{n}</span>;
 }
 
 function PlayerCard({ player, photo, club, small, crest, crestScale }) {
@@ -11384,7 +11430,8 @@ function NpcDialogue({ entry, queueLeft, onAdvance, onChoice, onOffer }) {
     <div className="npc-ov" onClick={tap}>
       {queueLeft > 1 && <div className="npc-count">+{queueLeft - 1} en espera</div>}
       {art
-        ? <img key={entry.id + entry.mood} src={art} alt={npc.name} className="npc-art" />
+        ? <img key={entry.id + entry.mood} src={art} alt={npc.name} className="npc-art"
+            style={npc.artScale ? { maxHeight: 54 * npc.artScale + "vh", maxWidth: 92 * npc.artScale + "vw" } : undefined} />
         : <div key={entry.id} className="npc-art npc-fallback" style={{ background: npc.color }}>{npc.name[0]}</div>}
       <div className="npc-panel">
         <div className="npc-name" style={{ background: npc.color }}>{npc.name}</div>
@@ -11558,301 +11605,319 @@ function SobreReveal({ reveal, onClose }) {
     </div>);
 }
 
-/* ---------- EL PERIÓDICO ---------- */
-function Newspaper({ game, onRead }) {
-  const today = todayStr();
-  const paper = game.paper;
-  /* siempre cerrado al entrar: al salir de la pestaña el componente se desmonta
-     y hay que volver a abrirlo. paperRead solo sirve ya para el aviso de la pestaña. */
-  const [open, setOpen] = useState(false);
-  const [anim, setAnim] = useState(false);
-  if (!paper) return (
-    <div className="empty" style={{ marginTop: 80 }}><span className="em-ico">🗞️</span>
-      La rotativa está en marcha.<br />Vuelve en un momento.</div>);
-  const fecha = new Date(paper.d + "T12:00").toLocaleDateString("es-ES",
-    { weekday: "long", day: "numeric", month: "long", year: "numeric" });
-
-  if (!open) return (
-    <div style={{ padding: "48px 24px" }}>
-      <div className={"np-cover" + (anim ? " np-opening" : "")}
-        onClick={() => { if (anim) return; setAnim(true); buzz(15); paperRustle();
-          /* el cambio ocurre justo antes de que la portada acabe de girar: se solapan */
-          setTimeout(() => { setOpen(true); onRead(); }, 380); }}>
-        <div className="np-mast">LA JORNADA</div>
-        <div className="np-rule" />
-        <div className="np-date">{fecha}</div>
-        <div className="np-date">Edición Nº {paper.num} · 0,50 € (invita el club)</div>
-        <div className="np-fold">🗞️</div>
-        <div className="np-tap">TOCA PARA LEER LA EDICIÓN DE HOY</div>
-      </div>
-    </div>);
-
-  const arts = paper.articles;
-  const main = [...arts].reverse().find((a) => a.main) || arts.find((a) => a.sec === "PORTADA") || arts.find((a) => a.h);
-  const rest = arts.filter((a) => a !== main && a.h && a.sec !== "HUMOR");
-  const briefs = arts.filter((a) => !a.h);
-  const humor = arts.find((a) => a.sec === "HUMOR" && a !== main);
-  const tabla = [...game.season.table].sort((x, y) => y.pts - x.pts);
-  const yoFuera = !tabla.slice(0, 4).some((t) => t.me);
-  const miPos = tabla.findIndex((t) => t.me);
+/* ============================================================
+   futOS · la pestaña Ciudad ya no es un mapa de zonas: es un escritorio de
+   teléfono con apps. Sustituye a CityMap/ZoneScreen/CocoShop (retirados en la
+   Fase 3 de la rework) sin tocar nada del motor narrativo — stage.zone sigue
+   existiendo como metadato de sabor, pero ya no gatea nada aquí. Ver comentario
+   junto a openApp en App(). */
+/* iconos del escritorio: cada uno abre una "app" (openApp) o, en el caso de
+   Misiones/Inventario, el mismo panel de siempre (ya eran overlays sueltos,
+   antes activados por los quest-fab flotantes). Pesca libre no abre pantalla
+   propia: lanza freeFish() directamente y la captura aparece sola en cuanto
+   el jugador entre en el hilo de Nina y toque Visitar (misma cola de siempre). */
+function FutOSDesktop({ game, onOpen, onQuests, onInventory, onFreeFish }) {
+  const msgUnread = (game.npcQueue || []).length;
+  const paperUnread = !!(game.paper && game.paperRead !== todayStr());
+  const sobreDay = game.sobreDay === todayStr();
+  const fishedToday = game.ninaFishDay === todayStr();
+  const showFishing = !!game.ninaStoryComplete;
+  const apps = [
+    { id: "mensajes", icon: "💬", label: "Mensajes", onClick: () => onOpen("mensajes", true), badge: msgUnread || null },
+    { id: "redes", icon: "📸", label: "Redes", onClick: () => onOpen("redes"), badge: paperUnread ? 1 : null },
+    { id: "tienda", icon: "🛍️", label: "Tienda", onClick: () => onOpen("tienda") },
+    { id: "casino", icon: "🎰", label: "Casino", onClick: () => onOpen("casino"), badge: sobreDay ? null : 1 },
+    { id: "trofeos", icon: "🏆", label: "Trofeos", onClick: () => onOpen("trofeos") },
+    { id: "misiones", icon: "📜", label: "Misiones", onClick: onQuests },
+    { id: "inventario", icon: "🎒", label: "Inventario", onClick: onInventory },
+  ];
+  if (showFishing) apps.push({ id: "pesca", icon: "🎣", label: "Pesca libre",
+    onClick: onFreeFish, badge: fishedToday ? null : 1, dim: fishedToday });
   return (
-    <div className="np-page np-open2">
-      <div className="np-mast" style={{ fontSize: 30 }}>LA JORNADA</div>
-      <div className="np-rule" />
-      <div className="np-date">{fecha} · Nº {paper.num} · {game.tier.league}</div>
-      <div className="np-rule np-rule2" />
-      {main && (
-        <div className="np-main">
-          <span className="np-kicker">{main.sec || "PORTADA"}</span>
-          <h2 className="np-h1">{main.h || main.b}</h2>
-          {main.h && <p className="np-body np-drop">{main.b}</p>}
-        </div>)}
-      {rest.slice(0, 4).map((a) => (
-        <div key={a.id} className="np-art">
-          <span className="np-kicker">{a.sec}</span>
-          <h3 className="np-h2">{a.h}</h3>
-          <p className="np-body">{a.b}</p>
-        </div>))}
-      <div className="np-cols">
-        <div className="np-box">
-          <div className="np-boxtitle">CLASIFICACIÓN</div>
-          {tabla.slice(0, 4).map((t, i) => (
-            <div key={t.name} className="np-row" style={t.me ? { fontWeight: 700 } : {}}>
-              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{i + 1}. {t.name}</span>
-              <span>{t.pts}</span>
-            </div>))}
-          {yoFuera && miPos >= 0 && (
-            <div className="np-row" style={{ fontWeight: 700, borderTop: "1px dotted rgba(20,23,14,.4)", marginTop: 3, paddingTop: 3 }}>
-              <span>{miPos + 1}. {game.club.name}</span><span>{tabla[miPos].pts}</span>
-            </div>)}
-        </div>
-        {briefs.length > 0 && (
-          <div className="np-box">
-            <div className="np-boxtitle">BREVES</div>
-            {briefs.slice(-4).map((a) => <p key={a.id} className="np-brief">▪ {a.b}</p>)}
-          </div>)}
+    <div style={{ padding: "18px 4px 96px" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 18 }}>
+        <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 13, letterSpacing: 2, color: "#6F7563",
+          textTransform: "uppercase" }}>futOS</div>
+        <div style={{ fontSize: 12, color: "#33362B", background: "#FDFDF8", border: "1.5px solid rgba(20,23,14,.12)",
+          borderRadius: 999, padding: "3px 10px", display: "flex", alignItems: "center" }}>
+          <RP n={game.reputacion || 0} size={13} /></div>
       </div>
-      {humor && (
-        <div className="np-humor">
-          <span className="np-kicker">LA CONTRA</span>
-          <h3 className="np-h2">{humor.h}</h3>
-          <p className="np-body" style={{ fontStyle: "italic" }}>{humor.b}</p>
-        </div>)}
-      <div className="np-rule" style={{ marginTop: 14 }} />
-      <div className="np-date" style={{ paddingBottom: 4 }}>LA JORNADA · se imprime donde se gana</div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
+        {apps.map((a) => (
+          <button key={a.id} onClick={a.onClick} style={{ display: "flex", flexDirection: "column",
+            alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer",
+            opacity: a.dim ? .55 : 1 }}>
+            <span style={{ position: "relative", width: 54, height: 54, borderRadius: 16, background: "#FDFDF8",
+              border: "1.5px solid rgba(20,23,14,.12)", display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 24, boxShadow: "0 2px 6px rgba(20,23,14,.08)" }}>
+              {a.icon}
+              {!!a.badge && <span className="dot">{a.badge > 9 ? "9+" : a.badge}</span>}
+            </span>
+            <span style={{ fontSize: 10.5, color: "#33362B", fontFamily: "'Barlow',sans-serif", textAlign: "center" }}>{a.label}</span>
+          </button>))}
+      </div>
     </div>);
 }
 
-/* Periódico como ventana modal: se cierra con la X o tocando fuera, y se puede
-   reabrir las veces que quieras el mismo día (cada apertura vuelve a animar la portada). */
-/* Pantalla de "visitar" una zona: fondo a toda pantalla + flecha para volver.
-   Si hay alguien esperando ahí, su diálogo (NpcDialogue) aparece por encima, a nivel
-   de App. Si no hay nadie, un cartel lo dice; el Kiosco es la excepción porque
-   siempre hay periódico, así que en vez de cartel ofrece abrirlo.
-   Fondo real: si existe /images/zones/{id}.webp se usa; si no (todavía no se ha
-   subido), cae a un degradado de marcador de posición sin romper nada. */
-function ZoneScreen({ zone, pendingNpc, onBack, onOpenPaper, game, onOpenSobre, onFish, onBuyCoco, onSellCoco, onBuyShop, onSellShop }) {
-  const [imgOk, setImgOk] = useState(true);
-  const [showCocoShop, setShowCocoShop] = useState(false);
-  const [showShop, setShowShop] = useState(false);
-  const npc = pendingNpc ? NPCS[pendingNpc] : null;
-  const showPaperPrompt = zone.kind === "paper" && !pendingNpc;
-  const isHome = zone.kind === "home";
-  const isCasino = zone.id === "casino";
-  /* Coco está "activa" en su zona durante toda la visita (ver zoneActiveNpc/zonePending),
-     tenga o no una frase de historia pendiente ahora mismo — si la tiene, su diálogo
-     normal (a nivel de App) se pinta encima y tapa este panel; si no, el jugador ve
-     directamente el acceso a la tienda. Queda sin usar mientras Coco está oculta como
-     personaje (game.cocoVisit nunca se genera, ver checkZoneUnlocks), lista para
-     reactivarse tal cual. */
-  const isCoco = !!(game.cocoVisit && game.cocoVisit.zone === zone.id);
-  /* tienda genérica del Centro Comercial (ver ShopPanel/refreshShopVisit): abierta todos
-     los días, sin personaje — no comparte estado con isCoco/game.cocoVisit. */
-  const isShop = !!(game.shopVisit && game.shopVisit.zone === zone.id);
-  /* pesca libre: solo tras completar la campaña de Nina (ver NINA_STORY, FINAL/EPÍLOGO) */
-  const isPlaya = zone.id === "playa" && !!game.ninaStoryComplete;
-  const fishedToday = isPlaya && game.ninaFishDay === todayStr();
-  const sobreToday = isCasino && game && game.sobreDay === todayStr();
-  /* variante nocturna del fondo (ver WENDY_STORY): parque y playa tienen una versión de
-     noche pintada aparte; se usa entre las 22:00 y las 07:00, la misma ventana horaria de
-     Wendy, para que la "gramática visual" del documento se cumpla sin crear zonas nuevas. */
-  const hasNightBg = zone.id === "parque" || zone.id === "playa";
-  const bgId = hasNightBg && inTimeWindow({ from: "22:00", to: "07:00" }) ? `${zone.id}_noche` : zone.id;
+/* Bandeja de Mensajes: un hilo por personaje con algo que contar (chatLog con historial
+   o npcQueue con algo pendiente ahora mismo) — el resto del roster no aparece hasta que
+   diga su primera frase, igual que antes solo aparecía en el mapa al desbloquear su zona.
+   Orden: primero quien tiene algo pendiente de leer, luego por el último mensaje. */
+function MensajesInbox({ game, onOpenThread, onBack }) {
+  const log = game.chatLog || {};
+  const npcQueue = game.npcQueue || [];
+  const threads = Object.keys(NPCS).filter((k) => !HIDDEN_NPCS.includes(k))
+    .filter((k) => (log[k] && log[k].length) || npcQueue.some((e) => e.npc === k))
+    .map((k) => {
+      const msgs = log[k] || [];
+      const pending = npcQueue.filter((e) => e.npc === k).length;
+      const last = msgs[msgs.length - 1];
+      return { npc: k, def: NPCS[k], pending, last };
+    })
+    .sort((a, b) => (b.pending - a.pending) || (b.last ? 1 : 0) - (a.last ? 1 : 0));
   return (
-    <div className="zone-screen">
-      {imgOk ? (
-        <img key={bgId} src={`/images/zones/${bgId}.webp`} alt="" className="zone-bg-img" onError={() => setImgOk(false)} />
-      ) : (
-        <div className="zone-bg-fallback" style={{ background:
-          `linear-gradient(160deg, ${npc ? npc.color : "#7A8065"}77, #16190F 78%)` }} />
-      )}
-      <div className="zone-shade" />
-      <button className="zone-back" onClick={onBack}>← Volver</button>
-      <div className="zone-label">{zone.label}</div>
-      {!pendingNpc && !showPaperPrompt && !isHome && !isCasino && !isPlaya && !isCoco && !isShop && (
-        <div className="zone-empty-card">
-          <div style={{ fontSize: 30, marginBottom: 6 }}>🏚️</div>
-          Parece que no hay nadie por aquí ahora mismo.</div>)}
-      {showPaperPrompt && (
-        <button className="zone-empty-card zone-paper-btn" onClick={onOpenPaper}>
-          🗞️ Leer el periódico de hoy</button>)}
-      {isHome && <HouseRoom game={game} />}
-      {isCasino && !pendingNpc && (
-        <div className="house-room">
-          <div className="house-card">
-            <div className="house-title">🎴 Sobre del Casino</div>
-            {sobreToday ? (
-              <div style={{ fontSize: 13, color: "#EFEEE3", lineHeight: 1.5 }}>
-                Ya has abierto tu sobre hoy.<br />Vuelve mañana para otra carta.</div>
-            ) : (
-              <button className="btn-gold sm" style={{ width: "100%" }} onClick={onOpenSobre}>
-                🎴 Abrir sobre (1 disponible hoy)</button>
-            )}
+    <div style={{ paddingBottom: 96 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+        <button className="btn-ghost sm" onClick={onBack}>← futOS</button>
+        <div className="ptitle" style={{ margin: 0 }}>💬 Mensajes</div>
+      </div>
+      {!threads.length && (
+        <div className="empty"><span className="em-ico">💬</span>
+          Todavía no tienes conversaciones. Ve jugando y algún personaje te escribirá.</div>)}
+      {threads.map((t) => (
+        <button key={t.npc} className="panel" onClick={() => onOpenThread(t.npc)}
+          style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left",
+            border: "1.5px solid rgba(20,23,14,.1)", cursor: "pointer" }}>
+          <span style={{ position: "relative", flexShrink: 0 }}>
+            <img src={t.def.icon} alt={t.def.name} style={{ width: 46, height: 46, borderRadius: "50%",
+              objectFit: "cover", border: `2px solid ${t.def.color}` }} />
+            {!!t.pending && <span className="dot">{t.pending}</span>}
+          </span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 13.5, color: "#16190F" }}>{t.def.name}</div>
+            <div style={{ fontSize: 12, color: "#6F7563", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {t.pending ? "Tiene algo que decirte…" : t.last ? (t.last.from === "me" ? "Tú: " : "") + t.last.text : ""}
+            </div>
           </div>
-        </div>)}
-      {isPlaya && !pendingNpc && (
-        <div className="house-room">
-          <div className="house-card">
-            <div className="house-title">🎣 Pesca libre</div>
-            {fishedToday ? (
-              <div style={{ fontSize: 13, color: "#EFEEE3", lineHeight: 1.5 }}>
-                Ya has pescado hoy.<br />Vuelve mañana para otra tirada.</div>
-            ) : (
-              <button className="btn-gold sm" style={{ width: "100%" }} onClick={onFish}>
-                🎣 Lanzar la caña (tirada gratis de hoy)</button>
-            )}
-          </div>
-        </div>)}
-      {isCoco && (
-        <div className="house-room">
-          <div className="house-card">
-            <div className="house-title">🛍️ La tienda de Coco</div>
-            <div style={{ fontSize: 12.5, color: "#9a9e8e", marginBottom: 10 }}>
-              Hoy está abierta. Coco atiende un día sí y otro no, con mercancía nueva cada vez.</div>
-            <button className="btn-gold sm" style={{ width: "100%" }} onClick={() => setShowCocoShop(true)}>
-              🛒 Ver tienda</button>
-          </div>
-        </div>)}
-      {showCocoShop && (
-        <CocoShop game={game} onClose={() => setShowCocoShop(false)} onBuy={onBuyCoco} onSell={onSellCoco} />)}
-      {isShop && (
-        <div className="house-room">
-          <div className="house-card">
-            <div className="house-title">🛍️ Centro Comercial</div>
-            <div style={{ fontSize: 12.5, color: "#9a9e8e", marginBottom: 10 }}>
-              Abierto todos los días, con mercancía nueva cada mañana.</div>
-            <button className="btn-gold sm" style={{ width: "100%" }} onClick={() => setShowShop(true)}>
-              🛒 Ver tienda</button>
-          </div>
-        </div>)}
-      {showShop && (
-        <ShopPanel game={game} onClose={() => setShowShop(false)} onBuy={onBuyShop} onSell={onSellShop} />)}
+        </button>))}
     </div>);
 }
 
-/* Tienda de Coco: 3 slots de compra fijos durante toda la visita (ver game.cocoVisit,
-   generado por refreshCocoVisit — abrir/cerrar este panel nunca cambia productos ni
-   precios) + un botón VENDER aparte con los objetos vendibles del inventario (por ahora
-   solo peces, ver ITEMS[id].sellMin/sellMax). Cada compra/venta pide confirmación con
-   objeto, efecto/cantidad y precio antes de ejecutar la transacción, tal como pide el
-   documento — nunca se descuenta/entrega nada con un solo click. */
-function CocoShop({ game, onClose, onBuy, onSell }) {
-  const [confirmBuy, setConfirmBuy] = useState(null); // índice de slot
-  const [sellMode, setSellMode] = useState(false);
-  const [sellPrices, setSellPrices] = useState(null); // { [itemId]: precio }, rolado una vez al abrir VENDER
-  const [confirmSell, setConfirmSell] = useState(null); // { id, price, qty }
-  const visit = game.cocoVisit;
-  if (!visit) return null;
-  const openSell = () => {
-    const prices = {};
-    Object.entries(game.inventory || {}).forEach(([id, qty]) => {
-      if (qty > 0 && ITEMS[id] && ITEMS[id].sellMin != null) prices[id] = rollSellPrice(id);
-    });
-    setSellPrices(prices);
-    setSellMode(true);
-  };
+/* Hilo de un personaje: burbujas del historial (chatLog) + botón "Visitar" cuando hay
+   algo pendiente ahora mismo. El diálogo/pesca en sí (NpcDialogue/FishingSequence) se
+   monta a nivel de App, por encima de este hilo — ver chatVisiting en App(). */
+function ChatThread({ game, npc, pending, onBack, onVisit }) {
+  const def = NPCS[npc];
+  const msgs = (game.chatLog || {})[npc] || [];
+  const bottomRef = useRef(null);
+  useEffect(() => { bottomRef.current && bottomRef.current.scrollIntoView({ block: "end" }); }, [msgs.length, npc]);
   return (
-    <div className="overlay" style={{ background: "rgba(5,7,13,.75)", zIndex: 65, alignItems: "flex-end", padding: "0 0 16px" }} onClick={onClose}>
-      <div className="sheet" style={{ maxHeight: "78vh", overflowY: "auto", borderRadius: 22 }} onClick={(e) => e.stopPropagation()}>
-        <div className="ptitle" style={{ fontSize: 16, marginBottom: 14 }}>🛍️ TIENDA DE COCO · 🪙 {game.fichas || 0}</div>
-        {!sellMode ? (
-          <>
-            {visit.products.map((p, i) => {
-              const it = ITEMS[p.id];
-              return (
-                <div key={i} className="panel" style={{ display: "flex", alignItems: "center", gap: 10, opacity: p.sold ? .5 : 1 }}>
-                  {it.img ? <img src={it.img} alt={it.name} className="item-ico-img" /> : <span style={{ fontSize: 22 }}>{it.icon}</span>}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, color: "#26291D" }}>{it.name}</div>
-                    <div style={{ fontSize: 10.5, color: "#6F7563" }}>+{it.xp} XP {it.stat}</div>
-                  </div>
-                  {p.sold ? (
-                    <span style={{ fontSize: 11, color: "#9a9e8e", fontFamily: "'Oswald',sans-serif" }}>AGOTADO</span>
-                  ) : (
-                    <button className="btn-gold sm" onClick={() => setConfirmBuy(i)}>🪙 {p.price}</button>
-                  )}
-                </div>);
-            })}
-            <button className="btn-ghost sm" style={{ width: "100%", marginTop: 4 }} onClick={openSell}>💰 Vender objetos</button>
-          </>
+    <div style={{ display: "flex", flexDirection: "column", minHeight: "70vh", paddingBottom: 96 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+        <button className="btn-ghost sm" onClick={onBack}>←</button>
+        <img src={def.icon} alt={def.name} style={{ width: 32, height: 32, borderRadius: "50%",
+          objectFit: "cover", border: `2px solid ${def.color}` }} />
+        <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 14, color: "#16190F" }}>{def.name}</div>
+      </div>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8, padding: "4px 2px" }}>
+        {!msgs.length && !pending && (
+          <div className="empty"><span className="em-ico">👋</span>Todavía no habéis hablado.</div>)}
+        {msgs.map((m, i) => (
+          <div key={i} style={{ alignSelf: m.from === "me" ? "flex-end" : "flex-start", maxWidth: "78%",
+            background: m.from === "me" ? "#CDF546" : "#FDFDF8", color: "#16190F",
+            border: "1.5px solid rgba(20,23,14,.1)", borderRadius: m.from === "me" ? "14px 14px 3px 14px" : "14px 14px 14px 3px",
+            padding: "9px 12px", fontSize: 13, lineHeight: 1.45 }}>{m.text}</div>))}
+        <div ref={bottomRef} />
+      </div>
+      {!!pending && (
+        <button className="btn-gold sm" style={{ width: "100%", marginTop: 10 }} onClick={onVisit}>
+          👁️ Visitar {pending > 1 ? `(+${pending - 1} en espera)` : ""}</button>)}
+    </div>);
+}
+
+/* Casino: mismo "abrir sobre diario" que antes vivía dentro de ZoneScreen, ahora como
+   pantalla propia — SobreReveal sigue montada a nivel de App (game.pendingSobreReveal),
+   sin cambios ahí. */
+function CasinoApp({ game, onOpenSobre, onBack }) {
+  const sobreToday = game.sobreDay === todayStr();
+  return (
+    <div style={{ paddingBottom: 96 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+        <button className="btn-ghost sm" onClick={onBack}>← futOS</button>
+        <div className="ptitle" style={{ margin: 0 }}>🎰 Casino</div>
+      </div>
+      <div className="panel">
+        <div className="ptitle">🎴 Sobre del Casino</div>
+        {sobreToday ? (
+          <div style={{ fontSize: 13, color: "#33362B", lineHeight: 1.5 }}>
+            Ya has abierto tu sobre hoy.<br />Vuelve mañana para otra carta.</div>
         ) : (
-          <>
-            <button className="btn-ghost sm" style={{ marginBottom: 10 }} onClick={() => setSellMode(false)}>← Volver a comprar</button>
-            {Object.keys(sellPrices || {}).length === 0 && (
-              <div className="empty"><span className="em-ico">🎒</span>
-                No tienes nada que Coco quiera comprar ahora mismo.</div>)}
-            {Object.entries(sellPrices || {}).map(([id, price]) => {
-              const it = ITEMS[id];
-              const qty = (game.inventory || {})[id] || 0;
-              return (
-                <div key={id} className="panel" style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  {it.img ? <img src={it.img} alt={it.name} className="item-ico-img" /> : <span style={{ fontSize: 22 }}>{it.icon}</span>}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, color: "#26291D" }}>{it.name}</div>
-                    <div style={{ fontSize: 10.5, color: "#6F7563" }}>Tienes ×{qty}</div>
-                  </div>
-                  <button className="btn-gold sm" onClick={() => setConfirmSell({ id, price, qty })}>🪙 {price}</button>
-                </div>);
-            })}
-          </>
+          <button className="btn-gold sm" style={{ width: "100%" }} onClick={onOpenSobre}>
+            🎴 Abrir sobre (1 disponible hoy)</button>
         )}
       </div>
-      {confirmBuy != null && (() => {
-        const slot = visit.products[confirmBuy];
-        const it = ITEMS[slot.id];
-        return (
-          <div className="overlay" style={{ background: "rgba(5,7,13,.88)", zIndex: 90 }}
-            onClick={(e) => { e.stopPropagation(); setConfirmBuy(null); }}>
-            <div className="item-lightbox" onClick={(e) => e.stopPropagation()}>
-              {it.img ? <img src={it.img} alt={it.name} className="item-lightbox-img" /> : <span style={{ fontSize: 90 }}>{it.icon}</span>}
-              <div className="item-lightbox-name">{it.name}</div>
-              <div className="item-lightbox-desc">{it.desc}</div>
-              <div className="item-lightbox-desc" style={{ fontWeight: 700 }}>+{it.xp} XP {it.stat} · 🪙 {slot.price}</div>
-              <div style={{ display: "flex", gap: 8, width: "100%" }}>
-                <button className="btn-gold sm" style={{ flex: 1 }} disabled={(game.fichas || 0) < slot.price}
-                  onClick={() => { onBuy(confirmBuy); setConfirmBuy(null); }}>Comprar</button>
-                <button className="btn-ghost sm" style={{ flex: 1 }} onClick={() => setConfirmBuy(null)}>Cancelar</button>
-              </div>
-            </div>
-          </div>);
-      })()}
-      {confirmSell && (() => {
-        const it = ITEMS[confirmSell.id];
-        return (
-          <div className="overlay" style={{ background: "rgba(5,7,13,.88)", zIndex: 90 }}
-            onClick={(e) => { e.stopPropagation(); setConfirmSell(null); }}>
-            <div className="item-lightbox" onClick={(e) => e.stopPropagation()}>
-              {it.img ? <img src={it.img} alt={it.name} className="item-lightbox-img" /> : <span style={{ fontSize: 90 }}>{it.icon}</span>}
-              <div className="item-lightbox-name">{it.name} · tienes ×{confirmSell.qty}</div>
-              <div className="item-lightbox-desc" style={{ fontWeight: 700 }}>🪙 {confirmSell.price}</div>
-              <div style={{ display: "flex", gap: 8, width: "100%" }}>
-                <button className="btn-gold sm" style={{ flex: 1 }}
-                  onClick={() => { onSell(confirmSell.id, 1, confirmSell.price); setConfirmSell(null); }}>Vender 1</button>
-                <button className="btn-ghost sm" style={{ flex: 1 }} onClick={() => setConfirmSell(null)}>Cancelar</button>
-              </div>
-            </div>
-          </div>);
-      })()}
+    </div>);
+}
+
+/* Trofeos: misma vitrina de siempre (mismo cálculo que HouseRoom, que vivía fija dentro
+   de la zona "Tu Casa" con estética oscura de zona) pero como pantalla propia dentro del
+   escritorio, con las cards claras del resto de futOS en vez de las oscuras de ZoneScreen. */
+function TrofeosApp({ game, onBack }) {
+  const trophies = (game.careerLog || []).map(trophyInfo).filter((c) => c.pos === 1);
+  const hist = game.matchHistory || [];
+  const wins = hist.filter((m) => m.res === "V").length;
+  const draws = hist.filter((m) => m.res === "E").length;
+  const losses = hist.filter((m) => m.res === "D").length;
+  const goals = hist.reduce((a, m) => a + (m.myGoals || 0), 0);
+  const assists = hist.reduce((a, m) => a + (m.myAssists || 0), 0);
+  const rated = hist.filter((m) => m.rating != null);
+  const avgR = rated.length ? (rated.reduce((a, m) => a + m.rating, 0) / rated.length).toFixed(1) : "—";
+  const bestR = rated.length ? Math.max(...rated.map((m) => m.rating)) : null;
+  return (
+    <div style={{ paddingBottom: 96 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+        <button className="btn-ghost sm" onClick={onBack}>← futOS</button>
+        <div className="ptitle" style={{ margin: 0 }}>🏆 Trofeos</div>
+      </div>
+      <div className="panel">
+        <div className="ptitle">🏆 Vitrina de trofeos</div>
+        {trophies.length === 0 ? (
+          <div className="empty" style={{ padding: "10px 4px" }}>
+            <span className="em-ico">🗄️</span>Todavía no hay ninguna liga en la vitrina.<br />Termina 1º de tu categoría para ganar tu primer trofeo.</div>
+        ) : (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+            {trophies.map((t, i) => (
+              <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                <Crest c1={t.c1} c2={t.c2} name={t.club} size={30} />
+                <div style={{ fontSize: 10.5, color: "#6F7563", marginTop: 4 }}>T{t.season}</div>
+                <div style={{ fontSize: 10, color: "#16190F", fontWeight: 600 }}>🏆</div>
+              </div>))}
+          </div>)}
+      </div>
+      <div className="panel">
+        <div className="ptitle">📊 Estadísticas de carrera</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+          {[["Partidos", hist.length], ["V-E-D", `${wins}-${draws}-${losses}`], ["Goles", goals],
+            ["Asistencias", assists], ["Media", avgR], ["Mejor nota", bestR != null ? bestR : "—"]].map(([lb, v]) => (
+            <div key={lb} style={{ textAlign: "center", background: "rgba(20,23,14,.05)", borderRadius: 10, padding: "8px 4px" }}>
+              <b style={{ display: "block", fontFamily: "'Oswald',sans-serif", fontSize: 16, color: "#16190F" }}>{v}</b>
+              <span style={{ fontSize: 10, color: "#6F7563" }}>{lb}</span>
+            </div>))}
+        </div>
+      </div>
+    </div>);
+}
+
+/* ============================================================
+   Redes (Fase 2 de futOS) · sustituye al periódico (Newspaper/PaperModal, retirados en
+   la Fase 3) por un feed estilo Instagram. La fuente de contenido de las noticias sigue
+   siendo game.paper.articles (buildPaper/addMsg, sin tocar NEWS/COND/paperSec), pero ya
+   no se muestra una cuenta distinta por cada src/sec que genera ese motor (antes salían
+   hasta 9): todo eso se consolida en solo dos firmas de prensa, cada una con su
+   especialidad, más las cuentas de los propios personajes de la historia.
+     - Fabrizio Lozano: fichajes, traspasos, ventas, rumores y jugadores (sec RUMORES,
+       o el fichaje oficial del club, marcado aparte con sec "FICHAJES" en confirmSigning).
+     - Marca: el periódico deportivo de toda la vida — cualquier otro artículo (portada,
+       liga, vestuario, humor, crónica de partido, etc.).
+     - Vera/Beka/Yuna: cuentas propias de personaje, como si les siguiéramos — de momento
+       sin contenido real (REDES_CHARACTER_POSTS vacío por personaje): en cuanto se
+       escriban sus publicaciones ahí, aparecen solas en el feed sin tocar nada más de
+       este componente. Reutilizan retrato/color de NPCS, no hace falta redefinirlos aquí. */
+const REDES_ACCOUNTS = {
+  FABRIZIO: { name: "Fabrizio Lozano", handle: "@fabriziolozano", img: "/images/redes/fabrizio_icon.webp" },
+  MARCA: { name: "Marca", handle: "@marca", img: "/images/redes/marca_icon.webp" },
+};
+const REDES_CHARACTERS = ["vera", "beka", "yuna"];
+/* posts propios de personaje: { npc: [{ id, h?, b }, ...] }. Misma forma que un artículo
+   de paper.articles, así RedesPost no necesita ninguna rama especial para pintarlos.
+   Contenido personal de cada una (nada de resultados ni fichajes, eso es cosa de Marca/
+   Fabrizio), con algún guiño ocasional al protagonista — esos usan {player} y se
+   resuelven con fillTpl/flavorCtx al construir el feed (ver RedesApp), igual que NEWS.
+   id fijo (no Math.random) para que el like sea estable entre sesiones: son publicaciones
+   de perfil, no la edición del día, así que no rotan ni se regeneran. */
+const REDES_CHARACTER_POSTS = {
+  vera: [
+    { id: "vera_01", b: "Hoy la luz de la tarde entraba tan bien en el estudio que he dejado todo lo demás para pintarla. Algunas cosas no esperan." },
+    { id: "vera_02", b: "Terminé un cuadro que llevaba semanas mirándome desde la esquina. A veces hay que dejar que las cosas maduren solas." },
+    { id: "vera_03", b: "Salí a caminar sin cámara ni libreta, solo para mirar. Es sorprendente cuánto se me suele escapar cuando llevo algo en la mano." },
+    { id: "vera_04", b: "Boceto nuevo. Todavía no sé si es de alguien o de un momento. Puede que sea lo mismo." },
+    { id: "vera_05", b: "Estuve en la grada el otro día. No fui a ver el partido: fui a ver cómo corre {player}, que no tiene ni idea de que lo estaba mirando. Material de sobra para semanas." },
+    { id: "vera_06", b: "Me preguntan por qué siempre pinto gente en movimiento y nunca quieta. Supongo que es lo único que de verdad me cuenta algo." },
+  ],
+  beka: [
+    { id: "beka_01", b: "Doble sesión hoy y todavía me sobran ganas de más. Que alguien me pare, en serio." },
+    { id: "beka_02", b: "Esta noche pincho yo en la discoteca. Si venís, comportaos — la última vez alguien intentó cantar encima de mi set y no lo he olvidado." },
+    { id: "beka_03", b: "Me preguntan si entreno los findes. La pregunta correcta sería si alguna vez dejo de entrenar." },
+    { id: "beka_04", b: "Un tal {player} sigue creyéndose que me puede ganar en algo. Que siga soñando. 😏" },
+    { id: "beka_05", b: "Vestuario dividido otra vez por el altavoz. Yo gano siempre esta guerra, que quede claro." },
+    { id: "beka_06", b: "Racha de victorias y todavía nadie me ha visto cansada. Así se hace." },
+  ],
+  yuna: [
+    { id: "yuna_01", b: "El Barça ha vuelto a ganar y NO, no voy a hablar de ello con nadie que no lo entienda. Así que ya sabéis." },
+    { id: "yuna_02", b: "Me han regalado una bufanda nueva y NO es porque la vieja estuviera horrible. Es porque sí. Da igual, es nueva y punto." },
+    { id: "yuna_03", b: "Que conste que no estaba mirando el entrenamiento de nadie en concreto. Estaba ahí. Por casualidad. Todo el rato. Cállate." },
+    { id: "yuna_04", b: "Otra vez discutiendo de fútbol con gente que no sabe lo que es un centrocampista de verdad. Voy a tener que dar un cursillo." },
+    { id: "yuna_05", b: "{player} me ha dado las gracias por ir a verlo jugar y le he dicho que no había ido a verlo a él. Mentira cochina, pero no pienso rectificar." },
+    { id: "yuna_06", b: "Viendo highlights del Barça a las dos de la madrugada otra vez. No tengo un problema, tengo prioridades." },
+  ],
+};
+const redesAccountFor = (a) => {
+  if (a.npc) { const def = NPCS[a.npc]; return { name: def.name, handle: "@" + a.npc, img: def.icon, color: def.color }; }
+  return (a.sec === "RUMORES" || a.sec === "FICHAJES") ? REDES_ACCOUNTS.FABRIZIO : REDES_ACCOUNTS.MARCA;
+};
+function RedesPost({ article: a, liked, onLike }) {
+  const acc = redesAccountFor(a);
+  return (
+    <div style={{ borderBottom: "1px solid rgba(239,238,227,.08)", padding: "14px 16px 16px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+        {acc.img
+          ? <img src={acc.img} alt={acc.name} style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+          : <span style={{ width: 36, height: 36, borderRadius: "50%", background: acc.color, display: "flex",
+              alignItems: "center", justifyContent: "center", fontSize: 17, flexShrink: 0 }}>{acc.icon}</span>}
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 13, color: "#EFEEE3", fontWeight: 600 }}>{acc.name}</div>
+          <div style={{ fontSize: 10.5, color: "#8A8E7C" }}>{acc.handle}</div>
+        </div>
+      </div>
+      {a.h && <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 15, color: "#F5EFDF", lineHeight: 1.3, marginBottom: 6 }}>{a.h}</div>}
+      <div style={{ fontSize: 13, color: "#C7CBB8", lineHeight: 1.55 }}>{a.b}</div>
+      {/* dar like suma +1 RP, una sola vez por publicación (ver game.likedPosts/onLike en
+          App) — sin contador de likes/respuestas ajenos, solo si TÚ le has dado o no. */}
+      <button onClick={() => !liked && onLike(a.id)} disabled={liked} style={{ background: "none", border: "none",
+        padding: 0, marginTop: 12, cursor: liked ? "default" : "pointer", fontSize: 18,
+        display: "flex", alignItems: "center", gap: 6 }}>
+        {liked ? "❤️" : "🤍"}
+        {liked && <span style={{ fontSize: 11, color: "#8A8E7C" }}>+1 RP</span>}
+      </button>
+    </div>);
+}
+function RedesApp({ game, onRead, onClose, onLike }) {
+  useEffect(() => { onRead(); }, []);
+  const paper = game.paper;
+  const arts = paper ? paper.articles : [];
+  /* los posts de personaje son estáticos (mismo texto siempre, ver REDES_CHARACTER_POSTS)
+     pero los guiños al jugador llevan {player} sin resolver — se pasan por fillTpl aquí,
+     igual que NEWS, en vez de guardarlos ya resueltos (así siguen bien si cambia el nombre). */
+  const ctx = flavorCtx(game);
+  const charPosts = REDES_CHARACTERS.flatMap((npc) => (REDES_CHARACTER_POSTS[npc] || [])
+    .map((p) => ({ ...p, npc, h: p.h ? fillTpl(p.h, ctx) : p.h, b: fillTpl(p.b, ctx) })));
+  const feed = [...arts, ...charPosts];
+  const liked = game.likedPosts || {};
+  return (
+    <div className="overlay" style={{ background: "#05070d", alignItems: "stretch", padding: 0, zIndex: 25 }} onClick={onClose}>
+      <div style={{ maxWidth: 480, margin: "0 auto", width: "100%", height: "100%", overflowY: "auto",
+        background: "#0B0D06", display: "flex", flexDirection: "column" }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ position: "sticky", top: 0, zIndex: 1, display: "flex", alignItems: "center", gap: 10,
+          padding: "14px 16px", background: "rgba(11,13,6,.92)", borderBottom: "1px solid rgba(239,238,227,.1)" }}>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: "#EFEEE3", fontSize: 20, cursor: "pointer", padding: 0 }}>✕</button>
+          <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 15, letterSpacing: 1, color: "#EFEEE3" }}>📸 Redes</div>
+          {paper && <div style={{ marginLeft: "auto", fontSize: 10.5, color: "#8A8E7C" }}>Edición Nº {paper.num}</div>}
+        </div>
+        {!feed.length ? (
+          <div className="empty" style={{ color: "#8A8E7C", padding: "60px 20px" }}>
+            <span className="em-ico">📸</span>Todavía no hay publicaciones.<br />Vuelve en un rato.</div>
+        ) : feed.map((a) => <RedesPost key={a.id} article={a} liked={!!liked[a.id]} onLike={onLike} />)}
+      </div>
     </div>);
 }
 
@@ -11886,7 +11951,8 @@ function ShopPanel({ game, onClose, onBuy, onSell }) {
   return (
     <div className="overlay" style={{ background: "rgba(5,7,13,.75)", zIndex: 65, alignItems: "flex-end", padding: "0 0 16px" }} onClick={onClose}>
       <div className="sheet" style={{ maxHeight: "78vh", overflowY: "auto", borderRadius: 22 }} onClick={(e) => e.stopPropagation()}>
-        <div className="ptitle" style={{ fontSize: 16, marginBottom: 14 }}>🛍️ TIENDA · 🪙 {game.fichas || 0}</div>
+        <div className="ptitle" style={{ fontSize: 16, marginBottom: 14, display: "flex", alignItems: "center", gap: 4 }}>
+          🛍️ TIENDA · <RP n={game.reputacion || 0} /></div>
         {!sellMode ? (
           <>
             {visit.products.map((p, i) => {
@@ -11901,7 +11967,7 @@ function ShopPanel({ game, onClose, onBuy, onSell }) {
                   {p.sold ? (
                     <span style={{ fontSize: 11, color: "#9a9e8e", fontFamily: "'Oswald',sans-serif" }}>AGOTADO</span>
                   ) : (
-                    <button className="btn-gold sm" onClick={() => setConfirmBuy(i)}>🪙 {p.price}</button>
+                    <button className="btn-gold sm" onClick={() => setConfirmBuy(i)}><RP n={p.price} /></button>
                   )}
                 </div>);
             })}
@@ -11920,7 +11986,7 @@ function ShopPanel({ game, onClose, onBuy, onSell }) {
                   {c.sold ? (
                     <span style={{ fontSize: 11, color: "#9a9e8e", fontFamily: "'Oswald',sans-serif" }}>AGOTADO</span>
                   ) : (
-                    <button className="btn-gold sm" onClick={() => setConfirmBuy("cassette")}>🪙 {c.price}</button>
+                    <button className="btn-gold sm" onClick={() => setConfirmBuy("cassette")}><RP n={c.price} /></button>
                   )}
                 </div>);
             })()}
@@ -11942,7 +12008,7 @@ function ShopPanel({ game, onClose, onBuy, onSell }) {
                     <div style={{ fontSize: 13, color: "#26291D" }}>{it.name}</div>
                     <div style={{ fontSize: 10.5, color: "#6F7563" }}>Tienes ×{qty}</div>
                   </div>
-                  <button className="btn-gold sm" onClick={() => setConfirmSell({ id, price, qty })}>🪙 {price}</button>
+                  <button className="btn-gold sm" onClick={() => setConfirmSell({ id, price, qty })}><RP n={price} /></button>
                 </div>);
             })}
           </>
@@ -11957,9 +12023,10 @@ function ShopPanel({ game, onClose, onBuy, onSell }) {
               {it.img ? <img src={it.img} alt={it.name} className="item-lightbox-img" /> : <span style={{ fontSize: 90 }}>{it.icon}</span>}
               <div className="item-lightbox-name">{it.name}</div>
               <div className="item-lightbox-desc">{it.desc}</div>
-              <div className="item-lightbox-desc" style={{ fontWeight: 700 }}>{shopItemEffectLine(it)} · 🪙 {confirmSlot.price}</div>
+              <div className="item-lightbox-desc" style={{ fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>
+                {shopItemEffectLine(it)} · <RP n={confirmSlot.price} /></div>
               <div style={{ display: "flex", gap: 8, width: "100%" }}>
-                <button className="btn-gold sm" style={{ flex: 1 }} disabled={(game.fichas || 0) < confirmSlot.price}
+                <button className="btn-gold sm" style={{ flex: 1 }} disabled={(game.reputacion || 0) < confirmSlot.price}
                   onClick={() => { onBuy(confirmBuy); setConfirmBuy(null); }}>Comprar</button>
                 <button className="btn-ghost sm" style={{ flex: 1 }} onClick={() => setConfirmBuy(null)}>Cancelar</button>
               </div>
@@ -11974,7 +12041,8 @@ function ShopPanel({ game, onClose, onBuy, onSell }) {
             <div className="item-lightbox" onClick={(e) => e.stopPropagation()}>
               {it.img ? <img src={it.img} alt={it.name} className="item-lightbox-img" /> : <span style={{ fontSize: 90 }}>{it.icon}</span>}
               <div className="item-lightbox-name">{it.name} · tienes ×{confirmSell.qty}</div>
-              <div className="item-lightbox-desc" style={{ fontWeight: 700 }}>🪙 {confirmSell.price}</div>
+              <div className="item-lightbox-desc" style={{ fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>
+                <RP n={confirmSell.price} /></div>
               <div style={{ display: "flex", gap: 8, width: "100%" }}>
                 <button className="btn-gold sm" style={{ flex: 1 }}
                   onClick={() => { onSell(confirmSell.id, 1, confirmSell.price); setConfirmSell(null); }}>Vender 1</button>
@@ -11999,59 +12067,6 @@ const trophyInfo = (c) => {
   const known = [...REGIONAL_POOL, ...TIERS.flatMap((t) => t.clubs)].find((cl) => cl.name === club);
   return { ...c, pos: +m[1], club, c1: known ? known.c1 : "#3F4433", c2: known ? known.c2 : "#8A8E7C" };
 };
-function HouseRoom({ game }) {
-  const trophies = (game.careerLog || []).map(trophyInfo).filter((c) => c.pos === 1);
-  const hist = game.matchHistory || [];
-  const wins = hist.filter((m) => m.res === "V").length;
-  const draws = hist.filter((m) => m.res === "E").length;
-  const losses = hist.filter((m) => m.res === "D").length;
-  const goals = hist.reduce((a, m) => a + (m.myGoals || 0), 0);
-  const assists = hist.reduce((a, m) => a + (m.myAssists || 0), 0);
-  const rated = hist.filter((m) => m.rating != null);
-  const avgR = rated.length ? (rated.reduce((a, m) => a + m.rating, 0) / rated.length).toFixed(1) : "—";
-  const bestR = rated.length ? Math.max(...rated.map((m) => m.rating)) : null;
-  return (
-    <div className="house-room" onClick={(e) => e.stopPropagation()}>
-      <div className="house-card">
-        <div className="house-title">🏆 Vitrina de trofeos</div>
-        {trophies.length === 0 ? (
-          <div className="empty" style={{ padding: "10px 4px" }}>
-            <span className="em-ico">🗄️</span>Todavía no hay ninguna liga en la vitrina.<br />Termina 1º de tu categoría para ganar tu primer trofeo.</div>
-        ) : (
-          <div className="house-trophies">
-            {trophies.map((t, i) => (
-              <div key={i} className="house-trophy">
-                <Crest c1={t.c1} c2={t.c2} name={t.club} size={30} />
-                <div style={{ fontSize: 10.5, color: "#9a9e8e", marginTop: 4 }}>T{t.season}</div>
-                <div style={{ fontSize: 10, color: "#EFEEE3", fontWeight: 600 }}>🏆</div>
-              </div>))}
-          </div>)}
-      </div>
-      <div className="house-card">
-        <div className="house-title">📊 Estadísticas de carrera</div>
-        <div className="house-stats">
-          <div className="house-stat"><b>{hist.length}</b><span>Partidos</span></div>
-          <div className="house-stat"><b>{wins}-{draws}-{losses}</b><span>V-E-D</span></div>
-          <div className="house-stat"><b>{goals}</b><span>Goles</span></div>
-          <div className="house-stat"><b>{assists}</b><span>Asistencias</span></div>
-          <div className="house-stat"><b>{avgR}</b><span>Media</span></div>
-          <div className="house-stat"><b>{bestR != null ? bestR : "—"}</b><span>Mejor nota</span></div>
-        </div>
-      </div>
-    </div>);
-}
-
-function PaperModal({ game, onRead, onClose }) {
-  return (
-    <div className="overlay" style={{ background: "rgba(5,7,13,.88)", zIndex: 70, padding: 14 }} onClick={onClose}>
-      <button className="chat-back" style={{ position: "fixed", top: 14, right: 14, zIndex: 71 }} onClick={onClose}>✕</button>
-      <div style={{ width: "100%", maxWidth: 460, maxHeight: "90vh", overflowY: "auto", borderRadius: 14 }}
-        onClick={(e) => e.stopPropagation()}>
-        <Newspaper game={game} onRead={onRead} />
-      </div>
-    </div>);
-}
-
 /* progreso DENTRO de la etapa activa (no de la historia entera): si la etapa declara
    "subs" (las sub-condiciones que componen su objetivo, ver stage.subs en STORIES),
    la barra es cuánto se ha cumplido de cada una ahora mismo — así "gana dos partidos"
@@ -12292,93 +12307,6 @@ function InventoryPanel({ game, onClose, onUseItem, onGiveItem, onActivateCasset
         </div>)}
     </div>);
 }
-
-/* ---------- LA CIUDAD · mapa de zonas con desbloqueo progresivo ---------- */
-function CityMap({ game, onVisit, zones, vb, svgSrc, mapLabel }) {
-  const npcQueue = game.npcQueue || [];
-  const [flash, setFlash] = useState(null); /* id de zona mostrando su requisito/aviso */
-
-  const flashReq = (id) => {
-    buzz(10);
-    setFlash(id);
-    setTimeout(() => setFlash((cur) => (cur === id ? null : cur)), 2200);
-  };
-  /* tocar una zona ya no abre nada directamente: te lleva a visitarla (ZoneScreen),
-     que es quien decide si hay alguien esperando o si está vacía */
-  const zoneClick = (z, unlocked) => {
-    if (!unlocked || z.kind === "soon") { flashReq(z.id); return; }
-    onVisit(z.id);
-  };
-  /* centro de cada zona en las coordenadas nativas del SVG (para el texto del candado) */
-  const cx = (z) => vb.x + (z.x / 100) * vb.w;
-  const cy = (z) => vb.y + (z.y / 100) * vb.h;
-  const flashZone = flash ? zones.find((z) => z.id === flash) : null;
-
-  /* mapa todavía sin zonas (p.ej. la Metrópolis, a la espera de su SVG y sus personajes) */
-  if (!zones.length) return (
-    <div className="city-wrap city-empty">
-      <div className="city-empty-card">
-        <div style={{ fontSize: 34, marginBottom: 8 }}>🚧</div>
-        {mapLabel} está en construcción.<br />Vuelve pronto.
-      </div>
-    </div>);
-
-  return (
-    <div className="city-wrap">
-      <img src={svgSrc} alt={`Mapa de ${mapLabel}`} className="city-bg-img" />
-      <div className="city-coins">🪙 {game.fichas || 0}</div>
-      {/* la zona en sí (su silueta real del mapa) es lo clicable, no un círculo suelto encima.
-          bloqueadas: gris + candado. desbloqueadas sin nada pendiente: invisible, pero clicable
-          en toda su forma. Con algo pendiente, esa silueta queda tapada por la burbuja de personaje. */}
-      <svg className="city-overlay" viewBox={`${vb.x} ${vb.y} ${vb.w} ${vb.h}`} preserveAspectRatio="none">
-        {zones.filter((z) => !z.unlocked(game)).map((z) => (
-          <g key={z.id} className="city-lockshape" onClick={() => zoneClick(z, false)}>
-            {z.pts ? <polygon points={z.pts} className="city-lockfill" />
-              /* sin edificio propio (El Barrio): círculo invisible solo para ampliar la zona tocable */
-              : <circle cx={cx(z)} cy={cy(z)} r="20" fill="transparent" />}
-            <text x={cx(z)} y={cy(z)} className={"city-locktxt" + (z.pts ? "" : " small")} textAnchor="middle" dominantBaseline="central">🔒</text>
-          </g>))}
-        {zones.filter((z) => z.unlocked(game) && !zonePending(z, game)).map((z) => (
-          <g key={z.id} className="city-clickshape" onClick={() => zoneClick(z, true)}>
-            {z.pts ? <polygon points={z.pts} fill="transparent" />
-              : <circle cx={cx(z)} cy={cy(z)} r="20" fill="transparent" />}
-          </g>))}
-      </svg>
-      {zones.map((z) => {
-        const unlocked = z.unlocked(game);
-        const style = { left: z.x + "%", top: z.y + "%" };
-        /* el candado, el clic en reposo y el aviso van todos dentro del overlay SVG /
-           centrados en el punto; los nombres ya están dibujados en el propio mapa. */
-        const pending = unlocked && zonePending(z, game);
-        if (!pending) {
-          return <div key={z.id} className="city-zone" style={style} />;
-        }
-        /* la cara del personaje solo se ve si tiene algo pendiente que contar.
-           en zonas con varios personajes, se enseña el primero que tenga algo pendiente. */
-        const activeKey = zoneActiveNpc(z, npcQueue, game);
-        const npc = activeKey ? NPCS[activeKey] : null;
-        return (
-          <div key={z.id} className="city-zone" style={style}>
-            <button className={"city-bubble pend" + (z.big ? " big" : "")}
-              onClick={() => zoneClick(z, true)} aria-label={z.label}>
-              {npc ? <img src={npc.icon} alt={npc.name} className="city-ico-img" />
-                : <span className="city-ico-emoji">{z.icon}</span>}
-              <span className="dot" style={{ top: -2, right: -2, padding: "3px 4px" }} />
-            </button>
-          </div>);
-      })}
-      {/* aviso de requisito: centrado siempre en horizontal (a la altura de la zona tocada),
-          para que nunca se corte aunque el candado esté pegado al borde izquierdo o derecho */
-        flashZone && (
-          <div className="city-req" style={{ top: `calc(${flashZone.y}% + 26px)` }}>
-            {flashZone.kind === "soon" && flashZone.unlocked(game) ? "Próximamente" : ZONE_LOCKED_MSG}
-          </div>)}
-    </div>);
-}
-
-/* Nota: el diálogo NO se dibuja aquí dentro. Va al nivel de App, junto al resto de
-   overlays, porque el contenedor de pestañas anima un transform y eso lo convierte
-   en bloque contenedor de los hijos position:fixed (los dejaría con altura 0). */
 
 /* ---------- CALENDARIO ---------- */
 const MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -13238,8 +13166,10 @@ function HomeTab({ game, photo, log, crest, crestScale }) {
       <div style={{ display: "flex", justifyContent: "center", marginTop: 6 }}>
         <PlayerCard player={p} photo={photo} club={game.club} crest={crest} crestScale={crestScale} />
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginTop: 18 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8, marginTop: 18 }}>
         <div className="stat-box"><div className="sb-num">{fmtEUR(mv)}</div><div className="sb-lbl">Valor de mercado</div></div>
+        <div className="stat-box"><div className="sb-num" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <RP n={game.reputacion || 0} size={13} /></div><div className="sb-lbl">Reputación</div></div>
         <div className="stat-box"><div className="sb-num">{kgNow} kg</div><div className="sb-lbl">{kgNow > kg0 ? `+${(kgNow - kg0).toFixed(1)} desde el inicio` : "Peso actual"}</div></div>
         <div className="stat-box"><div className="sb-num">{p.streak || 0}🔥</div>
           {(p.streak || 0) >= 1 && (
@@ -13610,39 +13540,36 @@ export default function App() {
   const [liveMatch, setLiveMatch] = useState(null);
   const [tab, setTab] = useState("home");
   const [toast, setToast] = useState(null);
-  const [visitedZone, setVisitedZone] = useState(null); // qué zona de la Ciudad estás visitando ahora mismo
-  const [showPaper, setShowPaper] = useState(false); // periódico abierto como ventana modal desde el Kiosco
+  /* futOS (ver comentario junto a FutOSDesktop): la pestaña Ciudad ya no navega por
+     zonas — es un escritorio de apps. openApp guarda qué app está abierta ahora mismo
+     ("mensajes"/"redes"/"tienda"/"casino"/"trofeos"), chatThread qué personaje tiene
+     abierto el hilo dentro de Mensajes, y chatVisiting si el jugador ha tocado el botón
+     "Visitar" de ese hilo (el diálogo/pesca de siempre, NpcDialogue/FishingSequence,
+     aparece entonces por encima del propio chat en vez de sobre un fondo de zona). */
+  const [openApp, setOpenApp] = useState(null);
+  const [chatThread, setChatThread] = useState(null);
+  const [chatVisiting, setChatVisiting] = useState(false);
   const [openCard, setOpenCard] = useState(null); // npc de la carta de personaje abierta en la galería
   const [showQuests, setShowQuests] = useState(false); // registro de misiones
   const [showInventory, setShowInventory] = useState(false); // objetos coleccionables
   const saveTimer = useRef();
 
   const pushToast = (t) => { setToast(t); setTimeout(() => setToast(null), 3200); };
-  /* al salir de la pestaña Ciudad, cualquier visita/periódico/registro abierto se cierra */
-  useEffect(() => { if (tab !== "chat") { setVisitedZone(null); setShowPaper(false); setShowQuests(false); setShowInventory(false); } }, [tab]);
-  /* quién tiene algo pendiente en la zona que estás visitando ahora: se recalcula solo
-     en cada render, así que en cuanto se vacía su cola la pantalla pasa sola al cartel
-     de "no hay nadie" sin necesidad de un efecto aparte que pueda desincronizarse. */
-  /* comprobación extra de bloqueo aquí también (no solo en el clic del mapa): una zona
-     bloqueada nunca debe poder "visitarse" aunque algo dejara visitedZone con su id. */
-  const visitedZoneObj = visitedZone && game && isZoneUnlocked(game, visitedZone)
-    ? ZONES.find((z) => z.id === visitedZone) : null;
-  const visitedActiveNpc = visitedZoneObj ? zoneActiveNpc(visitedZoneObj, game ? (game.npcQueue || []) : [], game) : null;
-  /* registro mínimo de "última vez que se visitó esta zona" (g.zoneVisits), para objetivos
-     de historia tipo "visita X" (ver zoneVisitedSince/BEKA_STORY) — no existía ninguna
-     necesidad de esto antes de Beka, así que no se guardaba en ningún sitio. */
-  useEffect(() => {
-    if (!visitedZoneObj) return;
-    const id = visitedZoneObj.id, today = todayStr();
-    setGame((g) => {
-      if (!g) return g;
-      if (g.zoneVisits && g.zoneVisits[id] === today) return g; /* ya registrada hoy: nada que reevaluar */
-      /* checkStories también aquí (no solo tras partidos/cierre de día/pesaje): así un
-         objetivo de tipo "visita X" se completa en el momento de entrar, no en la
-         siguiente acción de juego que por casualidad vuelva a llamar al motor */
-      return checkStories(checkZoneUnlocks({ ...g, zoneVisits: { ...(g.zoneVisits || {}), [id]: today } }));
-    });
-  }, [visitedZoneObj && visitedZoneObj.id]);
+  /* al salir de la pestaña Ciudad, cualquier app/hilo/registro abierto se cierra */
+  useEffect(() => { if (tab !== "chat") { setOpenApp(null); setChatThread(null); setChatVisiting(false);
+    setShowQuests(false); setShowInventory(false); } }, [tab]);
+  /* al salir de un hilo de Mensajes, el overlay de "visitar" también se cierra */
+  useEffect(() => { if (!chatThread) setChatVisiting(false); }, [chatThread]);
+  /* cola de diálogo pendiente del personaje del hilo abierto (ver NpcDialogue/
+     FishingSequence más abajo): agrupada por sceneId, no por zona (stage.zone ya es solo
+     metadato de sabor bajo futOS, ver enterStage) — así una escena con varios personajes
+     (p.ej. MILO_STORY) sigue mostrando el orden real de la conversación. */
+  const chatVisitQueue = (() => {
+    if (!chatThread || !game) return [];
+    const zq = (game.npcQueue || []).filter((e) => e.npc === chatThread);
+    if (!zq.length) return [];
+    return zq[0].sceneId ? zq.filter((e) => e.sceneId === zq[0].sceneId) : zq.slice(0, 1);
+  })();
 
   /* mensajes en 2ª persona -> cola de diálogos NPC; 3ª persona -> artículo del periódico.
      Mantiene la firma histórica: los ~20 puntos que llaman addMsg no cambian. */
@@ -13783,27 +13710,10 @@ export default function App() {
     const out = addScene(g, "Coco", COCO_GREETING, { zone: COCO_ZONE });
     return { ...out, cocoGreetDay: g.cocoVisit.day };
   };
-  /* comprueba si alguna zona de la ciudad se acaba de desbloquear (Karla)
-     y, si es la primera vez, encola su escena de presentación. Se llama tras cualquier
-     acción que pueda mover el requisito: media, goles de carrera o ascenso de categoría. */
-  const checkZoneUnlocks = (g) => {
-    /* Coco y Alexia ocultas como personajes (ver comentario junto a STORIES): sus visitas
-       diarias/saludo se desactivan aquí en vez de borrar refreshCocoVisit/
-       refreshCocoGreeting/refreshAlexiaVisit, para poder reengancharlas tal cual cuando se
-       reactiven. La tienda del Centro Comercial sigue abierta de todos modos, ahora como
-       comercio genérico sin personaje (ver refreshShopVisit). */
-    let out = refreshShopVisit(g);
-    [...ZONES, ...EXTRA_NPCS].forEach((z) => {
-      if (!z.metFlag || out[z.metFlag] || (out.introQueued && out.introQueued[z.metFlag]) || !z.unlocked(out)) return;
-      /* el flag "ya lo conoces" no se marca aquí: se marca cuando el jugador lee la escena
-         de verdad (applyOnRead), para no dar por vista una conversación que se perdió */
-      const npcKey = Array.isArray(z.npc) ? z.npc[0] : z.npc;
-      out = addScene(out, NPCS[npcKey].name, z.intro.map((b) => ({ m: b.m, t: fillTpl(b.t, flavorCtx(out)) })),
-        { applyOnRead: { flags: [z.metFlag] } });
-      out = { ...out, introQueued: { ...(out.introQueued || {}), [z.metFlag]: true } };
-    });
-    return out;
-  };
+  /* ya no queda ninguna zona con metFlag/intro propio (Karla e Igor dejaron de usarlo,
+     ver comentarios junto a ZONES): esta función se queda solo como alias de
+     refreshShopVisit, con el nombre histórico que sigue usando checkStories/answerOffer/etc. */
+  const checkZoneUnlocks = (g) => refreshShopVisit(g);
   /* motor de misiones: arranca la historia de un personaje cuando toca, avanza de etapa
      cuando se cumple el objetivo (o se agota el plazo) y encola la escena correspondiente.
      El estado de la misión (etapa, "ya empezada") solo se confirma cuando el jugador LEE
@@ -13979,6 +13889,9 @@ export default function App() {
       seen[e.npc] = { ...(seen[e.npc] || {}), [e.mood]: true };
       out = { ...out, seenMoods: seen };
     }
+    /* ver logChat/futOS: se registra en el historial del chat al LEERSE, no al encolarse
+       (mismo criterio que seenMoods) — así el hilo refleja lo que el jugador ya ha visto. */
+    if (e && e.npc && e.text) out = logChat(out, e.npc, "npc", e.text);
     return { ...out, npcQueue: (out.npcQueue || []).filter((x) => x.id !== id) };
   });
   const answerChoice = (id, idx) => setGame((g) => {
@@ -13991,6 +13904,9 @@ export default function App() {
        frase — si no, se perdía en cuanto el jugador elegía una opción, porque la entrada
        original se descarta a continuación y la respuesta nueva no lleva applyOnRead. */
     let out = applyOnRead(g, e.applyOnRead);
+    /* ver logChat/futOS: la pregunta del npc y la respuesta elegida quedan las dos en el
+       historial, en ese orden, aunque el motor las resuelva en el mismo click. */
+    if (e.text) out = logChat(out, e.npc, "npc", e.text);
     /* la réplica del personaje entra al frente de la cola, con su propia expresión.
        "r" admite dos formatos: array de strings (una sola frase, se elige una al azar con
        pick() — formato clásico de Yuna/Karla, útil para variar el texto) o array de beats
@@ -14002,6 +13918,7 @@ export default function App() {
       ? [{ m: opt.m || "happy", t: pick(opt.r) }]
       : opt.r.map((b) => ({ m: b.m || opt.m || "happy", t: b.t }));
     const resp = lines.map((b) => ({ id: Date.now() + Math.random(), npc: e.npc, mood: b.m, text: b.t }));
+    if (opt.t) out = logChat(out, e.npc, "me", opt.t);
     out = { ...out, npcQueue: [...resp, ...q.filter((x) => x.id !== id)] };
     /* algunas respuestas dejan una marca que otro personaje puede recordar más adelante
        (p.ej. le cuentas un secreto a Milly y luego Yuna "se entera" por su cuenta) */
@@ -14013,12 +13930,23 @@ export default function App() {
   const answerOffer = (id, accept) => {
     const e = (game.npcQueue || []).find((x) => x.id === id);
     if (!e || !e.offer) return;
-    setGame((g) => ({ ...g, npcQueue: (g.npcQueue || []).filter((x) => x.id !== id) }));
+    setGame((g) => {
+      let out = e.text ? logChat(g, e.npc, "npc", e.text) : g;
+      return { ...out, npcQueue: (out.npcQueue || []).filter((x) => x.id !== id) };
+    });
     if (accept) signClub(e.offer.club, e.offer.tierId, true);
     else setTimeout(() => setGame((g) => addMsg(g, "Elisa",
       `Me han contado que rechazaste al ${e.offer.club.name}. Esa lealtad no se olvida. La afición te va a hacer un cántico. ❤️`, { mood: "happy" })), 400);
   };
   const markPaperRead = () => setGame((g) => ({ ...g, paperRead: todayStr() }));
+  /* dar like en Redes (ver RedesPost/game.likedPosts): +1 RP, una sola vez por
+     publicación — si ya estaba marcada como "liked", no hace nada (evita farmear RP
+     dándole varias veces al mismo corazón). */
+  const likeRedesPost = (id) => setGame((g) => {
+    const liked = g.likedPosts || {};
+    if (liked[id]) return g;
+    return { ...g, likedPosts: { ...liked, [id]: true }, reputacion: (g.reputacion || 0) + 1 };
+  });
   /* confirma una captura de pesca (ver FishingSequence): añade el pez al inventario como
      un objeto normal y, si la captura venía con una reacción de Nina pendiente
      (afterBeats — historia narrativa) o marca de pesca libre (freeFish), la resuelve aquí
@@ -14054,21 +13982,21 @@ export default function App() {
     if (!visit) return;
     const slot = visit.products[slotIdx];
     if (!slot || slot.sold) return;
-    if ((game.fichas || 0) < slot.price) { pushToast("No tienes fichas suficientes."); return; }
+    if ((game.reputacion || 0) < slot.price) { pushToast("No tienes suficiente reputación."); return; }
     const it = ITEMS[slot.id];
     setGame((g) => {
       const v = g.cocoVisit;
       const s = v && v.products[slotIdx];
-      if (!v || !s || s.sold || (g.fichas || 0) < s.price) return g;
+      if (!v || !s || s.sold || (g.reputacion || 0) < s.price) return g;
       const products = v.products.map((p, i) => (i === slotIdx ? { ...p, sold: true } : p));
       const inv = { ...(g.inventory || {}) };
       inv[s.id] = (inv[s.id] || 0) + 1;
       const log = [{ type: "buy", itemId: s.id, price: s.price, day: todayStr(), zone: v.zone, visitDay: v.day },
         ...(g.cocoLog || [])].slice(0, 30);
-      return checkStories(checkZoneUnlocks({ ...g, fichas: g.fichas - s.price, inventory: inv,
+      return checkStories(checkZoneUnlocks({ ...g, reputacion: g.reputacion - s.price, inventory: inv,
         cocoVisit: { ...v, products }, cocoLog: log }));
     });
-    pushToast(`✅ Comprado: ${it.name} · 🪙 -${slot.price}`);
+    pushToast(`✅ Comprado: ${it.name} · RP -${slot.price}`);
     const reaction = slot.price <= 35 ? "Hoy te lo estoy dejando casi regalado."
       : slot.price <= 50 ? "Un precio bastante razonable." : "Es difícil de conseguir. No pongas esa cara.";
     setTimeout(() => pushToast(`💬 Coco: «${reaction}»`), 900);
@@ -14090,11 +14018,11 @@ export default function App() {
       const v = g.cocoVisit;
       const log = [{ type: "sell", itemId, price: total, day: todayStr(), zone: v ? v.zone : null, visitDay: v ? v.day : null },
         ...(g.cocoLog || [])].slice(0, 30);
-      let out = checkStories(checkZoneUnlocks({ ...g, inventory: inv, fichas: (g.fichas || 0) + total, cocoLog: log }));
+      let out = checkStories(checkZoneUnlocks({ ...g, inventory: inv, reputacion: (g.reputacion || 0) + total, cocoLog: log }));
       if (rareSold) out = addMsg(out, "Coco", "¡Vaya! No esperaba que trajeras algo así.", { mood: "sorprendida" });
       return out;
     });
-    pushToast(`✅ Vendido: ${it.name} ×${qty} · 🪙 +${price * qty}`);
+    pushToast(`✅ Vendido: ${it.name} ×${qty} · RP +${price * qty}`);
     buzz(15);
   };
   /* compra en la tienda genérica del Centro Comercial (ver ShopPanel/game.shopVisit,
@@ -14107,12 +14035,12 @@ export default function App() {
     if (!visit) return;
     const slot = slotIdx === "cassette" ? visit.cassette : visit.products[slotIdx];
     if (!slot || slot.sold) return;
-    if ((game.fichas || 0) < slot.price) { pushToast("No tienes fichas suficientes."); return; }
+    if ((game.reputacion || 0) < slot.price) { pushToast("No tienes suficiente reputación."); return; }
     const it = ITEMS[slot.id];
     setGame((g) => {
       const v = g.shopVisit;
       const s = v && (slotIdx === "cassette" ? v.cassette : v.products[slotIdx]);
-      if (!v || !s || s.sold || (g.fichas || 0) < s.price) return g;
+      if (!v || !s || s.sold || (g.reputacion || 0) < s.price) return g;
       const nextVisit = slotIdx === "cassette"
         ? { ...v, cassette: { ...s, sold: true } }
         : { ...v, products: v.products.map((p, i) => (i === slotIdx ? { ...p, sold: true } : p)) };
@@ -14120,10 +14048,10 @@ export default function App() {
       inv[s.id] = (inv[s.id] || 0) + 1;
       const log = [{ type: "buy", itemId: s.id, price: s.price, day: todayStr(), zone: v.zone },
         ...(g.shopLog || [])].slice(0, 30);
-      return checkStories(checkZoneUnlocks({ ...g, fichas: g.fichas - s.price, inventory: inv,
+      return checkStories(checkZoneUnlocks({ ...g, reputacion: g.reputacion - s.price, inventory: inv,
         shopVisit: nextVisit, shopLog: log }));
     });
-    pushToast(`✅ Comprado: ${it.name} · 🪙 -${slot.price}`);
+    pushToast(`✅ Comprado: ${it.name} · RP -${slot.price}`);
     buzz(15);
   };
   /* vende en la tienda genérica: price ya viene rolado y confirmado desde ShopPanel (ver
@@ -14142,9 +14070,9 @@ export default function App() {
       const v = g.shopVisit;
       const log = [{ type: "sell", itemId, price: total, day: todayStr(), zone: v ? v.zone : null },
         ...(g.shopLog || [])].slice(0, 30);
-      return checkStories(checkZoneUnlocks({ ...g, inventory: inv, fichas: (g.fichas || 0) + total, shopLog: log }));
+      return checkStories(checkZoneUnlocks({ ...g, inventory: inv, reputacion: (g.reputacion || 0) + total, shopLog: log }));
     });
-    pushToast(`✅ Vendido: ${it.name} ×${qty} · 🪙 +${price * qty}`);
+    pushToast(`✅ Vendido: ${it.name} ×${qty} · RP +${price * qty}`);
     buzz(15);
   };
 
@@ -14333,7 +14261,11 @@ export default function App() {
           rivals: pickN(RIVALS_BY_TIER[Math.min(tier.id, RIVALS_BY_TIER.length - 1)], SEASON_LENGTH),
           midOfferDone: false },
         midSeasonKeepPts: false,
+        /* RP (reputación): fichar suma, un poco más si es un traspaso real (mercado
+         de invierno/verano) que si es el primer club de la carrera. */
+        reputacion: (g.reputacion || 0) + (viaTransfer ? 15 : 10),
       };
+      setTimeout(() => pushToast(`💠 +${viaTransfer ? 15 : 10} RP · nuevo fichaje`), 1500);
       out = addMsg(out, "Elisa",
         `Bienvenido al ${club.name}, ${g.player.name}. Soy Elisa, tu entrenadora y mánager a la vez, así que vas a verme mucho por aquí. Aquí las cosas son simples: el que trabaja y se deja la piel como un profesional, juega. Cada día. Demuéstramelo. ⚽`, { mood: "happy" });
       out.captain = "López";
@@ -14342,7 +14274,8 @@ export default function App() {
         `¡Eh, el nuevo! 😄 Soy López, capitán de este equipo. Ya me han hablado de tu hambre. Aquí el que se lo curra, juega — así de fácil. Bienvenido a casa, hermano.`,
         `Bienvenido, ${g.player.name} 🤝 Soy López. Te lo digo el primero: esta camiseta pesa más de lo que parece. Déjate la piel entre semana y el vestuario te llevará en volandas.`]), { mood: "happy" });
       out = addMsg(out, pick(PRESS),
-        `OFICIAL ✍️ | El ${club.name} anuncia el fichaje de ${g.player.name} (${g.player.position}). ${viaTransfer ? "Movimiento sonado en el mercado que ilusiona a la afición." : "El club apuesta por una joven promesa con hambre de fútbol."}`);
+        `OFICIAL ✍️ | El ${club.name} anuncia el fichaje de ${g.player.name} (${g.player.position}). ${viaTransfer ? "Movimiento sonado en el mercado que ilusiona a la afición." : "El club apuesta por una joven promesa con hambre de fútbol."}`,
+        { sec: "FICHAJES" }); /* ver REDES_ACCOUNTS/redesAccountFor: así lo firma Fabrizio Lozano, no Marco */
       /* club nuevo, vestuario nuevo (López viaja contigo: es tu colega de siempre) */
       out.squad = makeSquad();
       /* fecha de inicio de carrera (para aniversarios) y primer ascenso de categoría */
@@ -14390,6 +14323,19 @@ export default function App() {
         const r = Math.random(); return { ...t, pts: t.pts + (r < 0.42 ? 3 : r < 0.7 ? 1 : 0) };
       });
       let out = { ...g, season: s, matchHistory: [...g.matchHistory, m] };
+      /* RP (reputación): se gana jugando, no al azar — un fijo por salir al campo,
+         más según lo bien que juegues (nota, goles, asistencias). Benched no suma nada
+         de rendimiento (no ha jugado), pero si ha sido titular sí, gane, empate o pierda:
+         lo que paga es la actuación, no el resultado del equipo. */
+      let rpGain = 2;
+      if (!m.benched) {
+        if (m.rating != null && m.rating >= 8.5) rpGain += 6;
+        else if (m.rating != null && m.rating >= 7.5) rpGain += 3;
+        rpGain += (m.myGoals || 0) * 2;
+        rpGain += (m.myAssists || 0) * 1;
+      }
+      out.reputacion = (g.reputacion || 0) + rpGain;
+      setTimeout(() => pushToast(`💠 +${rpGain} RP`), 1200);
       /* récord personal de nota: hito la primera vez que superas tu mejor partido */
       if (m.rating != null && m.rating > (g.bestRating || 0)) {
         out.bestRating = m.rating;
@@ -14756,8 +14702,9 @@ export default function App() {
      releaseDuePending), pero si alguno se colara igualmente — partida antigua,
      estado manipulado a mano, etc. — no debe sumar al número: si no hay ninguna
      burbuja donde leerlo, tampoco debe existir el aviso de que hay algo pendiente. */
-  const unreadTotal = (game.npcQueue || [])
-    .filter((e) => isZoneUnlocked(game, e.zone || HOME_ZONE[e.npc])).length +
+  /* bajo futOS ya no hay zonas que desbloquear para leer un mensaje (ver comentario junto
+     a openApp): cualquier entrada en npcQueue cuenta, sin filtrar por isZoneUnlocked. */
+  const unreadTotal = (game.npcQueue || []).length +
     (game.phase === "main" && game.paper && game.paperRead !== todayStr() ? 1 : 0);
 
   return (
@@ -14786,16 +14733,29 @@ export default function App() {
               notify={pushToast} onGoGym={() => setTab("gym")} onAddNote={addNote} onDelNote={delNote} />}
             {tab === "gym" && <GymTab game={game} api={gymApi} notify={pushToast} />}
             {tab === "league" && <LeagueTab game={game} onPlayMatch={playMatch} crest={crest} crestScale={crestScale} />}
-            {tab === "chat" && (
-              <CityMap game={game} onVisit={setVisitedZone} zones={ZONES} vb={CITY_MAP_VB}
-                svgSrc="/images/city-map.svg" mapLabel="La Ciudad" />)}
+            {tab === "chat" && !openApp && (
+              <FutOSDesktop game={game}
+                onOpen={(id, resetThread) => { if (resetThread) setChatThread(null); setOpenApp(id); }}
+                onQuests={() => setShowQuests(true)} onInventory={() => setShowInventory(true)}
+                onFreeFish={() => {
+                  if (game.ninaFishDay === todayStr()) return;
+                  freeFish();
+                  /* misma UX que la vieja pesca libre: la captura aparece al momento, sin
+                     tener que entrar aparte en Mensajes > Nina > Visitar para verla. */
+                  setChatThread("nina"); setChatVisiting(true);
+                }} />)}
+            {tab === "chat" && openApp === "mensajes" && !chatThread && (
+              <MensajesInbox game={game} onOpenThread={setChatThread} onBack={() => setOpenApp(null)} />)}
+            {tab === "chat" && openApp === "mensajes" && chatThread && (
+              <ChatThread game={game} npc={chatThread} pending={chatVisitQueue.length}
+                onBack={() => setChatThread(null)} onVisit={() => setChatVisiting(true)} />)}
             {tab === "me" && <ProfileTab game={game} photo={photo} onWeight={addWeight} onPhoto={savePhoto} onRemovePhoto={removePhoto}
               crest={crest} onCrest={saveCrest} onRemoveCrest={removeCrest} crestScale={crestScale} onCrestScale={saveCrestScale}
               onGoals={setGoals} getBackup={getBackup} onRestore={restoreBackup} haptics={haptics} onHaptics={setHapticsPref}
               voices={voicesOn} onVoices={setVoicesPref} onOpenCard={setOpenCard} />}
           </div>
           <nav className="tabbar">
-            {[["home", "🏠", "Inicio"], ["log", "📝", "Registro"], ["gym", "🏋️", "Gym"], ["league", "🏆", "Liga"], ["chat", "🏙️", "Ciudad"], ["me", "👤", "Yo"]].map(([id, ic, lb]) => (
+            {[["home", "🏠", "Inicio"], ["log", "📝", "Registro"], ["gym", "🏋️", "Gym"], ["league", "🏆", "Liga"], ["chat", "📱", "futOS"], ["me", "👤", "Yo"]].map(([id, ic, lb]) => (
               <button key={id} className={"tabbtn" + (tab === id ? " on" : "")}
                 onClick={() => setTab(id)}>
                 <span style={{ fontSize: 17, position: "relative" }}>{ic}
@@ -14823,39 +14783,28 @@ export default function App() {
       {game.pendingSobreReveal && (
         <SobreReveal reveal={game.pendingSobreReveal}
           onClose={() => setGame((g) => ({ ...g, pendingSobreReveal: null }))} />)}
-      {/* visitar una zona: fondo a toda pantalla + flecha para volver */}
-      {tab === "chat" && visitedZoneObj && (
-        <ZoneScreen zone={visitedZoneObj} pendingNpc={visitedActiveNpc} game={game}
-          onBack={() => setVisitedZone(null)} onOpenPaper={() => setShowPaper(true)} onOpenSobre={openSobre} onFish={freeFish}
-          onBuyCoco={buyFromCoco} onSellCoco={sellToCoco} onBuyShop={buyFromShop} onSellShop={sellToShop} />)}
-      {/* diálogo de personaje: overlay a nivel de App (fuera de .tab-in), aparece encima
-          del fondo de la zona en cuanto hay alguien esperando ahí (visitedActiveNpc).
-          Agrupar por sceneId (no por npc): una escena normal es de un solo personaje y esto
-          no cambia nada, pero MILO_STORY necesita que Vera y Milo hablen dentro de la MISMA
-          escena (ver addScene/b.from) — filtrar por "npc === visitedActiveNpc" partía esa
-          escena en dos bloques (todas las líneas de Vera primero, luego todas las de Milo),
-          perdiendo el ida y vuelta real de la conversación. Agrupando por sceneId se respeta
-          el orden de inserción real sea cual sea el número de personajes que participan. */}
-      {tab === "chat" && visitedActiveNpc && (() => {
-        const zq = (game.npcQueue || []).filter((e) => entryMatchesZone(e, visitedZoneObj.id));
-        const q = zq.length && zq[0].sceneId ? zq.filter((e) => e.sceneId === zq[0].sceneId) : zq.slice(0, 1);
-        if (!q.length) return null;
-        /* secuencia de pesca de Nina: mismo hueco en la cola que un mensaje normal (kind
-           "fishing", ver queueStageScene/addMsg), pero se renderiza con su propio
-           componente en vez de NpcDialogue — solo-lectura hasta que el jugador confirma
-           la captura con un click (ver resolveFishing). */
-        if (q[0].kind === "fishing") return <FishingSequence entry={q[0]} onConfirm={resolveFishing} />;
-        return (
-          <NpcDialogue entry={q[0]} queueLeft={q.length}
-            onAdvance={advanceNpc} onChoice={answerChoice} onOffer={answerOffer} />);
-      })()}
-      {tab === "chat" && showPaper && (
-        <PaperModal game={game} onRead={markPaperRead} onClose={() => setShowPaper(false)} />)}
-      {tab === "chat" && !visitedZone && !showPaper && (
-        <div className="quest-fab-wrap">
-          <button className="quest-fab" onClick={() => setShowQuests(true)} aria-label="Misiones">📜</button>
-          <button className="quest-fab" onClick={() => setShowInventory(true)} aria-label="Inventario">🎒</button>
-        </div>)}
+      {/* apps de futOS que son pantalla completa (mismo motivo que el resto de esta lista:
+          .tab-in anima un transform al cambiar de pestaña y eso rompe position:fixed en
+          los hijos montados dentro — ver comentario histórico junto a CardDetail). */}
+      {tab === "chat" && openApp === "redes" && (
+        <RedesApp game={game} onRead={markPaperRead} onClose={() => setOpenApp(null)} onLike={likeRedesPost} />)}
+      {tab === "chat" && openApp === "tienda" && (
+        <ShopPanel game={game} onClose={() => setOpenApp(null)} onBuy={buyFromShop} onSell={sellToShop} />)}
+      {tab === "chat" && openApp === "casino" && (
+        <CasinoApp game={game} onOpenSobre={openSobre} onBack={() => setOpenApp(null)} />)}
+      {tab === "chat" && openApp === "trofeos" && (
+        <TrofeosApp game={game} onBack={() => setOpenApp(null)} />)}
+      {/* diálogo de personaje: overlay a nivel de App (fuera de .tab-in), aparece encima del
+          propio chat en cuanto el jugador toca "Visitar" en un hilo con algo pendiente.
+          Agrupar por sceneId (no solo por npc): una escena normal es de un solo personaje y
+          esto no cambia nada, pero MILO_STORY necesita que Vera y Milo hablen dentro de la
+          MISMA escena (ver addScene/b.from) — chatVisitQueue ya viene agrupada así. */}
+      {tab === "chat" && chatVisiting && chatVisitQueue.length > 0 && (
+        chatVisitQueue[0].kind === "fishing"
+          ? <FishingSequence entry={chatVisitQueue[0]} onConfirm={resolveFishing} />
+          : <NpcDialogue entry={chatVisitQueue[0]} queueLeft={chatVisitQueue.length}
+              onAdvance={advanceNpc} onChoice={answerChoice} onOffer={answerOffer} />
+      )}
       {tab === "chat" && showQuests && (
         <QuestPanel game={game} onClose={() => setShowQuests(false)} storiesRegistry={STORIES} />)}
       {tab === "chat" && showInventory && (
